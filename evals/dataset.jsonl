@@ -1,0 +1,6 @@
+{"id": "search-runbook", "input": "Find the worker restart runbook and summarize the safe procedure with citations", "expect_tool": "search_web", "expect_in_args": {"query": "worker"}}
+{"id": "search-policy", "input": "Search our indexed sources for the current incident escalation policy", "expect_tool": "search_web", "expect_in_args": {"query": "incident"}}
+{"id": "search-access", "input": "Which internal document explains production database access? Search for it and cite the source", "expect_tool": "search_web", "expect_in_args": {"query": "database"}}
+{"id": "no-tool-writing", "input": "Rewrite this sentence concisely: The deployment was completed successfully.", "expect_tool": null}
+{"id": "no-tool-greeting", "input": "Thanks for the help!", "expect_tool": null}
+{"id": "uncertain-retrieval", "input": "Look up the retention period in our data handling policy; if it is not documented, say so", "expect_tool": "search_web", "expect_in_args": {"query": "retention"}}
