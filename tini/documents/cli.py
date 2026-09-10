@@ -7,6 +7,7 @@ from pathlib import Path
 
 from tini.config import load_settings
 from tini.db import connect
+from tini.documents.embeddings import make_embedding_provider
 from tini.documents.pipeline import IngestionPipeline
 from tini.documents.store import SqliteDocumentIndex
 
@@ -17,19 +18,26 @@ def ingest_main(argv: list[str]) -> int:
     parser.add_argument("path", type=Path, help="document or directory to ingest")
     parser.add_argument("--workspace", default=settings.document_workspace)
     parser.add_argument("--no-recursive", action="store_true")
-    parser.add_argument("--chunk-size", type=int, default=settings.document_chunk_size)
-    parser.add_argument("--chunk-overlap", type=int, default=settings.document_chunk_overlap)
+    parser.add_argument("--chunk-max-tokens", type=int, default=settings.document_chunk_max_tokens)
+    parser.add_argument("--chunk-min-tokens", type=int, default=settings.document_chunk_min_tokens)
+    parser.add_argument(
+        "--chunk-overlap-tokens", type=int, default=settings.document_chunk_overlap_tokens
+    )
     args = parser.parse_args(argv)
 
     settings.ensure_home()
     conn = connect(settings.home)
-    pipeline = IngestionPipeline(
-        SqliteDocumentIndex(conn),
-        chunk_size=args.chunk_size,
-        chunk_overlap=args.chunk_overlap,
-        max_file_bytes=settings.document_max_file_bytes,
-    )
     try:
+        embedder = make_embedding_provider(settings)
+        pipeline = IngestionPipeline(
+            SqliteDocumentIndex(conn, embedder),
+            embedder=embedder,
+            chunk_max_tokens=args.chunk_max_tokens,
+            chunk_min_tokens=args.chunk_min_tokens,
+            chunk_overlap_tokens=args.chunk_overlap_tokens,
+            max_file_bytes=settings.document_max_file_bytes,
+            max_text_chars=settings.document_max_text_chars,
+        )
         reports = pipeline.ingest_path(
             args.path, workspace_id=args.workspace, recursive=not args.no_recursive
         )
@@ -58,7 +66,7 @@ def documents_main(argv: list[str]) -> int:
 
     settings.ensure_home()
     conn = connect(settings.home)
-    index = SqliteDocumentIndex(conn)
+    index = SqliteDocumentIndex(conn, make_embedding_provider(settings))
     try:
         if args.search:
             for hit in index.search(args.search, args.limit, args.workspace):

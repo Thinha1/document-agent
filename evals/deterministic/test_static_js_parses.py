@@ -44,7 +44,10 @@ def test_there_are_scripts_to_check():
 def test_every_dashboard_script_parses(script: pathlib.Path):
     result = subprocess.run(  # noqa: S603 — fixed argv, path from our own glob
         [shutil.which("node"), "--check", str(script)],
-        capture_output=True, text=True, timeout=30, check=False,
+        capture_output=True,
+        text=True,
+        timeout=30,
+        check=False,
     )
     assert result.returncode == 0, (
         f"{script.name} does not parse — the dashboard will render nothing.\n"

@@ -13,6 +13,9 @@ flowchart TB
     MODEL["Provider adapter<br/>Anthropic or OpenAI-compatible"]
     REGISTRY["Tool registry"]
     SEARX["Self-hosted SearXNG"]
+    DOCS[("SQLite document index<br/>metadata · chunks · FTS5")]
+    INGEST["Ingestion pipeline<br/>discover · parse · chunk · upsert"]
+    FILES["Local documents<br/>text · Markdown · HTML · PDF · DOCX"]
     MCP["MCP document sources"]
     MEMORY[("SQLite/FTS5 or optional memory backends")]
     TRACE["JSONL / OpenTelemetry traces"]
@@ -24,7 +27,9 @@ flowchart TB
     LOOP <--> MODEL
     LOOP <--> REGISTRY
     REGISTRY --> SEARX
+    REGISTRY --> DOCS
     REGISTRY --> MCP
+    FILES --> INGEST --> DOCS
     SESSION <--> MEMORY
     LOOP --> GW
     SESSION -. events .-> TRACE
@@ -37,6 +42,8 @@ flowchart TB
 - `tini/runtime/session.py` is the only context-assembly path.
 - `tini/loop/` owns open-ended query refinement and provider wire formats.
 - `tini/tools/` exposes `search_web` and optional namespaced MCP tools.
+- `tini/documents/` owns parsing, deterministic chunking, provenance, and the
+  `DocumentIndex` seam used by both ingestion and `search_documents`.
 - `tini/memory/` owns retrieval gating, stores, skills, and consolidation.
 - `tini/graph/` owns inspectable routing around the loop.
 - `tini/ops/` and `evals/` observe and score behavior without becoming runtime
@@ -54,9 +61,12 @@ searches. The graph handles only stable control flow. Its shipped triage workflo
 routes social messages to a small model and knowledge questions to the unchanged
 loop, failing open to the full path on errors.
 
-SQLite and JSONL provide zero-service defaults. Optional backends and telemetry
-integrations sit behind extras or environment configuration. Deterministic tests
-pin routing and tool behavior; judge evaluations score grounded answer quality.
+SQLite, FTS5, and JSONL provide zero-service defaults. The document index
+interface keeps backend-specific query syntax hidden, so a PostgreSQL/pgvector
+adapter can replace SQLite without changing the pipeline or model tool.
+Optional backends and telemetry integrations sit behind extras or environment
+configuration. Deterministic tests pin routing and tool behavior; judge
+evaluations score grounded answer quality.
 
 For state details, see [../ARCHITECHURE.md](../ARCHITECHURE.md). For prompt and
 retrieval context, see [../CONTEXT-ARCHITECHURE.md](../CONTEXT-ARCHITECHURE.md).

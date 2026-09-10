@@ -24,11 +24,38 @@ CONNECTION_LOGOS = {f"{integration.key}.svg" for integration in INTEGRATIONS}
 # JS keywords / builtins / DOM globals an inline handler may call without a js/
 # definition. Kept small on purpose — anything else must be a real app function.
 ALLOWED = {
-    "if", "for", "while", "switch", "return", "typeof", "new", "await", "function",
-    "Math", "JSON", "Date", "Number", "String", "Boolean", "Object", "Array",
-    "parseInt", "parseFloat", "isNaN", "console", "setTimeout", "setInterval",
-    "encodeURIComponent", "decodeURIComponent", "alert", "confirm", "prompt",
-    "document", "window", "event", "fetch",
+    "if",
+    "for",
+    "while",
+    "switch",
+    "return",
+    "typeof",
+    "new",
+    "await",
+    "function",
+    "Math",
+    "JSON",
+    "Date",
+    "Number",
+    "String",
+    "Boolean",
+    "Object",
+    "Array",
+    "parseInt",
+    "parseFloat",
+    "isNaN",
+    "console",
+    "setTimeout",
+    "setInterval",
+    "encodeURIComponent",
+    "decodeURIComponent",
+    "alert",
+    "confirm",
+    "prompt",
+    "document",
+    "window",
+    "event",
+    "fetch",
 }
 
 
@@ -37,7 +64,7 @@ def test_referenced_assets_exist():
     refs = re.findall(r'(?:src|href)="(/static/[^"]+)"', INDEX)
     assert refs, "expected script/link references in index.html"
     for ref in refs:
-        target = STATIC / ref[len("/static/"):]
+        target = STATIC / ref[len("/static/") :]
         assert target.is_file(), f"index.html references missing asset: {ref}"
 
 
@@ -79,8 +106,8 @@ def test_every_registry_group_has_a_display_name():
 
 def _defined_names() -> set[str]:
     names = set()
-    names |= set(re.findall(r'^(?:async\s+)?function\s+([A-Za-z_$][\w$]*)', JS_SRC, re.MULTILINE))
-    names |= set(re.findall(r'^(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=', JS_SRC, re.MULTILINE))
+    names |= set(re.findall(r"^(?:async\s+)?function\s+([A-Za-z_$][\w$]*)", JS_SRC, re.MULTILINE))
+    names |= set(re.findall(r"^(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=", JS_SRC, re.MULTILINE))
     return names
 
 
@@ -89,7 +116,7 @@ def _handler_calls(text: str) -> set[str]:
     called = set()
     for body in re.findall(r'\bon\w+="([^"]*)"', text) + re.findall(r"\bon\w+='([^']*)'", text):
         # identifier immediately before '(' that isn't a property access (no leading .)
-        called |= set(re.findall(r'(?<![.\w$])([A-Za-z_$][\w$]*)\s*\(', body))
+        called |= set(re.findall(r"(?<![.\w$])([A-Za-z_$][\w$]*)\s*\(", body))
     return called
 
 
@@ -107,3 +134,12 @@ def test_app_js_is_gone():
     """The monolith was split; index.html must not load the old single file."""
     assert not (STATIC / "app.js").exists(), "stale app.js still present"
     assert "/static/app.js" not in INDEX, "index.html still references app.js"
+
+
+def test_dashboard_has_persistent_light_and_dark_themes():
+    assert 'id="theme-toggle"' in INDEX
+    assert 'localStorage.getItem("tini-theme")' in INDEX
+    assert 'localStorage.setItem("tini-theme"' in JS_SRC
+    css = (STATIC / "style.css").read_text()
+    assert ':root[data-theme="light"]' in css
+    assert ':root[data-theme="dark"]' in css

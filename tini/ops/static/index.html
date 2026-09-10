@@ -1,6 +1,7 @@
 <!doctype html><html><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Tini Agent</title>
+<script>try{const t=localStorage.getItem("tini-theme");if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
 <link rel="stylesheet" href="/static/style.css"></head><body>
 <nav id="nav">
   <div class="brand">Tini Agent<small id="model" style="cursor:pointer" title="click to change the model" onclick="location.hash='#models'"></small>
@@ -11,6 +12,7 @@
   <a href="#loop" data-v="loop">Loop <span class="n" id="n-loop"></span></a>
   <a href="#graph" data-v="graph">Graph <span class="n" id="n-graph"></span></a>
   <a href="#memory" data-v="memory">Memory <span class="n" id="n-mem"></span></a>
+  <a href="#documents" data-v="documents">Knowledge <span class="n" id="n-docs"></span></a>
   <a href="#tools" data-v="tools">Tools <span class="n" id="n-tools"></span></a>
   <a href="#database" data-v="database">Database <span class="n" id="n-db"></span></a>
   <a href="#ops" data-v="ops">Ops <span class="n" id="n-ops"></span></a>
@@ -29,6 +31,7 @@
   <a href="#models" data-v="models">Models</a>
   <a href="#connections" data-v="connections">Connections</a>
   <a href="#settings" data-v="settings">Behaviour</a>
+  <button class="theme-toggle" id="theme-toggle" onclick="toggleTheme()" aria-label="Switch color theme"><span id="theme-icon">◐</span><span id="theme-label">Theme</span></button>
 </nav>
 <div class="resizer" id="nav-resizer" title="Drag to resize sidebar"></div>
 <main>
@@ -69,6 +72,7 @@
 <script src="/static/js/render.js"></script>
 <script src="/static/js/diagram.js"></script>
 <script src="/static/js/graph.js"></script>
+<script src="/static/js/documents.js"></script>
 <script src="/static/js/views.js"></script>
 <script src="/static/js/compare.js"></script>
 <script src="/static/js/dock.js"></script>

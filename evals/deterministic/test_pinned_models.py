@@ -19,10 +19,20 @@ import pytest
 from tini.ops import catalog
 from tini.ops import settings_api as d
 
-PROVIDER_KEYS = ("ANTHROPIC_API_KEY", "OPENAI_API_KEY", "GEMINI_API_KEY", "DEEPSEEK_API_KEY",
-                 "MINIMAX_API_KEY", "MOONSHOT_API_KEY", "ZHIPU_API_KEY", "OPENROUTER_API_KEY",
-                 "XAI_API_KEY", "OPENCODE_ZEN_API_KEY", "OPENCODE_GO_API_KEY",
-                 "CUSTOM_OPENAI_API_KEY")
+PROVIDER_KEYS = (
+    "ANTHROPIC_API_KEY",
+    "OPENAI_API_KEY",
+    "GEMINI_API_KEY",
+    "DEEPSEEK_API_KEY",
+    "MINIMAX_API_KEY",
+    "MOONSHOT_API_KEY",
+    "ZHIPU_API_KEY",
+    "OPENROUTER_API_KEY",
+    "XAI_API_KEY",
+    "OPENCODE_ZEN_API_KEY",
+    "OPENCODE_GO_API_KEY",
+    "CUSTOM_OPENAI_API_KEY",
+)
 
 
 @pytest.fixture
@@ -59,10 +69,10 @@ def test_pin_persists_and_marks_first_per_provider_default(home):
 
 
 def test_default_model_for_reads_first_pinned(home):
-    assert catalog.default_model_for("kimi") == ""          # nothing pinned yet
+    assert catalog.default_model_for("kimi") == ""  # nothing pinned yet
     d.pin_action({"action": "pin", "provider": "kimi", "model": "kimi-k3"})
     d.pin_action({"action": "pin", "provider": "kimi", "model": "kimi-k2.6"})
-    assert catalog.default_model_for("kimi") == "kimi-k3"   # the first one
+    assert catalog.default_model_for("kimi") == "kimi-k3"  # the first one
 
 
 def test_make_default_moves_model_to_front_of_its_group(home):
@@ -77,7 +87,7 @@ def test_unpin_removes_and_promotes_next_default(home):
     d.pin_action({"action": "pin", "provider": "gemini", "model": "gemini-3.5-pro"})
     info = d.pin_action({"action": "unpin", "provider": "gemini", "model": "gemini-3.5-flash"})
     assert [p["model"] for p in info["pinned"]] == ["gemini-3.5-pro"]
-    assert catalog.default_model_for("gemini") == "gemini-3.5-pro"   # survivor is now default
+    assert catalog.default_model_for("gemini") == "gemini-3.5-pro"  # survivor is now default
 
 
 def test_switching_provider_adopts_its_pinned_default(home, monkeypatch):
@@ -91,7 +101,11 @@ def test_switching_provider_adopts_its_pinned_default(home, monkeypatch):
     from tini.ops import browser_agent
 
     monkeypatch.setattr(browser_agent, "rebuild", lambda: None)
-    monkeypatch.setattr(browser_agent, "current", lambda: type("A", (), {"tracer": type("T", (), {"event": lambda *args: None})()})())
+    monkeypatch.setattr(
+        browser_agent,
+        "current",
+        lambda: type("A", (), {"tracer": type("T", (), {"event": lambda *args: None})()})(),
+    )
     monkeypatch.setenv("TINI_PROVIDER", "gemini")
     monkeypatch.setenv("TINI_MODEL", "gemini-3.5-flash")
     result = integrations.apply_provider("kimi")
@@ -104,13 +118,22 @@ def test_pinned_are_grouped_by_provider_for_display(home):
     """A model added later (e.g. claude-fable-5) should list WITH its provider's
     other models, not stranded at the bottom — while each provider's default
     (first pinned) stays on top."""
-    (home / "models.json").write_text(json.dumps({"pinned": [
-        "anthropic:claude-opus-4-8", "openai:gpt-5.3-chat-latest",
-        "anthropic:claude-fable-5", "openai:gpt-4.1-mini"]}))
+    (home / "models.json").write_text(
+        json.dumps(
+            {
+                "pinned": [
+                    "anthropic:claude-opus-4-8",
+                    "openai:gpt-5.3-chat-latest",
+                    "anthropic:claude-fable-5",
+                    "openai:gpt-4.1-mini",
+                ]
+            }
+        )
+    )
     rows = [(r["provider"], r["model"], r["default"]) for r in d.settings_info()["pinned"]]
     assert rows == [
-        ("anthropic", "claude-opus-4-8", True),      # default stays first
-        ("anthropic", "claude-fable-5", False),      # grouped with anthropic, not stranded
+        ("anthropic", "claude-opus-4-8", True),  # default stays first
+        ("anthropic", "claude-fable-5", False),  # grouped with anthropic, not stranded
         ("openai", "gpt-5.3-chat-latest", True),
         ("openai", "gpt-4.1-mini", False),
     ]
@@ -137,25 +160,27 @@ def test_defaults_apply_before_curation_and_only_for_keyed_providers(home, monke
     """No models.json yet -> the switcher shows flagship+fast for providers that
     have a key set, flagship first (so it's the default). Providers without a
     key stay out (you can't use them)."""
-    monkeypatch.setenv("MOONSHOT_API_KEY", "k")      # only kimi is keyed
-    monkeypatch.setenv("ANTHROPIC_API_KEY", "a")     # and anthropic
+    monkeypatch.setenv("MOONSHOT_API_KEY", "k")  # only kimi is keyed
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "a")  # and anthropic
 
     info = d.settings_info()
     pairs = [(p["provider"], p["model"], p["default"]) for p in info["pinned"]]
     assert pairs == [
-        ("anthropic", "claude-opus-4-8", True), ("anthropic", "claude-sonnet-5", False),
-        ("kimi", "kimi-k3", True), ("kimi", "kimi-k2.7-code-highspeed", False),
+        ("anthropic", "claude-opus-4-8", True),
+        ("anthropic", "claude-sonnet-5", False),
+        ("kimi", "kimi-k3", True),
+        ("kimi", "kimi-k2.7-code-highspeed", False),
     ]
-    assert catalog.default_model_for("kimi") == "kimi-k3"        # flagship is the default
-    assert catalog.default_model_for("gemini") == ""            # unkeyed -> no default
+    assert catalog.default_model_for("kimi") == "kimi-k3"  # flagship is the default
+    assert catalog.default_model_for("gemini") == ""  # unkeyed -> no default
 
 
 def test_pinning_snapshots_defaults_then_diverges(home, monkeypatch):
     """The first pin action persists the computed defaults + the change, so
     later edits don't keep resurrecting defaults."""
-    monkeypatch.setenv("MOONSHOT_API_KEY", "k")      # only kimi keyed -> 2 defaults
+    monkeypatch.setenv("MOONSHOT_API_KEY", "k")  # only kimi keyed -> 2 defaults
     d.pin_action({"action": "unpin", "provider": "kimi", "model": "kimi-k2.7-code-highspeed"})
-    assert (home / "models.json").exists()               # now materialized
+    assert (home / "models.json").exists()  # now materialized
     assert [p["model"] for p in d.settings_info()["pinned"]] == ["kimi-k3"]
 
 
@@ -169,8 +194,18 @@ def test_known_catalog_providers_can_list(home):
     intentionally shows its curated defaults until we wire and verify one."""
     from tini.loop.models import PROVIDERS
 
-    CAN_LIST = {"anthropic", "openai", "openrouter", "gemini", "deepseek", "minimax",
-                "kimi", "xai", "opencode_zen", "opencode_go"}
+    CAN_LIST = {
+        "anthropic",
+        "openai",
+        "openrouter",
+        "gemini",
+        "deepseek",
+        "minimax",
+        "kimi",
+        "xai",
+        "opencode_zen",
+        "opencode_go",
+    }
     for name in CAN_LIST:
         prov = PROVIDERS[name]
         can_list = bool(prov.catalog_url) or (prov.kind == "openai" and bool(prov.base_url))

@@ -57,9 +57,10 @@ rebuilds it on a provider switch), so **import the module, not the name**:
 
 ```python
 from tini.ops import browser_agent
-browser_agent.current()          # sees a later swap
+
+browser_agent.current()  # sees a later swap
 ```
 
 ```python
-from tini.ops.browser_agent import _agent   # frozen at None forever
+from tini.ops.browser_agent import _agent  # frozen at None forever
 ```

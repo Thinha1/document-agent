@@ -6,12 +6,19 @@ import hashlib
 import mimetypes
 from dataclasses import dataclass, field
 from html.parser import HTMLParser
+from io import BytesIO
 from pathlib import Path
 from typing import Any
 
-
 PLAIN_TEXT_SUFFIXES = {
-    ".txt", ".md", ".markdown", ".rst", ".csv", ".json", ".yaml", ".yml",
+    ".txt",
+    ".md",
+    ".markdown",
+    ".rst",
+    ".csv",
+    ".json",
+    ".yaml",
+    ".yml",
 }
 SUPPORTED_SUFFIXES = PLAIN_TEXT_SUFFIXES | {".html", ".htm", ".pdf", ".docx"}
 
@@ -88,9 +95,14 @@ def discover_documents(path: Path, recursive: bool = True) -> list[Path]:
     return sorted(files, key=lambda item: str(item).lower())
 
 
-def load_document(path: Path, max_file_bytes: int) -> LoadedDocument:
+def load_document(
+    path: Path, max_file_bytes: int, max_text_chars: int = 5_000_000
+) -> LoadedDocument:
+    path = path.expanduser()
+    if path.is_symlink():
+        raise DocumentLoadError(f"symbolic links are not ingested: {path}")
     path = path.resolve()
-    if path.is_symlink() or not path.is_file():
+    if not path.is_file():
         raise DocumentLoadError(f"source is not a regular file: {path}")
     suffix = path.suffix.lower()
     if suffix not in SUPPORTED_SUFFIXES:
@@ -101,7 +113,13 @@ def load_document(path: Path, max_file_bytes: int) -> LoadedDocument:
             f"document is {size} bytes; limit is {max_file_bytes} bytes: {path.name}"
         )
 
-    raw = path.read_bytes()
+    with path.open("rb") as source_file:
+        raw = source_file.read(max_file_bytes + 1)
+    if len(raw) > max_file_bytes:
+        raise DocumentLoadError(
+            f"document exceeds the {max_file_bytes} byte limit while reading: {path.name}"
+        )
+    size = len(raw)
     content_hash = hashlib.sha256(raw).hexdigest()
     metadata: dict[str, Any] = {"extension": suffix}
     title = path.stem
@@ -113,16 +131,20 @@ def load_document(path: Path, max_file_bytes: int) -> LoadedDocument:
         parser.feed(_decode_utf8(raw, path))
         text = parser.text()
     elif suffix == ".pdf":
-        text, pdf_meta = _load_pdf(path)
+        text, pdf_meta = _load_pdf(raw, path)
         metadata.update(pdf_meta)
     else:
-        text, docx_meta = _load_docx(path)
+        text, docx_meta = _load_docx(raw, path)
         title = docx_meta.pop("title", "") or title
         metadata.update(docx_meta)
 
     text = _normalise_text(text)
     if not text:
         raise DocumentLoadError(f"document contains no extractable text: {path.name}")
+    if len(text) > max_text_chars:
+        raise DocumentLoadError(
+            f"extracted text is {len(text)} characters; limit is {max_text_chars}: {path.name}"
+        )
     media_type = mimetypes.guess_type(path.name)[0] or "application/octet-stream"
     return LoadedDocument(
         path=path,
@@ -149,15 +171,15 @@ def _normalise_text(text: str) -> str:
     return "\n".join(lines).strip()
 
 
-def _load_pdf(path: Path) -> tuple[str, dict[str, Any]]:
+def _load_pdf(raw: bytes, path: Path) -> tuple[str, dict[str, Any]]:
     try:
         from pypdf import PdfReader
     except ImportError as exc:
         raise DocumentLoadError(
-            "PDF ingestion requires the documents extra: pip install -e '.[documents]'"
+            "PDF ingestion requires pypdf; reinstall tini-agent to restore core dependencies"
         ) from exc
     try:
-        reader = PdfReader(path)
+        reader = PdfReader(BytesIO(raw))
         if reader.is_encrypted:
             raise DocumentLoadError(f"encrypted PDF is not supported: {path.name}")
         pages = [page.extract_text() or "" for page in reader.pages]
@@ -168,15 +190,15 @@ def _load_pdf(path: Path) -> tuple[str, dict[str, Any]]:
     return "\n\n".join(pages), {"page_count": len(pages)}
 
 
-def _load_docx(path: Path) -> tuple[str, dict[str, Any]]:
+def _load_docx(raw: bytes, path: Path) -> tuple[str, dict[str, Any]]:
     try:
         from docx import Document
     except ImportError as exc:
         raise DocumentLoadError(
-            "DOCX ingestion requires the documents extra: pip install -e '.[documents]'"
+            "DOCX ingestion requires python-docx; reinstall tini-agent to restore core dependencies"
         ) from exc
     try:
-        document = Document(path)
+        document = Document(BytesIO(raw))
         parts = [paragraph.text for paragraph in document.paragraphs if paragraph.text.strip()]
         for table in document.tables:
             for row in table.rows:

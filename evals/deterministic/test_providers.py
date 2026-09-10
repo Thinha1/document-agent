@@ -50,8 +50,9 @@ def test_missing_key_exits_with_the_key_name(name, monkeypatch):
 
 
 def test_unknown_provider_names_the_choices():
-    settings = Settings(provider="not-a-provider", model="", small_model="",
-                        api_key="", base_url=None)
+    settings = Settings(
+        provider="not-a-provider", model="", small_model="", api_key="", base_url=None
+    )
     with pytest.raises(SystemExit, match="openrouter"):
         get_client(settings)
 
@@ -63,10 +64,16 @@ def test_dashboard_pricing_covers_every_provider(name):
     assert name in PRICING
 
 
-@pytest.mark.parametrize("name", [n for n, p in PROVIDERS.items()
-                                  if p.catalog_url is None
-                                  and not p.requires_model
-                                  and (p.kind == "anthropic" or not p.base_url)])
+@pytest.mark.parametrize(
+    "name",
+    [
+        n
+        for n, p in PROVIDERS.items()
+        if p.catalog_url is None
+        and not p.requires_model
+        and (p.kind == "anthropic" or not p.base_url)
+    ],
+)
 def test_model_listing_falls_back_without_a_catalog(name, monkeypatch):
     """Providers with no listable catalog still give the picker their defaults
     (and never make a network call to get them)."""
@@ -117,9 +124,11 @@ def test_catalog_url_is_used_with_both_auth_styles(monkeypatch):
     def fake_urlopen(req, timeout=10):
         captured["url"] = req.full_url
         captured["headers"] = {k.lower(): v for k, v in req.header_items()}
-        body = io.BytesIO(json.dumps(
-            {"data": [{"id": "kimi-k3"}, {"id": "kimi-k2.7"}, {"id": "kimi-k1.5"}]}
-        ).encode())
+        body = io.BytesIO(
+            json.dumps(
+                {"data": [{"id": "kimi-k3"}, {"id": "kimi-k2.7"}, {"id": "kimi-k1.5"}]}
+            ).encode()
+        )
         body.__enter__ = lambda *a: body
         body.__exit__ = lambda *a: None
         return body
@@ -159,7 +168,7 @@ def test_price_for_layers_model_over_provider():
     assert price_for("anthropic", "claude-opus-4-8") == (5.0, 25.0)
     fable_in, fable_out = price_for("anthropic", "claude-fable-5")
     opus_in, opus_out = price_for("anthropic", "claude-opus-4-8")
-    assert fable_in > opus_in and fable_out > opus_out   # fable is never cheaper
+    assert fable_in > opus_in and fable_out > opus_out  # fable is never cheaper
 
 
 def test_every_priced_model_has_a_knowledge_cutoff():
@@ -178,8 +187,9 @@ def test_every_priced_model_has_a_knowledge_cutoff():
 
     for model, cutoff in MODEL_CUTOFF.items():
         if cutoff is not None:
-            assert re.fullmatch(r"20\d\d-(0[1-9]|1[0-2])", cutoff), \
+            assert re.fullmatch(r"20\d\d-(0[1-9]|1[0-2])", cutoff), (
                 f"{model}: cutoff {cutoff!r} is not YYYY-MM"
+            )
 
     # The motivating case, plus the unknown-model path (no guessing).
     assert cutoff_for("gemini-3.1-pro-preview") == "2025-01"
@@ -193,6 +203,7 @@ def test_every_priced_model_has_a_knowledge_cutoff():
 # gate fails open on error BY DESIGN, so this did not surface as a failure — it
 # surfaced as "retrieve", on every turn, for every non-anthropic model in the
 # arena. These pin the rule that stops it.
+
 
 def test_env_model_names_do_not_leak_into_another_provider(monkeypatch):
     from tini.config import Settings

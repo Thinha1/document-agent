@@ -18,20 +18,24 @@ from tini.ops import catalog
 
 EXPECTED_ENDPOINTS = {
     "minimax": [
-        ("China", "https://api.minimaxi.com/anthropic",
-         "https://api.minimaxi.com/anthropic/v1/models"),
-        ("Global", "https://api.minimax.io/anthropic",
-         "https://api.minimax.io/anthropic/v1/models"),
+        (
+            "China",
+            "https://api.minimaxi.com/anthropic",
+            "https://api.minimaxi.com/anthropic/v1/models",
+        ),
+        (
+            "Global",
+            "https://api.minimax.io/anthropic",
+            "https://api.minimax.io/anthropic/v1/models",
+        ),
     ],
     "glm": [
         ("Global", "https://api.z.ai/api/anthropic", None),
         ("China", "https://open.bigmodel.cn/api/anthropic", None),
     ],
     "kimi": [
-        ("Global", "https://api.moonshot.ai/anthropic",
-         "https://api.moonshot.ai/v1/models"),
-        ("China", "https://api.moonshot.cn/anthropic",
-         "https://api.moonshot.cn/v1/models"),
+        ("Global", "https://api.moonshot.ai/anthropic", "https://api.moonshot.ai/v1/models"),
+        ("China", "https://api.moonshot.cn/anthropic", "https://api.moonshot.cn/v1/models"),
     ],
 }
 
@@ -70,10 +74,16 @@ def test_client_uses_provider_specific_base_url(
         SimpleNamespace(Anthropic=StubAnthropicClient),
     )
 
-    client = models.get_client(Settings(
-        provider=provider_name, api_key="", base_url=None, model="",
-        small_model="", home=tmp_path,
-    ))
+    client = models.get_client(
+        Settings(
+            provider=provider_name,
+            api_key="",
+            base_url=None,
+            model="",
+            small_model="",
+            home=tmp_path,
+        )
+    )
 
     assert isinstance(client, StubAnthropicClient)
     assert captured["base_url"] == selected_url
@@ -82,10 +92,18 @@ def test_client_uses_provider_specific_base_url(
 @pytest.mark.parametrize(
     ("provider_name", "base_url_env", "selected_url", "catalog_url"),
     [
-        ("minimax", "MINIMAX_BASE_URL", "https://api.minimax.io/anthropic",
-         "https://api.minimax.io/anthropic/v1/models"),
-        ("kimi", "MOONSHOT_BASE_URL", "https://api.moonshot.cn/anthropic",
-         "https://api.moonshot.cn/v1/models"),
+        (
+            "minimax",
+            "MINIMAX_BASE_URL",
+            "https://api.minimax.io/anthropic",
+            "https://api.minimax.io/anthropic/v1/models",
+        ),
+        (
+            "kimi",
+            "MOONSHOT_BASE_URL",
+            "https://api.moonshot.cn/anthropic",
+            "https://api.moonshot.cn/v1/models",
+        ),
     ],
 )
 def test_catalog_follows_selected_provider_region(
@@ -161,19 +179,22 @@ def test_openai_compatible_provider_uses_scoped_base_url(
     monkeypatch.delenv("TINI_BASE_URL", raising=False)
     monkeypatch.setattr(models, "OpenAICompatClient", StubOpenAICompatClient)
 
-    client = models.get_client(Settings(
-        provider=provider_name, api_key="", base_url=None,
-        model="compatible-model" if provider_name == "custom_openai" else "",
-        small_model="", home=tmp_path,
-    ))
+    client = models.get_client(
+        Settings(
+            provider=provider_name,
+            api_key="",
+            base_url=None,
+            model="compatible-model" if provider_name == "custom_openai" else "",
+            small_model="",
+            home=tmp_path,
+        )
+    )
 
     assert isinstance(client, StubOpenAICompatClient)
     assert captured["base_url"] == "https://compatible.example/v1"
 
 
-def test_custom_provider_uses_openai_wire_and_main_model_for_small_calls(
-    monkeypatch, tmp_path
-):
+def test_custom_provider_uses_openai_wire_and_main_model_for_small_calls(monkeypatch, tmp_path):
     captured = {}
 
     class StubOpenAICompatClient:
@@ -215,17 +236,29 @@ def test_custom_provider_requires_base_url_and_model(monkeypatch, tmp_path):
     monkeypatch.setenv("CUSTOM_OPENAI_API_KEY", "custom-key")
     monkeypatch.delenv("CUSTOM_OPENAI_BASE_URL", raising=False)
     with pytest.raises(SystemExit, match="CUSTOM_OPENAI_BASE_URL"):
-        models.get_client(Settings(
-            provider="custom_openai", api_key="", base_url=None, model="model-a",
-            small_model="", home=tmp_path,
-        ))
+        models.get_client(
+            Settings(
+                provider="custom_openai",
+                api_key="",
+                base_url=None,
+                model="model-a",
+                small_model="",
+                home=tmp_path,
+            )
+        )
 
     monkeypatch.setenv("CUSTOM_OPENAI_BASE_URL", "https://llm.example/v1")
     with pytest.raises(SystemExit, match="TINI_MODEL"):
-        models.get_client(Settings(
-            provider="custom_openai", api_key="", base_url=None, model="",
-            small_model="", home=tmp_path,
-        ))
+        models.get_client(
+            Settings(
+                provider="custom_openai",
+                api_key="",
+                base_url=None,
+                model="",
+                small_model="",
+                home=tmp_path,
+            )
+        )
 
 
 def test_provider_view_exposes_custom_base_url_input(monkeypatch):
@@ -274,12 +307,10 @@ def test_custom_provider_modal_submits_models_before_activation():
 
     assert 'const needsModels = current || provider === "custom_openai"' in source
     assert "if (needsModels)" in source
-    assert "payload.model = document.getElementById(\"pm-model\")?.value" in source
+    assert 'payload.model = document.getElementById("pm-model")?.value' in source
 
 
-def test_apply_custom_provider_persists_isolated_credentials_and_models(
-    monkeypatch, tmp_path
-):
+def test_apply_custom_provider_persists_isolated_credentials_and_models(monkeypatch, tmp_path):
     monkeypatch.chdir(tmp_path)
     (tmp_path / ".env").write_text("")
     monkeypatch.setenv("TINI_HOME", str(tmp_path / ".tini"))
@@ -323,9 +354,7 @@ def test_custom_openai_endpoint_owns_its_model_catalog(monkeypatch):
     assert provider.catalog_for(provider.configured_base_url()) is None
 
 
-def test_apply_provider_persists_scoped_base_url_and_clears_legacy_override(
-    monkeypatch, tmp_path
-):
+def test_apply_provider_persists_scoped_base_url_and_clears_legacy_override(monkeypatch, tmp_path):
     monkeypatch.chdir(tmp_path)
     (tmp_path / ".env").write_text("TINI_BASE_URL='https://legacy.example'\n")
     monkeypatch.setenv("TINI_HOME", str(tmp_path / ".tini"))
@@ -341,9 +370,7 @@ def test_apply_provider_persists_scoped_base_url_and_clears_legacy_override(
     tracer = SimpleNamespace(event=lambda *args: None)
     monkeypatch.setattr(browser_agent, "current", lambda: SimpleNamespace(tracer=tracer))
 
-    result = integrations.apply_provider(
-        "minimax", base_url="https://api.minimax.io/anthropic"
-    )
+    result = integrations.apply_provider("minimax", base_url="https://api.minimax.io/anthropic")
 
     assert result.ok
     assert os.environ["MINIMAX_BASE_URL"] == "https://api.minimax.io/anthropic"
@@ -362,10 +389,13 @@ def test_models_edit_modal_posts_selected_base_url():
     assert "payload.activate = false" in source
 
 
-@pytest.mark.parametrize(("current_provider", "expected_rebuilds"), [
-    ("kimi", 0),
-    ("minimax", 1),
-])
+@pytest.mark.parametrize(
+    ("current_provider", "expected_rebuilds"),
+    [
+        ("kimi", 0),
+        ("minimax", 1),
+    ],
+)
 def test_reusing_saved_provider_endpoint_skips_remote_probe_and_noop_rebuild(
     monkeypatch, tmp_path, current_provider, expected_rebuilds
 ):
@@ -388,9 +418,7 @@ def test_reusing_saved_provider_endpoint_skips_remote_probe_and_noop_rebuild(
     tracer = SimpleNamespace(event=lambda *args: None)
     monkeypatch.setattr(browser_agent, "current", lambda: SimpleNamespace(tracer=tracer))
 
-    result = integrations.apply_provider(
-        "kimi", base_url="https://api.moonshot.cn/anthropic"
-    )
+    result = integrations.apply_provider("kimi", base_url="https://api.moonshot.cn/anthropic")
 
     assert result.ok
     assert probes == []

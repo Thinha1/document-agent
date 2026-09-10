@@ -1,7 +1,7 @@
 """The storage seam for document ingestion and retrieval.
 
-An index owns the backend-specific work: SQLite uses FTS5 today; a pgvector
-adapter can embed and index the same chunks later. Callers only learn this
+An index owns backend-specific work: SQLite combines FTS5 with local cosine
+search today; a pgvector adapter can replace it later. Callers only learn this
 small interface and never handle backend query syntax or vector dimensions.
 """
 

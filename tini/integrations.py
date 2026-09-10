@@ -36,10 +36,10 @@ class IntegrationState(StrEnum):
     first visit, about integrations that were already working.
     """
 
-    NOT_CONFIGURED = "not_configured"                        # nothing filled in
+    NOT_CONFIGURED = "not_configured"  # nothing filled in
     INSTALLED_BUT_UNCONFIGURED = "installed_but_unconfigured"  # something REQUIRED is missing
-    CONFIGURED = "configured"                                # complete, never tested
-    CONNECTED = "connected"                                  # probed, and it worked
+    CONFIGURED = "configured"  # complete, never tested
+    CONNECTED = "connected"  # probed, and it worked
     ERROR = "error"
 
 
@@ -146,105 +146,282 @@ def _notion_normalize(values: dict[str, str]) -> dict[str, str]:
 
 
 INTEGRATIONS: tuple[Integration, ...] = (
-    Integration("telegram", "Channels", "Telegram", "Lets Tini receive and send Telegram messages.",
-                (EnvField("TELEGRAM_BOT_TOKEN", "Bot token", required=True, secret=True),
-                 EnvField("TELEGRAM_ALLOWED_USER", "Allowed user")), "telegram", "telegram",
-                "https://t.me/BotFather", ReloadMode.GATEWAY,
-                lambda env: bool(env.get("TELEGRAM_BOT_TOKEN")), None),
-    Integration("discord", "Channels", "Discord", "Lets Tini answer in a Discord server.",
-                (EnvField("DISCORD_BOT_TOKEN", "Bot token", required=True, secret=True),
-                 EnvField("DISCORD_ALLOWED_USER", "Allowed user"),
-                 EnvField("DISCORD_ALLOWED_CHANNEL", "Allowed channel"),
-                 EnvField("DISCORD_REQUIRE_MENTION", "Require mention", FieldKind.BOOL),
-                 EnvField("DISCORD_MAX_TURNS_PER_HOUR", "Max turns per hour"),
-                 EnvField("DISCORD_HOME", "Workspace directory")), "discord", "discord", "",
-                ReloadMode.GATEWAY, lambda env: bool(env.get("DISCORD_BOT_TOKEN")), None,
-                _positive_int),
-    Integration("whatsapp", "Channels", "WhatsApp", "Lets Tini answer WhatsApp messages via the Meta Cloud API.",
-                (EnvField("WHATSAPP_TOKEN", "Access token", required=True, secret=True),
-                 EnvField("WHATSAPP_PHONE_NUMBER_ID", "Phone number ID", required=True),
-                 EnvField("WHATSAPP_APP_SECRET", "App secret", required=True, secret=True),
-                 EnvField("WHATSAPP_VERIFY_TOKEN", "Webhook verify token", required=True, secret=True),
-                 EnvField("WHATSAPP_ALLOWED_PHONE", "Allowed phone",
-                          help="Without '+' prefix. Empty = answer anyone.")),
-                "whatsapp", "httpx", "https://developers.facebook.com/apps",
-                ReloadMode.GATEWAY, lambda env: bool(env.get("WHATSAPP_TOKEN")), None),
-    Integration("notion", "Memory & Storage", "Notion", "Stores episodic memory in a Notion database.",
-                (EnvField("TINI_EPISODIC_STORE", "Episodic store", FieldKind.CHOICE,
-                          default="sqlite", options=("sqlite", "notion")),
-                 EnvField("NOTION_TOKEN", "Integration token", required=True, secret=True),
-                 EnvField("NOTION_EPISODES_DATABASE_ID", "Episodes database ID", required=True)),
-                "notion", "notion_client", "https://www.notion.so/my-integrations", ReloadMode.AGENT,
-                lambda env: env.get("TINI_EPISODIC_STORE") == "notion", None, _notion_normalize),
-    Integration("mem0", "Memory & Storage", "Mem0", "Stores semantic memory in the Mem0 service.",
-                (EnvField("TINI_SEMANTIC_STORE", "Semantic store", FieldKind.CHOICE,
-                          default="sqlite", options=("sqlite", "mem0")),
-                 EnvField("MEM0_API_KEY", "API key", required=True, secret=True,
-                          help="From app.mem0.ai. The adapter sends infer=False so add() always "
-                               "stores — a bake-off against it measures retrieval, not Mem0's "
-                               "own extraction step."),
-                 EnvField("MEM0_USER_ID", "User id", help="Defaults to 'tini'. Change it only if "
-                                                          "several people share one Mem0 account.")),
-                "arena", "mem0", "", ReloadMode.AGENT,
-                lambda env: env.get("TINI_SEMANTIC_STORE") == "mem0", None),
-    Integration("zep", "Memory & Storage", "Zep", "Stores semantic memory in a Zep temporal graph.",
-                (EnvField("TINI_SEMANTIC_STORE", "Semantic store", FieldKind.CHOICE,
-                          default="sqlite", options=("sqlite", "zep")),
-                 EnvField("ZEP_API_KEY", "API key", required=True, secret=True,
-                          help="From getzep.com. Facts become graph edges with validity dates, so a "
-                               "correction supersedes the old value instead of ranking beside it — "
-                               "the one backend built for the update test."),
-                 EnvField("ZEP_USER_ID", "User id", help="Defaults to 'tini'. Zep scopes a graph per user."),
-                 EnvField("ZEP_MAX_WAIT_SECONDS", "Max wait (s)",
-                          help="Ingestion is asynchronous: graph.add returns in ~0.2s with the episode "
-                               "unprocessed, and the text is not searchable until Zep has turned it into "
-                               "nodes and edges. Tini polls until it has, up to this long. Default 120 — "
-                               "raise it if seeding times out, never lower it to make a benchmark finish.")),
-                "arena", "zep_cloud", "", ReloadMode.AGENT,
-                lambda env: env.get("TINI_SEMANTIC_STORE") == "zep", None),
-    Integration("langmem", "Memory & Storage", "LangMem",
-                "Stores semantic memory in a LangGraph store via LangMem.",
-                (EnvField("TINI_SEMANTIC_STORE", "Semantic store", FieldKind.CHOICE,
-                          default="sqlite", options=("sqlite", "langmem")),
-                 EnvField("TINI_LANGMEM_POSTGRES", "Postgres URL",
-                          help="Optional. Without it LangGraph's InMemoryStore is used, which its own "
-                               "docs describe as a reference implementation whose data dies with the "
-                               "process — fine for a benchmark run, not a persistence story."),
-                 EnvField("OPENAI_API_KEY", "OpenAI key", required=True, secret=True,
-                          help="LangMem has no key of its own; it bills through embeddings. Semantic "
-                               "search needs this or the store is a plain key-value dict.")),
-                "arena", "langmem", "", ReloadMode.AGENT,
-                lambda env: env.get("TINI_SEMANTIC_STORE") == "langmem", None),
-    Integration("supabase", "Memory & Storage", "Supabase", "Stores semantic memory in Supabase pgvector.",
-                (EnvField("TINI_SEMANTIC_STORE", "Semantic store", FieldKind.CHOICE,
-                          default="sqlite", options=("sqlite", "supabase")),
-                 EnvField("SUPABASE_URL", "Project URL", required=True),
-                 EnvField("SUPABASE_SERVICE_KEY", "Service key", required=True, secret=True,
-                          help="Embeddings also require OPENAI_API_KEY (optionally OPENAI_EMBED_MODEL).")),
-                "supabase", "supabase", "", ReloadMode.AGENT,
-                lambda env: env.get("TINI_SEMANTIC_STORE") == "supabase", None),
-    Integration("searxng", "Search & Observability", "SearXNG",
-                "Searches operator-controlled sources through a self-hosted SearXNG instance.",
-                (EnvField("SEARXNG_BASE_URL", "Base URL", required=True,
-                          placeholder="http://localhost:8080",
-                          help="Enable json in the instance's search.formats setting."),),
-                None, None, "https://docs.searxng.org/admin/installation-searxng.html",
-                ReloadMode.LIVE, lambda env: bool(env.get("SEARXNG_BASE_URL")), None),
-    Integration("otel", "Search & Observability", "OpenTelemetry", "Exports traces to an OTLP collector.",
-                (EnvField("OTEL_EXPORTER_OTLP_ENDPOINT", "OTLP endpoint"),), "tracing", "opentelemetry",
-                "", ReloadMode.AGENT, lambda env: bool(env.get("OTEL_EXPORTER_OTLP_ENDPOINT")), None),
+    Integration(
+        "telegram",
+        "Channels",
+        "Telegram",
+        "Lets Tini receive and send Telegram messages.",
+        (
+            EnvField("TELEGRAM_BOT_TOKEN", "Bot token", required=True, secret=True),
+            EnvField("TELEGRAM_ALLOWED_USER", "Allowed user"),
+        ),
+        "telegram",
+        "telegram",
+        "https://t.me/BotFather",
+        ReloadMode.GATEWAY,
+        lambda env: bool(env.get("TELEGRAM_BOT_TOKEN")),
+        None,
+    ),
+    Integration(
+        "discord",
+        "Channels",
+        "Discord",
+        "Lets Tini answer in a Discord server.",
+        (
+            EnvField("DISCORD_BOT_TOKEN", "Bot token", required=True, secret=True),
+            EnvField("DISCORD_ALLOWED_USER", "Allowed user"),
+            EnvField("DISCORD_ALLOWED_CHANNEL", "Allowed channel"),
+            EnvField("DISCORD_REQUIRE_MENTION", "Require mention", FieldKind.BOOL),
+            EnvField("DISCORD_MAX_TURNS_PER_HOUR", "Max turns per hour"),
+            EnvField("DISCORD_HOME", "Workspace directory"),
+        ),
+        "discord",
+        "discord",
+        "",
+        ReloadMode.GATEWAY,
+        lambda env: bool(env.get("DISCORD_BOT_TOKEN")),
+        None,
+        _positive_int,
+    ),
+    Integration(
+        "whatsapp",
+        "Channels",
+        "WhatsApp",
+        "Lets Tini answer WhatsApp messages via the Meta Cloud API.",
+        (
+            EnvField("WHATSAPP_TOKEN", "Access token", required=True, secret=True),
+            EnvField("WHATSAPP_PHONE_NUMBER_ID", "Phone number ID", required=True),
+            EnvField("WHATSAPP_APP_SECRET", "App secret", required=True, secret=True),
+            EnvField("WHATSAPP_VERIFY_TOKEN", "Webhook verify token", required=True, secret=True),
+            EnvField(
+                "WHATSAPP_ALLOWED_PHONE",
+                "Allowed phone",
+                help="Without '+' prefix. Empty = answer anyone.",
+            ),
+        ),
+        "whatsapp",
+        "httpx",
+        "https://developers.facebook.com/apps",
+        ReloadMode.GATEWAY,
+        lambda env: bool(env.get("WHATSAPP_TOKEN")),
+        None,
+    ),
+    Integration(
+        "notion",
+        "Memory & Storage",
+        "Notion",
+        "Stores episodic memory in a Notion database.",
+        (
+            EnvField(
+                "TINI_EPISODIC_STORE",
+                "Episodic store",
+                FieldKind.CHOICE,
+                default="sqlite",
+                options=("sqlite", "notion"),
+            ),
+            EnvField("NOTION_TOKEN", "Integration token", required=True, secret=True),
+            EnvField("NOTION_EPISODES_DATABASE_ID", "Episodes database ID", required=True),
+        ),
+        "notion",
+        "notion_client",
+        "https://www.notion.so/my-integrations",
+        ReloadMode.AGENT,
+        lambda env: env.get("TINI_EPISODIC_STORE") == "notion",
+        None,
+        _notion_normalize,
+    ),
+    Integration(
+        "mem0",
+        "Memory & Storage",
+        "Mem0",
+        "Stores semantic memory in the Mem0 service.",
+        (
+            EnvField(
+                "TINI_SEMANTIC_STORE",
+                "Semantic store",
+                FieldKind.CHOICE,
+                default="sqlite",
+                options=("sqlite", "mem0"),
+            ),
+            EnvField(
+                "MEM0_API_KEY",
+                "API key",
+                required=True,
+                secret=True,
+                help="From app.mem0.ai. The adapter sends infer=False so add() always "
+                "stores — a bake-off against it measures retrieval, not Mem0's "
+                "own extraction step.",
+            ),
+            EnvField(
+                "MEM0_USER_ID",
+                "User id",
+                help="Defaults to 'tini'. Change it only if several people share one Mem0 account.",
+            ),
+        ),
+        "arena",
+        "mem0",
+        "",
+        ReloadMode.AGENT,
+        lambda env: env.get("TINI_SEMANTIC_STORE") == "mem0",
+        None,
+    ),
+    Integration(
+        "zep",
+        "Memory & Storage",
+        "Zep",
+        "Stores semantic memory in a Zep temporal graph.",
+        (
+            EnvField(
+                "TINI_SEMANTIC_STORE",
+                "Semantic store",
+                FieldKind.CHOICE,
+                default="sqlite",
+                options=("sqlite", "zep"),
+            ),
+            EnvField(
+                "ZEP_API_KEY",
+                "API key",
+                required=True,
+                secret=True,
+                help="From getzep.com. Facts become graph edges with validity dates, so a "
+                "correction supersedes the old value instead of ranking beside it — "
+                "the one backend built for the update test.",
+            ),
+            EnvField(
+                "ZEP_USER_ID", "User id", help="Defaults to 'tini'. Zep scopes a graph per user."
+            ),
+            EnvField(
+                "ZEP_MAX_WAIT_SECONDS",
+                "Max wait (s)",
+                help="Ingestion is asynchronous: graph.add returns in ~0.2s with the episode "
+                "unprocessed, and the text is not searchable until Zep has turned it into "
+                "nodes and edges. Tini polls until it has, up to this long. Default 120 — "
+                "raise it if seeding times out, never lower it to make a benchmark finish.",
+            ),
+        ),
+        "arena",
+        "zep_cloud",
+        "",
+        ReloadMode.AGENT,
+        lambda env: env.get("TINI_SEMANTIC_STORE") == "zep",
+        None,
+    ),
+    Integration(
+        "langmem",
+        "Memory & Storage",
+        "LangMem",
+        "Stores semantic memory in a LangGraph store via LangMem.",
+        (
+            EnvField(
+                "TINI_SEMANTIC_STORE",
+                "Semantic store",
+                FieldKind.CHOICE,
+                default="sqlite",
+                options=("sqlite", "langmem"),
+            ),
+            EnvField(
+                "TINI_LANGMEM_POSTGRES",
+                "Postgres URL",
+                help="Optional. Without it LangGraph's InMemoryStore is used, which its own "
+                "docs describe as a reference implementation whose data dies with the "
+                "process — fine for a benchmark run, not a persistence story.",
+            ),
+            EnvField(
+                "OPENAI_API_KEY",
+                "OpenAI key",
+                required=True,
+                secret=True,
+                help="LangMem has no key of its own; it bills through embeddings. Semantic "
+                "search needs this or the store is a plain key-value dict.",
+            ),
+        ),
+        "arena",
+        "langmem",
+        "",
+        ReloadMode.AGENT,
+        lambda env: env.get("TINI_SEMANTIC_STORE") == "langmem",
+        None,
+    ),
+    Integration(
+        "supabase",
+        "Memory & Storage",
+        "Supabase",
+        "Stores semantic memory in Supabase pgvector.",
+        (
+            EnvField(
+                "TINI_SEMANTIC_STORE",
+                "Semantic store",
+                FieldKind.CHOICE,
+                default="sqlite",
+                options=("sqlite", "supabase"),
+            ),
+            EnvField("SUPABASE_URL", "Project URL", required=True),
+            EnvField(
+                "SUPABASE_SERVICE_KEY",
+                "Service key",
+                required=True,
+                secret=True,
+                help="Embeddings also require OPENAI_API_KEY (optionally OPENAI_EMBED_MODEL).",
+            ),
+        ),
+        "supabase",
+        "supabase",
+        "",
+        ReloadMode.AGENT,
+        lambda env: env.get("TINI_SEMANTIC_STORE") == "supabase",
+        None,
+    ),
+    Integration(
+        "searxng",
+        "Search & Observability",
+        "SearXNG",
+        "Searches operator-controlled sources through a self-hosted SearXNG instance.",
+        (
+            EnvField(
+                "SEARXNG_BASE_URL",
+                "Base URL",
+                required=True,
+                placeholder="http://localhost:8080",
+                help="Enable json in the instance's search.formats setting.",
+            ),
+        ),
+        None,
+        None,
+        "https://docs.searxng.org/admin/installation-searxng.html",
+        ReloadMode.LIVE,
+        lambda env: bool(env.get("SEARXNG_BASE_URL")),
+        None,
+    ),
+    Integration(
+        "otel",
+        "Search & Observability",
+        "OpenTelemetry",
+        "Exports traces to an OTLP collector.",
+        (EnvField("OTEL_EXPORTER_OTLP_ENDPOINT", "OTLP endpoint"),),
+        "tracing",
+        "opentelemetry",
+        "",
+        ReloadMode.AGENT,
+        lambda env: bool(env.get("OTEL_EXPORTER_OTLP_ENDPOINT")),
+        None,
+    ),
 )
 
 
 def _integration_from_provider(name: str, provider: Provider) -> Integration:
-    fields = (EnvField(
-        provider.key_env,
-        "API Key",
-        required=name == "custom_openai",
-        secret=True,
-        help=("Use a non-empty placeholder if the local server ignores authentication."
-              if name == "custom_openai" else ""),
-    ),)
+    fields = (
+        EnvField(
+            provider.key_env,
+            "API Key",
+            required=name == "custom_openai",
+            secret=True,
+            help=(
+                "Use a non-empty placeholder if the local server ignores authentication."
+                if name == "custom_openai"
+                else ""
+            ),
+        ),
+    )
     if provider.base_url_env:
         if provider.endpoints:
             base_url_field = EnvField(
@@ -262,32 +439,49 @@ def _integration_from_provider(name: str, provider: Provider) -> Integration:
                 required=provider.requires_base_url,
                 default=provider.base_url or "",
                 placeholder="https://provider.example/v1",
-                help=("Required OpenAI-compatible endpoint; include /v1 when the server "
-                      "expects it." if provider.requires_base_url else
-                      "Optional provider-specific endpoint override."),
+                help=(
+                    "Required OpenAI-compatible endpoint; include /v1 when the server expects it."
+                    if provider.requires_base_url
+                    else "Optional provider-specific endpoint override."
+                ),
             )
         fields += (base_url_field,)
     if provider.model_prefix_env:
-        fields += (EnvField(
-            provider.model_prefix_env,
-            "Upstream provider",
-            placeholder="openai",
-            help=("Optional gateway route prefix. For Bifrost, use the provider name "
-                  "configured in Bifrost; leave blank for a direct endpoint."),
-        ),)
+        fields += (
+            EnvField(
+                provider.model_prefix_env,
+                "Upstream provider",
+                placeholder="openai",
+                help=(
+                    "Optional gateway route prefix. For Bifrost, use the provider name "
+                    "configured in Bifrost; leave blank for a direct endpoint."
+                ),
+            ),
+        )
     display_name = {
         "openai": "OpenAI",
         "custom_openai": "Custom OpenAI-Compatible",
     }.get(name, name.replace("_", " ").title())
-    description = ("Uses any OpenAI-compatible Chat Completions endpoint."
-                   if name == "custom_openai" else f"Uses {display_name} models.")
-    return Integration(name, "AI Providers", display_name, description,
-                       fields, None, None, "",
-                       ReloadMode.AGENT,
-                       lambda env, p=provider: bool(env.get(p.key_env)) and (
-                           not p.requires_base_url or bool(env.get(p.base_url_env))
-                       ),
-                       _provider_probe)
+    description = (
+        "Uses any OpenAI-compatible Chat Completions endpoint."
+        if name == "custom_openai"
+        else f"Uses {display_name} models."
+    )
+    return Integration(
+        name,
+        "AI Providers",
+        display_name,
+        description,
+        fields,
+        None,
+        None,
+        "",
+        ReloadMode.AGENT,
+        lambda env, p=provider: (
+            bool(env.get(p.key_env)) and (not p.requires_base_url or bool(env.get(p.base_url_env)))
+        ),
+        _provider_probe,
+    )
 
 
 def provider_integrations() -> tuple[Integration, ...]:
@@ -335,8 +529,9 @@ def _health() -> dict[str, IntegrationStatus]:
     try:
         raw = json.loads(_health_path().read_text(encoding="utf-8"))
         for key, value in raw.items():
-            _HEALTH[key] = IntegrationStatus(IntegrationState(value["state"]), value.get("message", ""),
-                                             value.get("checked_at"))
+            _HEALTH[key] = IntegrationStatus(
+                IntegrationState(value["state"]), value.get("message", ""), value.get("checked_at")
+            )
     except (OSError, ValueError, TypeError, KeyError, json.JSONDecodeError):
         pass
     return _HEALTH
@@ -347,7 +542,9 @@ def _save_health() -> None:
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
         temp = path.with_suffix(".tmp")
-        temp.write_text(json.dumps({key: asdict(value) for key, value in _health().items()}), encoding="utf-8")
+        temp.write_text(
+            json.dumps({key: asdict(value) for key, value in _health().items()}), encoding="utf-8"
+        )
         temp.replace(path)
     except OSError:
         pass
@@ -383,15 +580,27 @@ def _configured(field: EnvField, value: str) -> bool:
 def _status(integration: Integration, env: Mapping[str, str]) -> IntegrationStatus:
     values = [env.get(field.name, "") for field in integration.env]
     enabled = integration.enabled(env)
-    any_configured = any(_configured(field, value) for field, value in zip(integration.env, values, strict=True))
+    any_configured = any(
+        _configured(field, value) for field, value in zip(integration.env, values, strict=True)
+    )
     if not enabled and not any_configured:
-        message = "macOS only" if integration.key.startswith("apple_") and sys.platform != "darwin" else ""
+        message = (
+            "macOS only"
+            if integration.key.startswith("apple_") and sys.platform != "darwin"
+            else ""
+        )
         return IntegrationStatus(IntegrationState.NOT_CONFIGURED, message)
-    missing = [field.name for field in integration.env if field.required and not env.get(field.name)]
+    missing = [
+        field.name for field in integration.env if field.required and not env.get(field.name)
+    ]
     if missing:
-        return IntegrationStatus(IntegrationState.INSTALLED_BUT_UNCONFIGURED, f"missing {', '.join(missing)}")
+        return IntegrationStatus(
+            IntegrationState.INSTALLED_BUT_UNCONFIGURED, f"missing {', '.join(missing)}"
+        )
     if integration.import_name and not _extra_installed(integration.import_name):
-        return IntegrationStatus(IntegrationState.INSTALLED_BUT_UNCONFIGURED, f"missing {integration.extra} extra")
+        return IntegrationStatus(
+            IntegrationState.INSTALLED_BUT_UNCONFIGURED, f"missing {integration.extra} extra"
+        )
     if integration.reload is ReloadMode.GATEWAY and _gateway_status_provider:
         status = _gateway_status_provider(integration.key)
         if status is not None:
@@ -399,8 +608,10 @@ def _status(integration: Integration, env: Mapping[str, str]) -> IntegrationStat
     # Everything required is present and the extra is installed. Whether it
     # actually WORKS is a separate question, answered only by a probe — so the
     # honest answer when no probe has run is "configured", not "needs setup".
-    return _health().get(integration.key, IntegrationStatus(IntegrationState.CONFIGURED,
-                                                            "configured — not tested yet"))
+    return _health().get(
+        integration.key,
+        IntegrationStatus(IntegrationState.CONFIGURED, "configured — not tested yet"),
+    )
 
 
 def list_integrations() -> tuple[IntegrationView, ...]:
@@ -408,17 +619,33 @@ def list_integrations() -> tuple[IntegrationView, ...]:
     views = []
     for integration in registry():
         fields = tuple(
-            FieldView(field.name, field.label, field.kind, field.required, field.secret,
-                      _configured(field, env.get(field.name, "")),
-                      env.get(field.name, "")[-4:] if field.secret else "",
-                      field.options, "" if field.secret else env.get(field.name, field.default), field.help,
-                      field.option_labels)
+            FieldView(
+                field.name,
+                field.label,
+                field.kind,
+                field.required,
+                field.secret,
+                _configured(field, env.get(field.name, "")),
+                env.get(field.name, "")[-4:] if field.secret else "",
+                field.options,
+                "" if field.secret else env.get(field.name, field.default),
+                field.help,
+                field.option_labels,
+            )
             for field in integration.env
         )
-        views.append(IntegrationView(integration.key, integration.group, integration.name, integration.what,
-                                     _status(integration, env), fields,
-                                     f"pip install -e '.[{integration.extra}]'" if integration.extra else "",
-                                     integration.setup_url))
+        views.append(
+            IntegrationView(
+                integration.key,
+                integration.group,
+                integration.name,
+                integration.what,
+                _status(integration, env),
+                fields,
+                f"pip install -e '.[{integration.extra}]'" if integration.extra else "",
+                integration.setup_url,
+            )
+        )
     return tuple(views)
 
 
@@ -478,7 +705,9 @@ def cli_main() -> int:
         detail = status.message if status.state is not IntegrationState.NOT_CONFIGURED else ""
         checked = f" (checked {status.checked_at})" if status.checked_at else ""
         console.print(f"  {view.name:<20} {label}{' · ' + detail if detail else ''}{checked}")
-        if status.state is IntegrationState.ERROR and any(field.configured for field in view.fields):
+        if status.state is IntegrationState.ERROR and any(
+            field.configured for field in view.fields
+        ):
             failed = True
     return int(failed)
 
@@ -521,8 +750,15 @@ def _otel_probe(values: Mapping[str, str]) -> None:
         port = parsed.port
     except ValueError as exc:
         raise ValueError("OTLP endpoint must be a valid host:port") from exc
-    if (not parsed.hostname or port is None or parsed.path not in ("", "/")
-            or parsed.query or parsed.fragment or parsed.username or parsed.password):
+    if (
+        not parsed.hostname
+        or port is None
+        or parsed.path not in ("", "/")
+        or parsed.query
+        or parsed.fragment
+        or parsed.username
+        or parsed.password
+    ):
         raise ValueError("OTLP endpoint must be host:port (for example localhost:4317)")
     connection = socket.create_connection((parsed.hostname, port), timeout=3)
     connection.close()
@@ -584,7 +820,9 @@ def _restore(path: Path, contents: str | None, environment: Mapping[str, str | N
             os.environ[name] = value
 
 
-def apply_integration(key: str, values: Mapping[str, str], clear: tuple[str, ...] = (), *, force: bool = False) -> ApplyResult:
+def apply_integration(
+    key: str, values: Mapping[str, str], clear: tuple[str, ...] = (), *, force: bool = False
+) -> ApplyResult:
     integration = _find_integration(key)
     if integration is None:
         return ApplyResult(False, error="unknown integration")
@@ -616,7 +854,11 @@ def apply_integration(key: str, values: Mapping[str, str], clear: tuple[str, ...
             merged = integration.normalize(dict(merged))
             updates = {name: merged[name] for name in updates}
         enabled = integration.enabled(merged)
-        missing = [field.name for field in integration.env if field.required and enabled and not merged.get(field.name)]
+        missing = [
+            field.name
+            for field in integration.env
+            if field.required and enabled and not merged.get(field.name)
+        ]
         if missing:
             return ApplyResult(False, error=f"missing {', '.join(missing)}")
         if enabled and integration.import_name and not _extra_installed(integration.import_name):
@@ -648,12 +890,16 @@ def apply_integration(key: str, values: Mapping[str, str], clear: tuple[str, ...
             if status:
                 record_health(key, status)
         if force:
-            record_health(key, IntegrationStatus(IntegrationState.ERROR, "Saved without a successful test"))
+            record_health(
+                key, IntegrationStatus(IntegrationState.ERROR, "Saved without a successful test")
+            )
         elif tested or integration.reload is ReloadMode.GATEWAY:
             record_health(key, IntegrationStatus(IntegrationState.CONNECTED))
     except Exception as exc:
         _restore(path, contents, before)
-        record_health(key, IntegrationStatus(IntegrationState.ERROR, _safe_error(exc, merged, integration)))
+        record_health(
+            key, IntegrationStatus(IntegrationState.ERROR, _safe_error(exc, merged, integration))
+        )
         if integration.reload is ReloadMode.GATEWAY and _gateway_reloader:
             _gateway_reloader({key})
         return ApplyResult(False, error=_safe_error(exc, merged, integration))
@@ -674,24 +920,42 @@ def test_integration(key: str) -> IntegrationView:
         # disabled integration must never keep claiming it is connected.
         state = (
             view.status.state
-            if view.status.state in (IntegrationState.NOT_CONFIGURED,
-                                     IntegrationState.INSTALLED_BUT_UNCONFIGURED)
+            if view.status.state
+            in (IntegrationState.NOT_CONFIGURED, IntegrationState.INSTALLED_BUT_UNCONFIGURED)
             else IntegrationState.CONFIGURED
         )
         status = IntegrationStatus(state, "integration is disabled", view.status.checked_at)
-        return IntegrationView(view.key, view.group, view.name, view.what, status, view.fields,
-                               view.install_command, view.setup_url)
+        return IntegrationView(
+            view.key,
+            view.group,
+            view.name,
+            view.what,
+            status,
+            view.fields,
+            view.install_command,
+            view.setup_url,
+        )
     effective = _probed(integration)
     if effective.probe is None:
         view = _current_view(key)
         assert view is not None
         status = IntegrationStatus(view.status.state, "no test available", view.status.checked_at)
-        return IntegrationView(view.key, view.group, view.name, view.what, status, view.fields,
-                               view.install_command, view.setup_url)
+        return IntegrationView(
+            view.key,
+            view.group,
+            view.name,
+            view.what,
+            status,
+            view.fields,
+            view.install_command,
+            view.setup_url,
+        )
     try:
         effective.probe(values)
     except Exception as exc:
-        record_health(key, IntegrationStatus(IntegrationState.ERROR, _safe_error(exc, values, integration)))
+        record_health(
+            key, IntegrationStatus(IntegrationState.ERROR, _safe_error(exc, values, integration))
+        )
     else:
         record_health(key, IntegrationStatus(IntegrationState.CONNECTED))
     view = _current_view(key)
@@ -699,11 +963,18 @@ def test_integration(key: str) -> IntegrationView:
     return view
 
 
-def apply_provider(provider: str, *, key: str | None = None, model: str | None = None,
-                   small_model: str | None = None, base_url: str | None = None,
-                   upstream_provider: str | None = None,
-                   custom_key: str | None = None, force: bool = False,
-                   activate: bool = True) -> ApplyResult:
+def apply_provider(
+    provider: str,
+    *,
+    key: str | None = None,
+    model: str | None = None,
+    small_model: str | None = None,
+    base_url: str | None = None,
+    upstream_provider: str | None = None,
+    custom_key: str | None = None,
+    force: bool = False,
+    activate: bool = True,
+) -> ApplyResult:
     """Save provider fields and optionally make that provider active."""
     if provider not in PROVIDERS:
         return ApplyResult(False, error="unknown provider")
@@ -718,9 +989,15 @@ def apply_provider(provider: str, *, key: str | None = None, model: str | None =
         if not candidate_url:
             return ApplyResult(False, error=f"{selected.base_url_env} is required")
     if activate and selected.requires_model:
-        candidate_model = (model if model is not None else
-                           (catalog.default_model_for(provider) if switching else
-                            os.environ.get("TINI_MODEL", "")))
+        candidate_model = (
+            model
+            if model is not None
+            else (
+                catalog.default_model_for(provider)
+                if switching
+                else os.environ.get("TINI_MODEL", "")
+            )
+        )
         if not candidate_model.strip():
             return ApplyResult(False, error="TINI_MODEL is required for custom_openai")
     updates: dict[str, str] = {"TINI_PROVIDER": provider} if activate else {}
@@ -760,22 +1037,20 @@ def apply_provider(provider: str, *, key: str | None = None, model: str | None =
     current_base_url = selected.configured_base_url(legacy_base_url) or ""
     candidate_base_url = (
         updates.get(selected.base_url_env, current_base_url)
-        if selected.base_url_env else updates.get("TINI_BASE_URL", current_base_url)
+        if selected.base_url_env
+        else updates.get("TINI_BASE_URL", current_base_url)
     )
     key_changed = bool(key and key != current_key)
-    base_url_changed = (
-        base_url is not None
-        and candidate_base_url.rstrip("/") != current_base_url.rstrip("/")
-    )
+    base_url_changed = base_url is not None and candidate_base_url.rstrip(
+        "/"
+    ) != current_base_url.rstrip("/")
     prefix_changed = bool(
         selected.model_prefix_env
         and upstream_provider is not None
-        and updates[selected.model_prefix_env]
-        != os.environ.get(selected.model_prefix_env, "")
+        and updates[selected.model_prefix_env] != os.environ.get(selected.model_prefix_env, "")
     )
     changed_updates = {
-        name: value for name, value in updates.items()
-        if (os.environ.get(name) or "") != value
+        name: value for name, value in updates.items() if (os.environ.get(name) or "") != value
     }
     path = _env_path()
     contents = path.read_text(encoding="utf-8") if path.exists() else None
@@ -817,15 +1092,23 @@ def apply_provider(provider: str, *, key: str | None = None, model: str | None =
                 raise RuntimeError(error)
             current_agent = browser_agent.current()
             if current_agent is not None:
-                current_agent.tracer.event("config", {"from": {"provider": previous},
-                                                       "to": {"provider": provider}})
-        status = (IntegrationStatus(IntegrationState.ERROR, "Saved without a successful test")
-                  if force else IntegrationStatus(IntegrationState.CONNECTED))
+                current_agent.tracer.event(
+                    "config", {"from": {"provider": previous}, "to": {"provider": provider}}
+                )
+        status = (
+            IntegrationStatus(IntegrationState.ERROR, "Saved without a successful test")
+            if force
+            else IntegrationStatus(IntegrationState.CONNECTED)
+        )
         record_health(provider, status)
     except Exception as exc:
         _restore(path, contents, before)
-        result = _safe_error(exc, changed_updates, _find_integration(provider) or provider_integrations()[0])
-        return ApplyResult(False, error=result, can_force=bool(key or os.environ.get(selected.key_env)))
+        result = _safe_error(
+            exc, changed_updates, _find_integration(provider) or provider_integrations()[0]
+        )
+        return ApplyResult(
+            False, error=result, can_force=bool(key or os.environ.get(selected.key_env))
+        )
     return ApplyResult(True, _current_view(provider))
 
 
@@ -838,8 +1121,12 @@ def apply_provider_disabled(provider: str, *, disabled: bool) -> ApplyResult:
     if provider not in PROVIDERS:
         return ApplyResult(False, error="unknown provider")
     if disabled and os.environ.get("TINI_PROVIDER", "") == provider:
-        return ApplyResult(False, error="cannot disable the current provider — switch to another provider first")
-    current = {p.strip() for p in os.environ.get("TINI_DISABLED_PROVIDERS", "").split(",") if p.strip()}
+        return ApplyResult(
+            False, error="cannot disable the current provider — switch to another provider first"
+        )
+    current = {
+        p.strip() for p in os.environ.get("TINI_DISABLED_PROVIDERS", "").split(",") if p.strip()
+    }
     updated = (current | {provider}) if disabled else (current - {provider})
     _write_updates({"TINI_DISABLED_PROVIDERS": ",".join(sorted(updated))}, ())
     return ApplyResult(True, _current_view(provider))

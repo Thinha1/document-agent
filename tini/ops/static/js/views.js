@@ -26,6 +26,8 @@ const DB_DESC = {
   facts: "semantic memory — durable facts (Memory ▸ Semantic)",
   episodes: "episodic memory — dated summaries (Memory ▸ Episodic)",
   chat_log: "every message, tagged by session_id — consolidation reads from here",
+  documents: "indexed source metadata, content hashes, and workspace isolation",
+  document_chunks: "retrieval-sized text chunks referenced by search_documents",
 };
 const QUERY_EXAMPLES = [
   "SELECT role, content FROM chat_log ORDER BY id DESC LIMIT 10",
@@ -519,6 +521,9 @@ const VIEWS = {
     if (sub==="soul") return h + memSoul(d);
     if (sub==="consolidation") return h + memConsolidation(d);
     return h + memOverview(d);
+  },
+  documents(d){
+    return documentsView(d);
   },
   settings(d){
     const st = d.settings || {providers:[]};

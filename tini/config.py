@@ -41,6 +41,16 @@ def _load_env() -> str:
 DOTENV_PATH = _load_env()
 
 
+def _embedding_api_key() -> str:
+    """Resolve a dedicated embedding key before a provider-key fallback."""
+    configured = os.getenv("TINI_EMBEDDING_API_KEY", "").strip()
+    if configured:
+        return configured
+    provider = os.getenv("TINI_EMBEDDING_PROVIDER", "none").strip().lower()
+    fallback = {"gemini": "GEMINI_API_KEY", "openai": "OPENAI_API_KEY"}.get(provider)
+    return os.getenv(fallback, "").strip() if fallback else ""
+
+
 @dataclass
 class Settings:
     # --- LLM: pick a provider, set its key. See tini/loop/models.py PROVIDERS.
@@ -52,11 +62,31 @@ class Settings:
     model: str = field(default_factory=lambda: os.getenv("TINI_MODEL", ""))
     # Cheap model used by the retrieval gate and the consolidation summarizer.
     small_model: str = field(default_factory=lambda: os.getenv("TINI_SMALL_MODEL", ""))
+    # Embeddings are a separate concern from generation: the chat model may be
+    # DeepSeek/custom OpenAI-compatible while retrieval uses Gemini or another
+    # OpenAI-compatible embedding endpoint. These settings are independent of
+    # the chat provider and drive document indexing plus vector retrieval.
+    embedding_provider: str = field(
+        default_factory=lambda: os.getenv("TINI_EMBEDDING_PROVIDER", "none").strip().lower()
+    )
+    embedding_model: str = field(
+        default_factory=lambda: os.getenv("TINI_EMBEDDING_MODEL", "").strip()
+    )
+    embedding_api_key: str = field(default_factory=_embedding_api_key)
+    embedding_base_url: str | None = field(
+        default_factory=lambda: os.getenv("TINI_EMBEDDING_BASE_URL", "").strip() or None
+    )
+    embedding_dimensions: int = field(
+        default_factory=lambda: int(os.getenv("TINI_EMBEDDING_DIMENSIONS", "768"))
+    )
     # Providers the user turned off in the dashboard (comma-separated ids).
     # Disabled providers are hidden from pickers/switchers; the ACTIVE provider
     # can't be disabled (guarded in integrations.apply_provider_disabled).
-    disabled_providers: frozenset[str] = field(default_factory=lambda: frozenset(
-        p.strip() for p in os.getenv("TINI_DISABLED_PROVIDERS", "").split(",") if p.strip()))
+    disabled_providers: frozenset[str] = field(
+        default_factory=lambda: frozenset(
+            p.strip() for p in os.getenv("TINI_DISABLED_PROVIDERS", "").split(",") if p.strip()
+        )
+    )
 
     # --- Home: where Tini keeps its state (memory DB, config, traces).
     # Defaults to ./.tini next to where you run it, so you can open every file
@@ -80,8 +110,12 @@ class Settings:
 
     # --- Memory
     # Consolidate (distill chats into durable facts) only after N new exchanges.
-    consolidate_every: int = field(default_factory=lambda: int(os.getenv("TINI_CONSOLIDATE_EVERY", "6")))
-    retrieval_top_k: int = field(default_factory=lambda: int(os.getenv("TINI_RETRIEVAL_TOP_K", "4")))
+    consolidate_every: int = field(
+        default_factory=lambda: int(os.getenv("TINI_CONSOLIDATE_EVERY", "6"))
+    )
+    retrieval_top_k: int = field(
+        default_factory=lambda: int(os.getenv("TINI_RETRIEVAL_TOP_K", "4"))
+    )
     # 'sqlite' (default, zero setup) or 'supabase' (pgvector upgrade path — see launch-rag).
     semantic_store: str = field(default_factory=lambda: os.getenv("TINI_SEMANTIC_STORE", "sqlite"))
     # 'sqlite' (default, zero setup) or 'notion' (episodes live in a Notion database).
@@ -89,16 +123,22 @@ class Settings:
     # Internal-document ingestion. The index is SQLite/FTS5 locally; its
     # interface allows a pgvector adapter without changing callers.
     document_workspace: str = field(
-        default_factory=lambda: os.getenv("TINI_DOCUMENT_WORKSPACE", "default")
+        default_factory=lambda: os.getenv("TINI_DOCUMENT_WORKSPACE", "").strip() or "default"
     )
-    document_chunk_size: int = field(
-        default_factory=lambda: int(os.getenv("TINI_DOCUMENT_CHUNK_SIZE", "1200"))
+    document_chunk_max_tokens: int = field(
+        default_factory=lambda: int(os.getenv("TINI_DOCUMENT_CHUNK_MAX_TOKENS", "512"))
     )
-    document_chunk_overlap: int = field(
-        default_factory=lambda: int(os.getenv("TINI_DOCUMENT_CHUNK_OVERLAP", "150"))
+    document_chunk_min_tokens: int = field(
+        default_factory=lambda: int(os.getenv("TINI_DOCUMENT_CHUNK_MIN_TOKENS", "120"))
+    )
+    document_chunk_overlap_tokens: int = field(
+        default_factory=lambda: int(os.getenv("TINI_DOCUMENT_CHUNK_OVERLAP_TOKENS", "48"))
     )
     document_max_file_bytes: int = field(
         default_factory=lambda: int(os.getenv("TINI_DOCUMENT_MAX_FILE_BYTES", "26214400"))
+    )
+    document_max_text_chars: int = field(
+        default_factory=lambda: int(os.getenv("TINI_DOCUMENT_MAX_TEXT_CHARS", "5000000"))
     )
 
     # --- Orchestration
@@ -118,9 +158,7 @@ class Settings:
     )
 
     # --- Tracing (JSONL always; OTel exports if an endpoint is set)
-    otel_endpoint: str = field(
-        default_factory=lambda: os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "")
-    )
+    otel_endpoint: str = field(default_factory=lambda: os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", ""))
 
     def ensure_home(self) -> Path:
         self.home.mkdir(parents=True, exist_ok=True)

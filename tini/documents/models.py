@@ -5,7 +5,6 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Literal
 
-
 DEFAULT_WORKSPACE = "default"
 IngestAction = Literal["created", "updated", "skipped", "failed"]
 
@@ -28,6 +27,9 @@ class DocumentChunk:
     char_start: int
     char_end: int
     metadata: dict[str, Any] = field(default_factory=dict)
+    embedding: tuple[float, ...] | None = field(default=None, repr=False)
+    embedding_provider: str | None = None
+    embedding_model: str | None = None
 
 
 @dataclass(frozen=True)

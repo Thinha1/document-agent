@@ -18,7 +18,8 @@ const TITLES = {chat:"Chat & watch", ops:"LLM Ops",
                 "compare/models":"Model race — ten brains, one harness",
                 "compare/memory":"Memory race — one brain, five places to put facts",
                 settings:"Behaviour — how a turn runs",
-                database:"Database — everything Tini stores (state.db)"};
+                database:"Database — everything Tini stores (state.db)",
+                documents:"Knowledge Base — ingest, inspect, retrieve"};
 function render(){
   if (!D) return;
   const [v, subRaw] = (location.hash||"#overview").slice(1).split("/");
@@ -36,7 +37,7 @@ function render(){
   if (view === "overview" || view === "graph"){
     // don't rebuild mid-animation or the glowing SVG gets wiped
     if (activeView !== view || !animating){ document.getElementById("view").innerHTML = VIEWS[view](D); }
-  } else if ((view === "memory" || view === "settings" || view === "database" || view === "compare" || view === "models" || view === "connections") && editing && !subChanged){
+  } else if ((view === "memory" || view === "settings" || view === "database" || view === "compare" || view === "models" || view === "connections" || view === "documents") && editing && !subChanged){
     // don't wipe an in-progress edit on the 5s refresh — but DO switch sub-tabs
   } else {
     editing = false;
@@ -56,6 +57,7 @@ function render(){
   document.getElementById("n-graph").textContent =
     (D.graph && (D.graph.stats.quick + D.graph.stats.full)) || "";
   document.getElementById("n-mem").textContent = D.facts.length + D.episodes.length;
+  document.getElementById("n-docs").textContent = (D.documents?.items || []).length;
   document.getElementById("n-tools").textContent = (D.tools?.catalog || []).length;
   document.getElementById("n-db").textContent = (D.db && D.db.all_tables.length) || "";
   document.getElementById("n-ops").textContent = D.stats.tool_errors || (D.eval_report ? "" : "!");
@@ -131,6 +133,32 @@ function wireChrome(){
   setNav(localStorage.getItem("navHidden") === "1");
 }
 
+function effectiveTheme(){
+  return document.documentElement.dataset.theme ||
+    (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+}
+function syncThemeButton(){
+  const dark = effectiveTheme() === "dark";
+  const icon = document.getElementById("theme-icon"), label = document.getElementById("theme-label");
+  if (icon) icon.textContent = dark ? "☾" : "☀";
+  if (label) label.textContent = dark ? "Dark" : "Light";
+  const button = document.getElementById("theme-toggle");
+  if (button) button.title = `Switch to ${dark ? "light" : "dark"} theme`;
+}
+function toggleTheme(){
+  const next = effectiveTheme() === "dark" ? "light" : "dark";
+  document.documentElement.dataset.theme = next;
+  localStorage.setItem("tini-theme", next);
+  syncThemeButton();
+}
+function wireTheme(){
+  syncThemeButton();
+  const media = window.matchMedia("(prefers-color-scheme: dark)");
+  if (media.addEventListener) media.addEventListener("change", () => {
+      if (!document.documentElement.dataset.theme) syncThemeButton();
+    });
+}
+
 // --- voice on the dashboard: record in the browser, transcribe on the server
 // with the SAME local Whisper `make voice` uses. Text lands in the input for
 // you to review, then Send — nothing leaves the machine.
@@ -198,6 +226,6 @@ function wireMic(){ const b = document.getElementById("mic"); if (b) b.onclick =
 
 window.addEventListener("hashchange", render);
 window.__hold = (v)=>{ animating = v; };   // test hook: freeze the diagram
-wireDock(); wireChrome(); wireMic();
+wireDock(); wireChrome(); wireMic(); wireTheme();
 refresh(); setInterval(refresh, 5000); setInterval(tickLive, 1000);
 pollEvents(); setInterval(pollEvents, 450);   // live harness animation

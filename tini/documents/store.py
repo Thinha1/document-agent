@@ -4,10 +4,13 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import sqlite3
+import struct
 import uuid
 from collections.abc import Sequence
 
+from tini.documents.embeddings import EmbeddingProvider
 from tini.documents.models import (
     DEFAULT_WORKSPACE,
     DocumentChunk,
@@ -20,31 +23,52 @@ from tini.memory.semantic.store import _fts_query
 
 
 class SqliteDocumentIndex:
-    def __init__(self, conn: sqlite3.Connection):
+    def __init__(self, conn: sqlite3.Connection, embedder: EmbeddingProvider | None = None):
         self.conn = conn
+        self.embedder = embedder
 
     def upsert_document(
         self, source: DocumentSource, chunks: Sequence[DocumentChunk]
     ) -> IngestReport:
+        metadata = json.dumps(source.metadata, ensure_ascii=False, sort_keys=True)
         existing = self.conn.execute(
-            "SELECT id, content_hash FROM documents WHERE workspace_id=? AND source_uri=?",
+            """SELECT id, content_hash, metadata, status FROM documents
+               WHERE workspace_id=? AND source_uri=?""",
             (source.workspace_id, source.source_uri),
         ).fetchone()
-        if existing and existing["content_hash"] == source.content_hash:
+        if (
+            existing
+            and existing["content_hash"] == source.content_hash
+            and existing["metadata"] == metadata
+            and existing["status"] == "ready"
+        ):
             count = self.conn.execute(
                 "SELECT COUNT(*) FROM document_chunks WHERE document_id=?", (existing["id"],)
             ).fetchone()[0]
-            return IngestReport(
-                source_uri=source.source_uri,
-                title=source.title,
-                action="skipped",
-                chunk_count=count,
-                document_id=existing["id"],
-            )
+            needs_vectors = bool(chunks and chunks[0].embedding is not None)
+            vector_count = 0
+            if needs_vectors:
+                vector_count = self.conn.execute(
+                    """SELECT COUNT(*) FROM document_chunk_embeddings e
+                       JOIN document_chunks c ON c.id=e.chunk_id
+                       WHERE c.document_id=? AND e.provider=? AND e.model=?""",
+                    (
+                        existing["id"],
+                        chunks[0].embedding_provider,
+                        chunks[0].embedding_model,
+                    ),
+                ).fetchone()[0]
+            if count and (not needs_vectors or vector_count == count):
+                return IngestReport(
+                    source_uri=source.source_uri,
+                    title=source.title,
+                    action="skipped",
+                    chunk_count=count,
+                    document_id=existing["id"],
+                )
 
         document_id = existing["id"] if existing else uuid.uuid4().hex
         action = "updated" if existing else "created"
-        metadata = json.dumps(source.metadata, ensure_ascii=False, sort_keys=True)
         with self.conn:
             if existing:
                 self.conn.execute(
@@ -79,25 +103,46 @@ class SqliteDocumentIndex:
                         metadata,
                     ),
                 )
+            chunk_rows = [
+                (
+                    _chunk_id(document_id, source.content_hash, chunk.ordinal),
+                    document_id,
+                    source.workspace_id,
+                    chunk.ordinal,
+                    source.title,
+                    chunk.text,
+                    chunk.char_start,
+                    chunk.char_end,
+                    json.dumps(chunk.metadata, ensure_ascii=False, sort_keys=True),
+                )
+                for chunk in chunks
+            ]
             self.conn.executemany(
                 """INSERT INTO document_chunks
                    (id, document_id, workspace_id, ordinal, title, text,
                     char_start, char_end, metadata)
                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-                [
+                chunk_rows,
+            )
+            embedding_rows = []
+            for row, chunk in zip(chunk_rows, chunks, strict=True):
+                if chunk.embedding is None:
+                    continue
+                embedding_rows.append(
                     (
-                        _chunk_id(document_id, source.content_hash, chunk.ordinal),
-                        document_id,
+                        row[0],
                         source.workspace_id,
-                        chunk.ordinal,
-                        source.title,
-                        chunk.text,
-                        chunk.char_start,
-                        chunk.char_end,
-                        json.dumps(chunk.metadata, ensure_ascii=False, sort_keys=True),
+                        chunk.embedding_provider,
+                        chunk.embedding_model,
+                        len(chunk.embedding),
+                        _pack_vector(chunk.embedding),
                     )
-                    for chunk in chunks
-                ],
+                )
+            self.conn.executemany(
+                """INSERT INTO document_chunk_embeddings
+                   (chunk_id, workspace_id, provider, model, dimensions, vector)
+                   VALUES (?, ?, ?, ?, ?, ?)""",
+                embedding_rows,
             )
             self.conn.execute(
                 "UPDATE documents SET status='ready', updated_at=datetime('now') WHERE id=?",
@@ -114,10 +159,17 @@ class SqliteDocumentIndex:
     def search(
         self, query: str, top_k: int = 6, workspace_id: str = DEFAULT_WORKSPACE
     ) -> list[SearchHit]:
+        limit = max(1, min(int(top_k), 50))
+        lexical = self._lexical_search(query, limit * 4, workspace_id)
+        vector = self._vector_search(query, workspace_id) if self.embedder is not None else []
+        if not vector:
+            return lexical[:limit]
+        return _reciprocal_rank_fusion(lexical, vector, limit)
+
+    def _lexical_search(self, query: str, limit: int, workspace_id: str) -> list[SearchHit]:
         fts = _fts_query(query)
         if not fts:
             return []
-        limit = max(1, min(int(top_k), 50))
         rows = self.conn.execute(
             """SELECT c.id AS chunk_id, c.document_id, c.title, d.source_uri,
                       c.text, c.ordinal, bm25(document_chunks_fts) AS rank
@@ -141,6 +193,47 @@ class SqliteDocumentIndex:
             )
             for row in rows
         ]
+
+    def _vector_search(self, query: str, workspace_id: str) -> list[SearchHit]:
+        if self.embedder is None or not query.strip():
+            return []
+        try:
+            query_vector = self.embedder.embed_query(query)
+        except Exception:
+            # Retrieval remains available through FTS if a remote provider is down.
+            return []
+        rows = self.conn.execute(
+            """SELECT c.id AS chunk_id, c.document_id, c.title, d.source_uri,
+                      c.text, c.ordinal, e.vector
+               FROM document_chunk_embeddings e
+               JOIN document_chunks c ON c.id=e.chunk_id
+               JOIN documents d ON d.id=c.document_id
+               WHERE e.workspace_id=? AND e.provider=? AND e.model=?
+                 AND e.dimensions=? AND d.status='ready'""",
+            (
+                workspace_id,
+                self.embedder.provider,
+                self.embedder.model,
+                self.embedder.dimensions,
+            ),
+        ).fetchall()
+        scored = [
+            (
+                _cosine_similarity(query_vector, _unpack_vector(row["vector"])),
+                SearchHit(
+                    document_id=row["document_id"],
+                    chunk_id=row["chunk_id"],
+                    title=row["title"],
+                    source_uri=row["source_uri"],
+                    text=row["text"],
+                    ordinal=row["ordinal"],
+                    score=0.0,
+                ),
+            )
+            for row in rows
+        ]
+        scored.sort(key=lambda item: item[0], reverse=True)
+        return [SearchHit(**{**hit.__dict__, "score": score}) for score, hit in scored[:200]]
 
     def list_documents(
         self, workspace_id: str = DEFAULT_WORKSPACE, limit: int = 200
@@ -186,3 +279,35 @@ class SqliteDocumentIndex:
 def _chunk_id(document_id: str, content_hash: str, ordinal: int) -> str:
     value = f"{document_id}:{content_hash}:{ordinal}".encode()
     return hashlib.sha256(value).hexdigest()[:32]
+
+
+def _pack_vector(vector: Sequence[float]) -> bytes:
+    return struct.pack(f"<{len(vector)}f", *vector)
+
+
+def _unpack_vector(value: bytes) -> tuple[float, ...]:
+    return struct.unpack(f"<{len(value) // 4}f", value)
+
+
+def _cosine_similarity(left: Sequence[float], right: Sequence[float]) -> float:
+    if len(left) != len(right):
+        return -1.0
+    dot = sum(a * b for a, b in zip(left, right, strict=True))
+    left_norm = math.sqrt(sum(value * value for value in left))
+    right_norm = math.sqrt(sum(value * value for value in right))
+    if left_norm == 0 or right_norm == 0:
+        return -1.0
+    return dot / (left_norm * right_norm)
+
+
+def _reciprocal_rank_fusion(
+    lexical: Sequence[SearchHit], vector: Sequence[SearchHit], limit: int
+) -> list[SearchHit]:
+    hits: dict[str, SearchHit] = {}
+    scores: dict[str, float] = {}
+    for ranking in (lexical, vector):
+        for rank, hit in enumerate(ranking, start=1):
+            hits[hit.chunk_id] = hit
+            scores[hit.chunk_id] = scores.get(hit.chunk_id, 0.0) + 1.0 / (60 + rank)
+    ordered = sorted(scores, key=scores.__getitem__, reverse=True)[:limit]
+    return [SearchHit(**{**hits[key].__dict__, "score": scores[key]}) for key in ordered]
