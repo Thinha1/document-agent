@@ -62,6 +62,13 @@ def settings_info() -> dict:
         "small_model": s.small_model or (prov.small_model if prov else ""),
         "base_url": (prov.configured_base_url(s.base_url) if prov else s.base_url) or "",
         "custom_key_set": bool(s.api_key),
+        "embedding": {
+            "provider": s.embedding_provider,
+            "model": s.embedding_model,
+            "base_url": s.embedding_base_url or "",
+            "dimensions": s.embedding_dimensions,
+            "api_key_set": bool(s.embedding_api_key),
+        },
         # Ids of providers the user disabled in the Models grid; the frontend
         # derives each card's status (unconfigured / configured / enabled) and
         # hides disabled providers from the chat switcher.

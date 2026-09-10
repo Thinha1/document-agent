@@ -26,12 +26,16 @@ def test_searxng_uses_json_search_endpoint(monkeypatch):
 
     def urlopen(request, timeout):
         captured.update(url=request.full_url, headers=dict(request.header_items()), timeout=timeout)
-        payload = {"results": [{
-            "title": "Internal runbook",
-            "content": "Restart the worker safely.",
-            "url": "https://docs.internal/runbook",
-            "engine": "internal-wiki",
-        }]}
+        payload = {
+            "results": [
+                {
+                    "title": "Internal runbook",
+                    "content": "Restart the worker safely.",
+                    "url": "https://docs.internal/runbook",
+                    "engine": "internal-wiki",
+                }
+            ]
+        }
         return Response(json.dumps(payload).encode())
 
     monkeypatch.setattr(urllib.request, "urlopen", urlopen)

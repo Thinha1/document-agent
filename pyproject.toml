@@ -18,6 +18,8 @@ classifiers = [
 dependencies = [
     "anthropic>=0.40",   # anthropic wire format: Anthropic, Kimi, GLM, MiniMax
     "openai>=1.50",      # openai wire format: OpenAI, Gemini, DeepSeek (and embeddings)
+    "pypdf>=5.0",        # PDF ingestion in the dashboard and CLI
+    "python-docx>=1.1",  # DOCX ingestion in the dashboard and CLI
     "python-dotenv>=1.0",
     "rich>=13.0",
 ]
@@ -77,11 +79,10 @@ voice-neural = [
 supabase = [
     "supabase>=2.0",
 ]
-# Plain text, Markdown, HTML, CSV, JSON and YAML need no extra.
-documents = [
-    "pypdf>=5.0",
-    "python-docx>=1.1",
-]
+# Compatibility alias: document parsers are now core because ingestion is a
+# first-class dashboard feature. Existing `pip install '.[documents]'` commands
+# remain valid.
+documents = []
 # The Memory arena: hosted memory backends raced against tini's own FTS5 store.
 # Never installed by default — the core is stdlib + anthropic/openai, and these
 # only exist so `make arena` can benchmark them.

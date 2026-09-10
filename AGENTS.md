@@ -4,7 +4,8 @@
 
 `tini/` is the installable Python package. Its main areas are gateways (`gateway/`), the
 model/tool cycle (`loop/`), workflows (`graph/`), capabilities (`tools/`), memory backends
-(`memory/`), and observability (`ops/`). Static dashboard files are under `tini/ops/static/`
+(`memory/`), document ingestion (`documents/`), and observability (`ops/`). Static dashboard
+files are under `tini/ops/static/`
 and require no frontend build. Tests live in `evals/deterministic/` and `evals/judge/`.
 Contributor skills go in `skills/community/<skill-name>/SKILL.md`; supporting material lives
 in `examples/`, `scripts/`, `docs/`, and `sql/`. Runtime data under `.tini/` is gitignored.

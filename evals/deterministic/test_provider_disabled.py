@@ -35,6 +35,7 @@ def test_toggle_persists_and_roundtrips(monkeypatch, tmp_path):
     # of asserting the exact format.
     assert "TINI_DISABLED_PROVIDERS" in (tmp_path / ".env").read_text()
     from dotenv import dotenv_values
+
     assert dotenv_values(tmp_path / ".env")["TINI_DISABLED_PROVIDERS"] == "openai"
     assert integrations.apply_provider_disabled("openai", disabled=False).ok
     assert os.environ["TINI_DISABLED_PROVIDERS"] == ""

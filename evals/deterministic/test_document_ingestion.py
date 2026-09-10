@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import importlib.util
 from itertools import pairwise
 from pathlib import Path
 
 import pytest
 
+from evals.helpers import ScriptedClient, make_tini, response, text_block, tool_block
 from tini.config import Settings
 from tini.db import connect
 from tini.documents.base import DocumentIndex
@@ -24,12 +26,17 @@ def index(tmp_path):
 
 @pytest.fixture
 def pipeline(index):
-    return IngestionPipeline(index, chunk_size=90, chunk_overlap=15)
+    return IngestionPipeline(index, chunk_max_tokens=20, chunk_min_tokens=5, chunk_overlap_tokens=4)
 
 
 def _write(path: Path, text: str) -> Path:
     path.write_text(text, encoding="utf-8")
     return path
+
+
+def test_default_install_includes_dashboard_document_parsers():
+    assert importlib.util.find_spec("pypdf") is not None
+    assert importlib.util.find_spec("docx") is not None
 
 
 def test_sqlite_adapter_satisfies_the_document_index_interface(index):
@@ -66,6 +73,20 @@ def test_changed_source_replaces_old_chunks_atomically(tmp_path, index, pipeline
     assert updated.document_id == created.document_id
     assert index.search("zephyr") == []
     assert "green command" in index.search("orion")[0].text
+
+
+def test_changing_chunk_strategy_reindexes_unchanged_source(tmp_path, index):
+    source = _write(tmp_path / "policy.md", "A sentence about policy. " * 20)
+    first = IngestionPipeline(
+        index, chunk_max_tokens=20, chunk_min_tokens=5, chunk_overlap_tokens=4
+    ).ingest_path(source)[0]
+
+    second = IngestionPipeline(
+        index, chunk_max_tokens=40, chunk_min_tokens=5, chunk_overlap_tokens=4
+    ).ingest_path(source)[0]
+
+    assert first.action == "created"
+    assert second.action == "updated"
 
 
 def test_workspace_filter_is_applied_inside_retrieval(tmp_path, index, pipeline):
@@ -110,6 +131,17 @@ def test_oversized_file_fails_without_creating_a_document(tmp_path, index):
     assert index.list_documents() == []
 
 
+def test_extracted_text_limit_fails_before_indexing(tmp_path, index):
+    source = _write(tmp_path / "expanded.html", "<p>too much extracted text</p>")
+    pipeline = IngestionPipeline(index, max_text_chars=5)
+
+    report = pipeline.ingest_path(source)[0]
+
+    assert report.action == "failed"
+    assert "characters; limit is 5" in report.error
+    assert index.list_documents() == []
+
+
 def test_explicit_unsupported_file_is_rejected(tmp_path):
     source = _write(tmp_path / "archive.exe", "not a document")
     with pytest.raises(DocumentLoadError, match="unsupported document type"):
@@ -128,17 +160,80 @@ def test_document_tool_returns_evidence_with_a_source(tmp_path, index, pipeline)
     assert set(registry._tools) == {"search_web", "search_documents"}
 
 
-def test_chunking_has_bounded_overlap_and_stable_ordinals():
-    text = "Alpha paragraph has useful context. " * 20
-    chunks = chunk_text(text, chunk_size=100, overlap=20)
+def test_document_result_returns_through_the_agent_loop(tmp_path):
+    gate = response([text_block('{"retrieve": false, "query": "", "reason": "test"}')])
+    turn = [
+        response([tool_block("search_documents", {"query": "rotation policy"})], "tool_use"),
+        response([text_block("Credentials rotate every ninety days [handbook#chunk-0].")]),
+    ]
+    app = make_tini(tmp_path / "home", client=ScriptedClient([gate] + turn))
+    source = _write(tmp_path / "handbook.md", "The rotation policy is every ninety days.")
+    IngestionPipeline(app.documents).ingest_path(source)
+
+    result = app.respond("What is the rotation policy?")
+
+    assert [call["tool"] for call in result.tool_calls] == ["search_documents"]
+    assert "ninety days" in result.tool_calls[0]["output"]
+    assert "handbook#chunk-0" in result.reply
+
+
+def test_pipeline_emits_each_observable_stage(tmp_path, index):
+    source = _write(tmp_path / "flow.md", "A short document that should be indexed.")
+    stages = []
+
+    IngestionPipeline(index).ingest_path(source, observer=lambda stage, event: stages.append(stage))
+
+    assert stages == ["discovered", "loading", "chunking", "embedding", "indexing", "created"]
+
+
+def test_chunking_respects_semantic_boundaries_and_stable_ordinals():
+    text = "# Alpha\n\n" + "First sentence has useful context. " * 8 + "\n\n# Beta\n\nNew topic."
+    chunks = chunk_text(text, max_tokens=30, min_tokens=5, overlap_tokens=7)
 
     assert len(chunks) > 1
     assert [chunk.ordinal for chunk in chunks] == list(range(len(chunks)))
-    assert all(len(chunk.text) <= 100 for chunk in chunks)
-    assert all(left.char_end > right.char_start for left, right in pairwise(chunks))
+    assert all(chunk.metadata["estimated_tokens"] <= 30 for chunk in chunks)
+    assert any(left.char_end > right.char_start for left, right in pairwise(chunks))
+    assert any(chunk.text.startswith("# Beta") for chunk in chunks)
 
 
-@pytest.mark.parametrize("chunk_size,overlap", [(0, 0), (10, -1), (10, 10)])
-def test_invalid_chunk_settings_fail_loudly(chunk_size, overlap):
+@pytest.mark.parametrize(
+    "max_tokens,min_tokens,overlap_tokens",
+    [(0, 0, 0), (10, 11, 0), (10, 0, -1), (10, 0, 10)],
+)
+def test_invalid_chunk_settings_fail_loudly(max_tokens, min_tokens, overlap_tokens):
     with pytest.raises(ValueError):
-        chunk_text("text", chunk_size=chunk_size, overlap=overlap)
+        chunk_text(
+            "text",
+            max_tokens=max_tokens,
+            min_tokens=min_tokens,
+            overlap_tokens=overlap_tokens,
+        )
+
+
+class _FakeEmbedder:
+    provider = "fake"
+    model = "semantic-v1"
+    dimensions = 3
+
+    def embed_documents(self, texts, *, title):
+        return [(1.0, 0.0, 0.0) if "compensation" in text else (0.0, 1.0, 0.0) for text in texts]
+
+    def embed_query(self, text):
+        return (1.0, 0.0, 0.0) if "salary" in text else (0.0, 1.0, 0.0)
+
+
+def test_embeddings_are_persisted_and_find_semantic_matches(tmp_path):
+    embedder = _FakeEmbedder()
+    index = SqliteDocumentIndex(connect(tmp_path), embedder)
+    source = _write(tmp_path / "benefits.md", "Employee compensation is reviewed each year.")
+
+    report = IngestionPipeline(index, embedder=embedder).ingest_path(source)[0]
+    hits = index.search("salary")
+    vector_count = index.conn.execute("SELECT COUNT(*) FROM document_chunk_embeddings").fetchone()[
+        0
+    ]
+
+    assert report.action == "created"
+    assert vector_count == report.chunk_count
+    assert hits and hits[0].title == "benefits"

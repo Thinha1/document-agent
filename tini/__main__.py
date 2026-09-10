@@ -1,15 +1,15 @@
 """Entrypoints — installed as the `tini` command (and `python -m tini`):
 
-  tini                       chat in the terminal (default)
-  tini dashboard             the browser cockpit → localhost:9000 (+ Telegram if configured)
-  tini ingest <path>         index a document or directory for local RAG
-  tini documents             list or search indexed documents
-  tini connections           list configured integrations and their health
-  tini voice                 talk to it (needs the [voice] extra)
-  tini telegram              phone → laptop (needs TELEGRAM_BOT_TOKEN)
-  tini discord               Discord → laptop (needs DISCORD_BOT_TOKEN)
-  tini whatsapp              WhatsApp → laptop (needs WHATSAPP_TOKEN, public URL)
-  tini skill install <url>   install a community skill
+tini                       chat in the terminal (default)
+tini dashboard             the browser cockpit → localhost:9000 (+ Telegram if configured)
+tini ingest <path>         index a document or directory for local RAG
+tini documents             list or search indexed documents
+tini connections           list configured integrations and their health
+tini voice                 talk to it (needs the [voice] extra)
+tini telegram              phone → laptop (needs TELEGRAM_BOT_TOKEN)
+tini discord               Discord → laptop (needs DISCORD_BOT_TOKEN)
+tini whatsapp              WhatsApp → laptop (needs WHATSAPP_TOKEN, public URL)
+tini skill install <url>   install a community skill
 """
 
 from __future__ import annotations

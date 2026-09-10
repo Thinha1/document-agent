@@ -34,10 +34,14 @@ def test_search_web_result_returns_to_the_loop(tmp_path, monkeypatch):
     monkeypatch.setenv("SEARXNG_BASE_URL", "http://searxng:8080")
     monkeypatch.setattr(
         "tini.tools.search._searxng",
-        lambda query, base_url, max_results: [{
-            "title": "Worker runbook", "content": "Restart safely",
-            "url": "https://docs.internal/worker", "engine": "wiki",
-        }],
+        lambda query, base_url, max_results: [
+            {
+                "title": "Worker runbook",
+                "content": "Restart safely",
+                "url": "https://docs.internal/worker",
+                "engine": "wiki",
+            }
+        ],
     )
     gate = response([text_block('{"retrieve": false, "query": "", "reason": "test"}')])
     turn = [
@@ -88,8 +92,10 @@ def test_iteration_guardrail_stops_runaway_loop(tmp_path):
 # ---------- live tier: the actual model eval over the dataset
 
 
-@pytest.mark.skipif(not (HAS_KEY and RUN_LIVE_EVALS),
-                    reason="set TINI_RUN_LIVE_EVALS=1 and configure an API key to run live evals")
+@pytest.mark.skipif(
+    not (HAS_KEY and RUN_LIVE_EVALS),
+    reason="set TINI_RUN_LIVE_EVALS=1 and configure an API key to run live evals",
+)
 @pytest.mark.parametrize("case", DATASET, ids=[c["id"] for c in DATASET])
 def test_dataset_case(case, tmp_path):
     app = make_tini(tmp_path / "home")

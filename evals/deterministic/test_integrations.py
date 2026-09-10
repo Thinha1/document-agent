@@ -81,9 +81,7 @@ def test_apply_rejects_unknown_and_can_clear_searxng(monkeypatch, tmp_path):
     (tmp_path / ".env").write_text("SEARXNG_BASE_URL=http://localhost:8080\n")
     monkeypatch.setenv("SEARXNG_BASE_URL", "http://localhost:8080")
     assert not integrations.apply_integration("searxng", {"NOPE": "x"}).ok
-    result = integrations.apply_integration(
-        "searxng", {}, ("SEARXNG_BASE_URL",), force=True
-    )
+    result = integrations.apply_integration("searxng", {}, ("SEARXNG_BASE_URL",), force=True)
     assert result.ok
     assert "SEARXNG_BASE_URL" not in os.environ
     assert "SEARXNG_BASE_URL" not in (tmp_path / ".env").read_text()

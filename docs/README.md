@@ -12,6 +12,7 @@ Use this page to choose the smallest reference that answers the current question
 | [memory-backends-playbook.md](memory-backends-playbook.md) | seeing your memories in each provider's own console |
 | [benchmarks.md](benchmarks.md) | what has been measured, and how |
 | [integrations.md](integrations.md) | providers, SearXNG, MCP, memory, traces, and gateways |
+| [document-ingestion.md](document-ingestion.md) | local parsing, chunking, indexing, and retrieval flow |
 
 ## Write-ups — one topic, explained
 

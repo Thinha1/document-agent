@@ -75,9 +75,7 @@ def make_tool() -> Tool:
         for index, result in enumerate(results, 1):
             engine = f" [{result['engine']}]" if result["engine"] else ""
             lines.append(
-                f"{index}. {result['title']}{engine}\n"
-                f"   {result['content']}\n"
-                f"   {result['url']}"
+                f"{index}. {result['title']}{engine}\n   {result['content']}\n   {result['url']}"
             )
         return "\n".join(lines)
 

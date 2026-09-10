@@ -99,6 +99,17 @@ CREATE INDEX IF NOT EXISTS document_chunks_document_idx
     ON document_chunks(document_id, ordinal);
 CREATE INDEX IF NOT EXISTS document_chunks_workspace_idx
     ON document_chunks(workspace_id);
+CREATE TABLE IF NOT EXISTS document_chunk_embeddings (
+    chunk_id TEXT PRIMARY KEY REFERENCES document_chunks(id) ON DELETE CASCADE,
+    workspace_id TEXT NOT NULL DEFAULT 'default',
+    provider TEXT NOT NULL,
+    model TEXT NOT NULL,
+    dimensions INTEGER NOT NULL,
+    vector BLOB NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS document_embeddings_lookup_idx
+    ON document_chunk_embeddings(workspace_id, provider, model, dimensions);
 CREATE VIRTUAL TABLE IF NOT EXISTS document_chunks_fts USING fts5(
     title, text, content=document_chunks, content_rowid=rowid
 );

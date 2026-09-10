@@ -40,7 +40,7 @@ from tini.integrations import (
     list_providers,
     test_integration,
 )
-from tini.ops import browser_agent, commands, compare_history
+from tini.ops import browser_agent, commands, compare_history, document_api
 from tini.ops.arena import (
     compare_clear,
     compare_delete_run,
@@ -114,22 +114,38 @@ def chat_stream(message: str, emit) -> None:
     route = next((e for e in events if e["kind"] == "route"), None)
     triage = next((e for e in events if e["kind"] == "triage"), None)
     quick = bool(route) and route.get("target") == "quick_reply"
-    emit("done", {
-        "reply": result.reply,
-        "gate": {"decision": gate["decision"], "reason": gate.get("reason")} if gate else None,
-        "graph": ({"workflow": route.get("workflow", "triage"),
-                   "route": "quick" if quick else "full",
-                   "reason": (triage or {}).get("reason", "")} if route else None),
-        "tools": [{"tool": c["tool"], "args": c["args"], "output": c["output"],
-                   "status": _tool_status(c["output"]),
-                   "summary": (c["output"] or "").split(". ")[0][:120]} for c in result.tool_calls],
-        "consolidation": {"new_facts": cons["new_facts"]} if cons else None,
-        "iterations": result.iterations,
-        "usage": result.usage,
-        "latency_ms": latency_ms,
-        # which brain answered — shown per card; a quick graph turn was the small model
-        "model": agent.settings.small_model if quick else agent.settings.model,
-    })
+    emit(
+        "done",
+        {
+            "reply": result.reply,
+            "gate": {"decision": gate["decision"], "reason": gate.get("reason")} if gate else None,
+            "graph": (
+                {
+                    "workflow": route.get("workflow", "triage"),
+                    "route": "quick" if quick else "full",
+                    "reason": (triage or {}).get("reason", ""),
+                }
+                if route
+                else None
+            ),
+            "tools": [
+                {
+                    "tool": c["tool"],
+                    "args": c["args"],
+                    "output": c["output"],
+                    "status": _tool_status(c["output"]),
+                    "summary": (c["output"] or "").split(". ")[0][:120],
+                }
+                for c in result.tool_calls
+            ],
+            "consolidation": {"new_facts": cons["new_facts"]} if cons else None,
+            "iterations": result.iterations,
+            "usage": result.usage,
+            "latency_ms": latency_ms,
+            # which brain answered — shown per card; a quick graph turn was the small model
+            "model": agent.settings.small_model if quick else agent.settings.model,
+        },
+    )
 
 
 def _run_command(command: tuple[str, str], emit) -> None:
@@ -142,34 +158,66 @@ def _run_command(command: tuple[str, str], emit) -> None:
     name, arg = command
     start = datetime.now(UTC)
     if name in ("graphs", "help", "?"):
-        emit("done", {"reply": commands.describe(), "tools": [], "iterations": 0,
-                      "latency_ms": 0, "gate": None})
+        emit(
+            "done",
+            {
+                "reply": commands.describe(),
+                "tools": [],
+                "iterations": 0,
+                "latency_ms": 0,
+                "gate": None,
+            },
+        )
         return
     try:
         state = commands.run(name, emit, arg)
     except Exception as exc:
-        emit("done", {"reply": f"`/{name}` failed: {type(exc).__name__}: {exc}",
-                      "tools": [], "iterations": 0, "latency_ms": 0, "gate": None})
+        emit(
+            "done",
+            {
+                "reply": f"`/{name}` failed: {type(exc).__name__}: {exc}",
+                "tools": [],
+                "iterations": 0,
+                "latency_ms": 0,
+                "gate": None,
+            },
+        )
         return
     if state is None:
-        emit("done", {"reply": commands.unknown_reply(name), "tools": [],
-                      "iterations": 0, "latency_ms": 0, "gate": None})
+        emit(
+            "done",
+            {
+                "reply": commands.unknown_reply(name),
+                "tools": [],
+                "iterations": 0,
+                "latency_ms": 0,
+                "gate": None,
+            },
+        )
         return
     reply = state.get("digest") or "(the workflow produced no text)"
     if state.get("ignored_argument"):
-        reply = (f"*`/{name}` takes no input, so \u201c{state['ignored_argument']}\u201d "
-                 f"was not used — a fixed shape always fetches the same sources. "
-                 f"Ask a normal question to use the loop instead.*\n\n") + reply
+        reply = (
+            f"*`/{name}` takes no input, so \u201c{state['ignored_argument']}\u201d "
+            f"was not used — a fixed shape always fetches the same sources. "
+            f"Ask a normal question to use the loop instead.*\n\n"
+        ) + reply
     if state.get("draft_path"):
         reply += f"\n\n*saved to `{state['draft_path']}`*"
     for node, err in (state.get("errors") or {}).items():
         reply += f"\n\n*{node}: {err}*"
-    emit("done", {
-        "reply": reply, "tools": [], "gate": None, "consolidation": None,
-        "iterations": 0,
-        "latency_ms": int((datetime.now(UTC) - start).total_seconds() * 1000),
-        "workflow": name,
-    })
+    emit(
+        "done",
+        {
+            "reply": reply,
+            "tools": [],
+            "gate": None,
+            "consolidation": None,
+            "iterations": 0,
+            "latency_ms": int((datetime.now(UTC) - start).total_seconds() * 1000),
+            "workflow": name,
+        },
+    )
 
 
 def _parse_ts(ts: str):
@@ -194,10 +242,10 @@ def _tool_status(output: str) -> str:
 # are cached with a short TTL — collect() runs on every dashboard auto-refresh
 # and must not round-trip to Notion every few seconds (rate limits + latency).
 # The sqlite path is a local query and doesn't need this.
-_NOTION_EPISODES_TTL = 30.0   # seconds; the page polls ~every 5s
+_NOTION_EPISODES_TTL = 30.0  # seconds; the page polls ~every 5s
 _notion_lock = threading.Lock()
-_notion_store = None                       # built once (its constructor calls Notion)
-_notion_episodes: tuple[float, list] | None = None   # (fetched_at, items)
+_notion_store = None  # built once (its constructor calls Notion)
+_notion_episodes: tuple[float, list] | None = None  # (fetched_at, items)
 
 
 def invalidate_notion_cache() -> None:
@@ -278,17 +326,25 @@ def collect() -> dict:
     for ev in events:
         kind = ev.get("type")
         if kind == "turn_start":
-            current = {"user_message": ev.get("user_message"), "ts": ev.get("ts"),
-                       "gate": None, "llm_calls": [], "tools": [], "reply": None}
+            current = {
+                "user_message": ev.get("user_message"),
+                "ts": ev.get("ts"),
+                "gate": None,
+                "llm_calls": [],
+                "tools": [],
+                "reply": None,
+            }
         elif kind == "wake_scan":
             wake_scans.append(ev)
         elif current is not None:
             if kind == "gate":
                 current["gate"] = ev
             elif kind == "route":
-                current["graph"] = {"workflow": ev.get("workflow"),
-                                    "route": "quick" if ev.get("target") == "quick_reply" else "full",
-                                    "reason": (current.get("graph") or {}).get("reason", "")}
+                current["graph"] = {
+                    "workflow": ev.get("workflow"),
+                    "route": "quick" if ev.get("target") == "quick_reply" else "full",
+                    "reason": (current.get("graph") or {}).get("reason", ""),
+                }
             elif kind == "triage":
                 current.setdefault("graph", {})["reason"] = ev.get("reason", "")
             elif kind == "llm":
@@ -332,12 +388,18 @@ def collect() -> dict:
     from tini.memory import bundled_skill_dirs
     from tini.memory.procedural.loader import SkillLoader
 
-    skills = [{"name": s.name, "description": s.description, "body": s.body,
-               "path": str(s.path),
-               # relative path (for reveal) + whether it lives in the editable home dir
-               "rel": _rel_to_home(s.path, home),
-               "editable": str((home / "skills").resolve()) in str(s.path.resolve())}
-              for s in SkillLoader([*bundled_skill_dirs(), home / "skills"]).skills]
+    skills = [
+        {
+            "name": s.name,
+            "description": s.description,
+            "body": s.body,
+            "path": str(s.path),
+            # relative path (for reveal) + whether it lives in the editable home dir
+            "rel": _rel_to_home(s.path, home),
+            "editable": str((home / "skills").resolve()) in str(s.path.resolve()),
+        }
+        for s in SkillLoader([*bundled_skill_dirs(), home / "skills"]).skills
+    ]
 
     eval_report = None
     report_path = home / "eval_report.json"
@@ -363,16 +425,25 @@ def collect() -> dict:
         types = {r["name"]: r["type"] for r in info}
         count = conn.execute(f"SELECT COUNT(*) FROM {name}").fetchone()[0]
         # up to 200 newest rows so each table has its own scrollable tab
-        sample = [dict(r) for r in conn.execute(f"SELECT * FROM {name} ORDER BY rowid DESC LIMIT 200").fetchall()]
+        sample = [
+            dict(r)
+            for r in conn.execute(f"SELECT * FROM {name} ORDER BY rowid DESC LIMIT 200").fetchall()
+        ]
         return {"name": name, "columns": cols, "types": types, "count": count, "sample": sample}
 
     db_path = home / "state.db"
-    all_tables = [r["name"] for r in
-                  conn.execute("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name").fetchall()]
+    all_tables = [
+        r["name"]
+        for r in conn.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name"
+        ).fetchall()
+    ]
     db_info = {
         "path": str(db_path.resolve()),
         "size": db_path.stat().st_size if db_path.exists() else 0,
-        "tables": [table_info(n) for n in ("facts", "episodes", "chat_log")],
+        "tables": [
+            table_info(n) for n in ("facts", "episodes", "chat_log", "documents", "document_chunks")
+        ],
         "fts": [t for t in all_tables if t.endswith("_fts")],
         "all_tables": all_tables,
     }
@@ -384,12 +455,21 @@ def collect() -> dict:
     # --- graph workflows: topology straight from the engine (never hand-drawn,
     # so the picture can't drift) + quick/full split from the trace events
     from tini.graph.workflows.triage import triage_topology
+
     graph_routes = [e.get("target") for e in events if e.get("type") == "route"]
     # The last few completed runs, newest first.
-    graph_runs = [{"workflow": e.get("workflow"), "ms": e.get("ms"),
-                   "at": e.get("ts"), "steps": e.get("steps"),
-                   "path": e.get("path") or [], "error": e.get("error")}
-                  for e in events if e.get("type") == "graph_end"][-8:][::-1]
+    graph_runs = [
+        {
+            "workflow": e.get("workflow"),
+            "ms": e.get("ms"),
+            "at": e.get("ts"),
+            "steps": e.get("steps"),
+            "path": e.get("path") or [],
+            "error": e.get("error"),
+        }
+        for e in events
+        if e.get("type") == "graph_end"
+    ][-8:][::-1]
 
     return {
         "generated_at": datetime.now(UTC).isoformat(timespec="seconds"),
@@ -400,10 +480,18 @@ def collect() -> dict:
             "turns": len(turns),
             "tool_calls": sum(len(t["tools"]) for t in turns),
             "tool_errors": sum(1 for t in turns for x in t["tools"] if x["status"] == "error"),
-            "gate_skips": sum(1 for t in turns if t["gate"] and t["gate"].get("decision") == "skip"),
-            "gate_retrieves": sum(1 for t in turns if t["gate"] and t["gate"].get("decision") == "retrieve"),
-            "tokens_in": sum(c.get("usage", {}).get("in", 0) for t in turns for c in t["llm_calls"]),
-            "tokens_out": sum(c.get("usage", {}).get("out", 0) for t in turns for c in t["llm_calls"]),
+            "gate_skips": sum(
+                1 for t in turns if t["gate"] and t["gate"].get("decision") == "skip"
+            ),
+            "gate_retrieves": sum(
+                1 for t in turns if t["gate"] and t["gate"].get("decision") == "retrieve"
+            ),
+            "tokens_in": sum(
+                c.get("usage", {}).get("in", 0) for t in turns for c in t["llm_calls"]
+            ),
+            "tokens_out": sum(
+                c.get("usage", {}).get("out", 0) for t in turns for c in t["llm_calls"]
+            ),
             "cost": round(total_cost, 4),
             "latency_avg": int(sum(latencies) / len(latencies)) if latencies else 0,
             "latency_p95": pct(0.95),
@@ -412,21 +500,40 @@ def collect() -> dict:
         "turns": turns[::-1][:50],
         "wake_scans": wake_scans[::-1][:25],
         # last raw trace lines, so Ops shows traces inline (no folder needed)
-        "trace_tail": [{"type": e.get("type"), "ts": e.get("ts"),
-                "provider": e.get("provider"), "model": e.get("model"),
+        "trace_tail": [
+            {
+                "type": e.get("type"),
+                "ts": e.get("ts"),
+                "provider": e.get("provider"),
+                "model": e.get("model"),
                 "usage": e.get("usage"),
-                "detail": (e.get("user_message") or e.get("decision") or e.get("tool")
-                       or e.get("reply") or "")}
-                       for e in events[-200:]][::-1],
+                "detail": (
+                    e.get("user_message")
+                    or e.get("decision")
+                    or e.get("tool")
+                    or e.get("reply")
+                    or ""
+                ),
+            }
+            for e in events[-200:]
+        ][::-1],
         "trace_file": (trace_files[-1].name if trace_files else None),
         "trace_errors": trace_errors,
-        "facts": rows("SELECT id, subject, content, source, created_at FROM facts ORDER BY id DESC"),
+        "facts": rows(
+            "SELECT id, subject, content, source, created_at FROM facts ORDER BY id DESC"
+        ),
         "episodes": episodes_data["items"],
         "episodes_source": episodes_data["source"],
         "episodes_error": episodes_data["error"],
-        "soul": (home / "SOUL.md").read_text(encoding="utf-8") if (home / "SOUL.md").exists() else "",
-        "chat_pending": conn.execute("SELECT COUNT(*) FROM chat_log WHERE consolidated=0").fetchone()[0],
-        "chat_log": rows("SELECT role, content, consolidated, source, session_id, created_at FROM chat_log ORDER BY id DESC LIMIT 80")[::-1],
+        "soul": (home / "SOUL.md").read_text(encoding="utf-8")
+        if (home / "SOUL.md").exists()
+        else "",
+        "chat_pending": conn.execute(
+            "SELECT COUNT(*) FROM chat_log WHERE consolidated=0"
+        ).fetchone()[0],
+        "chat_log": rows(
+            "SELECT role, content, consolidated, source, session_id, created_at FROM chat_log ORDER BY id DESC LIMIT 80"
+        )[::-1],
         "sessions": session_list(conn),
         "current_session": (live.session.session_id if live is not None else dash_session()),
         "consolidate_every": settings.consolidate_every,
@@ -437,14 +544,17 @@ def collect() -> dict:
             "enabled": settings.graph_workflows,
             "workflows": [triage_topology()],
             "runs": graph_runs,
-            "stats": {"quick": sum(1 for t in graph_routes if t == "quick_reply"),
-                      "full": sum(1 for t in graph_routes if t == "full_agent")},
+            "stats": {
+                "quick": sum(1 for t in graph_routes if t == "quick_reply"),
+                "full": sum(1 for t in graph_routes if t == "full_agent"),
+            },
         },
         "db": db_info,
         "settings": info,
         "providers": [asdict(view) for view in list_providers()],
         "connections": [asdict(view) for view in list_connections()],
         "tools": tools_info(),
+        "documents": document_api.documents_payload(settings),
         "usage": usage_summary(home),
     }
 
@@ -476,22 +586,30 @@ def session_list(conn) -> list[dict]:
         last = conn.execute(
             "SELECT role, content FROM chat_log WHERE session_id=? ORDER BY id DESC LIMIT 1", (sid,)
         ).fetchone()
-        sources = [r["source"] for r in conn.execute(
-            "SELECT DISTINCT source FROM chat_log WHERE session_id=?", (sid,)).fetchall()]
+        sources = [
+            r["source"]
+            for r in conn.execute(
+                "SELECT DISTINCT source FROM chat_log WHERE session_id=?", (sid,)
+            ).fetchall()
+        ]
         preview = ""
         if last:
             preview = ("you: " if last["role"] == "user" else "tini: ") + last["content"][:80]
-        out.append({"id": sid,
-                    "title": (first["content"][:60] if first else "(empty)"),
-                    "last": preview,
-                    "sources": sources,
-                    "messages": g["messages"],
-                    "last_at": g["last_at"]})
+        out.append(
+            {
+                "id": sid,
+                "title": (first["content"][:60] if first else "(empty)"),
+                "last": preview,
+                "sources": sources,
+                "messages": g["messages"],
+                "last_at": g["last_at"],
+            }
+        )
     return out
 
 
 def _tool_source(name: str, mcp_servers: list[str]) -> str:
-    if name == "search_web":
+    if name in {"search_web", "search_documents"}:
         return "retrieval"
     if any(name.startswith(f"{s}_") for s in mcp_servers):
         return "mcp"
@@ -510,25 +628,41 @@ def tools_info() -> dict:
     if mcp_path.exists():
         mcp["configured"] = True
         try:
-            mcp["servers"] = [s.get("name", "?") for s in json.loads(mcp_path.read_text(encoding="utf-8")).get("servers", [])]
+            mcp["servers"] = [
+                s.get("name", "?")
+                for s in json.loads(mcp_path.read_text(encoding="utf-8")).get("servers", [])
+            ]
         except (json.JSONDecodeError, OSError):
             pass
 
     catalog = []
     live = browser_agent.current()
+    display_conn = None
     if live is not None:
         mcp["live"] = getattr(live, "mcp_bridge", None) is not None
         tools = list(live.tools._tools.values())
     else:
         # Display-only: same tools minus MCP (building the real registry would
         # start MCP servers, which we don't want on a 5-second poll).
-        from tini.tools import search
+        from tini.documents.store import SqliteDocumentIndex
+        from tini.tools import documents, search
 
-        tools = [search.make_tool()]
+        display_conn = connect(settings.home)
+        tools = [
+            search.make_tool(),
+            documents.make_tool(SqliteDocumentIndex(display_conn), settings.document_workspace),
+        ]
     for t in tools:
-        catalog.append({"name": t.name, "description": t.description,
-                        "source": _tool_source(t.name, mcp["servers"])})
+        catalog.append(
+            {
+                "name": t.name,
+                "description": t.description,
+                "source": _tool_source(t.name, mcp["servers"]),
+            }
+        )
     catalog.sort(key=lambda c: (c["source"], c["name"]))
+    if display_conn is not None:
+        display_conn.close()
     return {"catalog": catalog, "mcp": mcp}
 
 
@@ -554,8 +688,10 @@ def run_query(payload: dict) -> dict:
         c.row_factory = sqlite3.Row
         cur = c.execute(sql)
         cols = [d[0] for d in cur.description] if cur.description else []
-        data = [[str(r[i]) if r[i] is not None else "" for i in range(len(cols))]
-                for r in cur.fetchmany(200)]
+        data = [
+            [str(r[i]) if r[i] is not None else "" for i in range(len(cols))]
+            for r in cur.fetchmany(200)
+        ]
         c.close()
         return {"columns": cols, "rows": data}
     except sqlite3.Error as exc:
@@ -623,9 +759,12 @@ def _thread_history(conn, sid: str) -> list[dict]:
             events = (json.loads(line) for line in iter_trace_lines(path))
             for event in events:
                 if event.get("type") == "turn_start":
-                    current = {"message": event.get("user_message"),
-                               "provider": None, "model": None,
-                               "usage": {"in": 0, "out": 0, "calls": 0}}
+                    current = {
+                        "message": event.get("user_message"),
+                        "provider": None,
+                        "model": None,
+                        "usage": {"in": 0, "out": 0, "calls": 0},
+                    }
                 elif current is not None and event.get("type") == "llm":
                     usage = event.get("usage") or {}
                     current["provider"] = event.get("provider") or current["provider"]
@@ -753,7 +892,9 @@ def memory_action(payload: dict) -> dict:
 
         text = (payload.get("content") or "").strip()
         dest = Path(payload.get("path") or "").resolve()
-        allowed = [d.resolve() for d in bundled_skill_dirs()] + [(settings.home / "skills").resolve()]
+        allowed = [d.resolve() for d in bundled_skill_dirs()] + [
+            (settings.home / "skills").resolve()
+        ]
         if dest.name != "SKILL.md" or not any(a in dest.parents for a in allowed):
             return {"error": "can only edit SKILL.md files inside the skills folders"}
         if _parse_text(text, dest) is None:
@@ -784,8 +925,6 @@ def memory_action(payload: dict) -> dict:
     return {"error": f"unknown action {action}"}
 
 
-
-
 def events_since(cursor):
     """New trace events past `cursor` (a line count in today's trace file).
     Any gateway — browser, CLI, voice, Telegram — appends to this same file,
@@ -812,8 +951,15 @@ def events_since(cursor):
 
 
 class Handler(BaseHTTPRequestHandler):
-    def _send(self, body: bytes, ctype: str, *, no_cache: bool = False) -> None:
-        self.send_response(200)
+    def _send(
+        self,
+        body: bytes,
+        ctype: str,
+        *,
+        no_cache: bool = False,
+        status: int = 200,
+    ) -> None:
+        self.send_response(status)
         self.send_header("Content-Type", ctype)
         self.send_header("Content-Length", str(len(body)))
         # The frontend files (app.js/style.css) change as we develop; without
@@ -822,6 +968,17 @@ class Handler(BaseHTTPRequestHandler):
             self.send_header("Cache-Control", "no-cache, must-revalidate")
         self.end_headers()
         self.wfile.write(body)
+
+    def _read_json(self, length: int) -> dict | None:
+        try:
+            payload = json.loads(self.rfile.read(length) or "{}")
+            if not isinstance(payload, dict):
+                raise TypeError("JSON body must be an object")
+        except (UnicodeDecodeError, json.JSONDecodeError, TypeError) as exc:
+            body = json.dumps({"error": f"invalid JSON body: {exc}"}).encode()
+            self._send(body, "application/json", status=400)
+            return None
+        return payload
 
     def do_GET(self):
         if self.path == "/api/data":
@@ -856,12 +1013,19 @@ class Handler(BaseHTTPRequestHandler):
                 fixture = memory_arena.load_fixture(_P(hit["path"])) if hit else None
                 track = hit["track"] if hit else (q.get("track", [""])[0] or "").strip()
                 model = (q.get("model", [""])[0] or "").strip()
-                self._send(json.dumps(memory_arena.store_contents(
-                    limit, only, track=track, model=model, fixture=fixture)).encode(),
-                    "application/json")
+                self._send(
+                    json.dumps(
+                        memory_arena.store_contents(
+                            limit, only, track=track, model=model, fixture=fixture
+                        )
+                    ).encode(),
+                    "application/json",
+                )
             except Exception as exc:
-                self._send(json.dumps([{"store": "?", "error": f"{type(exc).__name__}: {exc}"}]).encode(),
-                           "application/json")
+                self._send(
+                    json.dumps([{"store": "?", "error": f"{type(exc).__name__}: {exc}"}]).encode(),
+                    "application/json",
+                )
         elif self.path.startswith("/api/memory-arena?") or self.path == "/api/memory-arena":
             # The bake-off fixture, so the Arena's Memory tab can show WHAT is
             # being asked before any of it has been run. It lives in evals/,
@@ -877,10 +1041,14 @@ class Handler(BaseHTTPRequestHandler):
                 wanted = unquote(parse_qs(urlparse(self.path).query).get("probes", [""])[0]).strip()
                 sets = memory_arena.probe_sets()
                 hit = next((s for s in sets if s["id"] == wanted), None)
-                payload = {"available": True, "backends": memory_arena._available_backends(),
-                           "sets": sets, "chosen": hit["id"] if hit else "",
-                           "models": memory_arena.arena_models(),
-                           **memory_arena.load_fixture(_P(hit["path"]) if hit else None)}
+                payload = {
+                    "available": True,
+                    "backends": memory_arena._available_backends(),
+                    "sets": sets,
+                    "chosen": hit["id"] if hit else "",
+                    "models": memory_arena.arena_models(),
+                    **memory_arena.load_fixture(_P(hit["path"]) if hit else None),
+                }
                 self._send(json.dumps(payload).encode(), "application/json")
             except (OSError, ValueError):
                 self._send(json.dumps({"available": False}).encode(), "application/json")
@@ -895,6 +1063,20 @@ class Handler(BaseHTTPRequestHandler):
             raw = parse_qs(urlparse(self.path).query).get("cursor", [None])[0]
             cursor = int(raw) if raw and raw.lstrip("-").isdigit() else None
             self._send(json.dumps(events_since(cursor)).encode(), "application/json")
+        elif self.path.startswith("/api/documents/chunks"):
+            from urllib.parse import parse_qs, urlparse
+
+            query = parse_qs(urlparse(self.path).query)
+            raw_limit = query.get("limit", ["50"])[0]
+            try:
+                out = document_api.chunks(
+                    query.get("document_id", [""])[0],
+                    query.get("workspace", [""])[0],
+                    int(raw_limit) if raw_limit.isdigit() else 50,
+                )
+            except Exception as exc:
+                out = {"error": f"{type(exc).__name__}: {exc}"}
+            self._send(json.dumps(out, default=str).encode(), "application/json")
         elif self.path.startswith("/api/reveal"):
             from urllib.parse import parse_qs, unquote, urlparse
 
@@ -912,12 +1094,59 @@ class Handler(BaseHTTPRequestHandler):
             self.send_response(404)
             self.end_headers()
             return
-        ctype = {".css": "text/css", ".js": "text/javascript", ".svg": "image/svg+xml",
-                 ".html": "text/html; charset=utf-8"}.get(target.suffix, "application/octet-stream")
+        ctype = {
+            ".css": "text/css",
+            ".js": "text/javascript",
+            ".svg": "image/svg+xml",
+            ".html": "text/html; charset=utf-8",
+        }.get(target.suffix, "application/octet-stream")
         self._send(target.read_bytes(), ctype, no_cache=True)
 
     def do_POST(self):
         length = int(self.headers.get("Content-Length", 0))
+        # Browser file pickers cannot reveal local paths. Upload one raw file at
+        # a time into Tini's managed document folder and stream real pipeline
+        # stages back as SSE so the UI never invents progress.
+        if self.path.startswith("/api/documents/ingest"):
+            from urllib.parse import parse_qs, urlparse
+
+            settings = load_settings()
+            if length > settings.document_max_file_bytes:
+                self.send_response(413)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(
+                    json.dumps({"error": "file exceeds the configured size limit"}).encode()
+                )
+                self.close_connection = True
+                return
+            raw = self.rfile.read(length)
+            query = parse_qs(urlparse(self.path).query)
+            self.send_response(200)
+            self.send_header("Content-Type", "text/event-stream")
+            self.send_header("Cache-Control", "no-cache")
+            self.end_headers()
+
+            def emit_ingest(kind, event):
+                try:
+                    body = json.dumps({"kind": kind, **event}, default=str)
+                    self.wfile.write(f"data: {body}\n\n".encode())
+                    self.wfile.flush()
+                except (BrokenPipeError, ConnectionResetError):
+                    pass
+
+            try:
+                out = document_api.ingest_upload(
+                    query.get("name", [""])[0],
+                    query.get("workspace", [""])[0],
+                    raw,
+                    emit_ingest,
+                    settings,
+                )
+            except Exception as exc:
+                out = {"error": f"{type(exc).__name__}: {exc}"}
+            emit_ingest("done", out)
+            return
         # /api/voice takes a raw audio blob, not JSON — handle it first.
         if self.path == "/api/voice":
             raw = self.rfile.read(length)
@@ -925,7 +1154,9 @@ class Handler(BaseHTTPRequestHandler):
             return
         # /api/chat/stream streams harness events (SSE) as the turn runs.
         if self.path == "/api/chat/stream":
-            payload = json.loads(self.rfile.read(length) or "{}")
+            payload = self._read_json(length)
+            if payload is None:
+                return
             message = (payload.get("message") or "").strip()
             self.send_response(200)
             self.send_header("Content-Type", "text/event-stream")
@@ -934,7 +1165,9 @@ class Handler(BaseHTTPRequestHandler):
 
             def emit(kind, ev):
                 try:
-                    self.wfile.write(f"data: {json.dumps({'kind': kind, **ev}, default=str)}\n\n".encode())
+                    self.wfile.write(
+                        f"data: {json.dumps({'kind': kind, **ev}, default=str)}\n\n".encode()
+                    )
                     self.wfile.flush()
                 except (BrokenPipeError, ConnectionResetError):
                     pass  # the browser navigated away mid-stream — fine
@@ -949,7 +1182,9 @@ class Handler(BaseHTTPRequestHandler):
             return
         # /api/compare/stream races several models, emitting each result as it lands.
         if self.path == "/api/compare/stream":
-            payload = json.loads(self.rfile.read(length) or "{}")
+            payload = self._read_json(length)
+            if payload is None:
+                return
             self.send_response(200)
             self.send_header("Content-Type", "text/event-stream")
             self.send_header("Cache-Control", "no-cache")
@@ -957,10 +1192,13 @@ class Handler(BaseHTTPRequestHandler):
 
             def emit(kind, ev):
                 try:
-                    self.wfile.write(f"data: {json.dumps({'kind': kind, **ev}, default=str)}\n\n".encode())
+                    self.wfile.write(
+                        f"data: {json.dumps({'kind': kind, **ev}, default=str)}\n\n".encode()
+                    )
                     self.wfile.flush()
                 except (BrokenPipeError, ConnectionResetError):
                     pass
+
             try:
                 compare_stream(
                     (payload.get("message") or "").strip(),
@@ -985,20 +1223,25 @@ class Handler(BaseHTTPRequestHandler):
 
             from tini.ops import memory_arena
 
-            payload = json.loads(self.rfile.read(length) or "{}")
+            payload = self._read_json(length)
+            if payload is None:
+                return
             wanted = (payload.get("probes") or "").strip()
             hit = next((s for s in memory_arena.probe_sets() if s["id"] == wanted), None)
             fixture = memory_arena.load_fixture(_P(hit["path"])) if hit else None
             track = hit["track"] if hit else (payload.get("track") or "")
             try:
                 out = memory_arena.clean_stores(
-                    track=track, model=(payload.get("model") or "").strip(), fixture=fixture)
+                    track=track, model=(payload.get("model") or "").strip(), fixture=fixture
+                )
             except Exception as exc:
                 out = {"error": f"{type(exc).__name__}: {exc}"}
             self._send(json.dumps(out).encode(), "application/json")
             return
         if self.path == "/api/memory-arena/stream":
-            payload = json.loads(self.rfile.read(length) or "{}")
+            payload = self._read_json(length)
+            if payload is None:
+                return
             self.send_response(200)
             self.send_header("Content-Type", "text/event-stream")
             self.send_header("Cache-Control", "no-cache")
@@ -1006,10 +1249,13 @@ class Handler(BaseHTTPRequestHandler):
 
             def emit_mem(kind, ev):
                 try:
-                    self.wfile.write(f"data: {json.dumps({'kind': kind, **ev}, default=str)}\n\n".encode())
+                    self.wfile.write(
+                        f"data: {json.dumps({'kind': kind, **ev}, default=str)}\n\n".encode()
+                    )
                     self.wfile.flush()
                 except (BrokenPipeError, ConnectionResetError):
                     pass
+
             try:
                 # The chosen file must be one this server offered. Echoing a
                 # browser-supplied path straight into read_text() would turn a
@@ -1022,31 +1268,51 @@ class Handler(BaseHTTPRequestHandler):
                 hit = next((s for s in memory_arena.probe_sets() if s["id"] == wanted), None)
                 fixture = memory_arena.load_fixture(_P(hit["path"])) if hit else None
                 track = hit["track"] if hit else (payload.get("track") or "example")
-                memory_arena.run_arena(payload.get("backends") or ["sqlite"],
-                                       track, emit_mem, fixture=fixture,
-                                       model=(payload.get("model") or "").strip(),
-                                       seed_only=bool(payload.get("seed_only")))
+                memory_arena.run_arena(
+                    payload.get("backends") or ["sqlite"],
+                    track,
+                    emit_mem,
+                    fixture=fixture,
+                    model=(payload.get("model") or "").strip(),
+                    seed_only=bool(payload.get("seed_only")),
+                )
             except Exception as exc:
                 emit_mem("done", {"error": f"{type(exc).__name__}: {exc}"})
             return
-        routes = {"/api/chat": None, "/api/memory": memory_action, "/api/settings": apply_settings,
-                  "/api/query": run_query, "/api/session": session_action, "/api/pin": pin_action,
-                  "/api/connections": None, "/api/connections/test": None,
-                  "/api/providers": None,
-                  "/api/compare/clear": compare_clear,
-                  "/api/compare/regrade": compare_regrade, "/api/compare/delete_run": compare_delete_run}
+        routes = {
+            "/api/chat": None,
+            "/api/memory": memory_action,
+            "/api/settings": apply_settings,
+            "/api/query": run_query,
+            "/api/session": session_action,
+            "/api/pin": pin_action,
+            "/api/documents/search": document_api.search,
+            "/api/documents/action": document_api.action,
+            "/api/connections": None,
+            "/api/connections/test": None,
+            "/api/providers": None,
+            "/api/compare/clear": compare_clear,
+            "/api/compare/regrade": compare_regrade,
+            "/api/compare/delete_run": compare_delete_run,
+        }
         if self.path not in routes:
             self.send_response(404)
             self.end_headers()
             return
-        payload = json.loads(self.rfile.read(length) or "{}")
+        payload = self._read_json(length)
+        if payload is None:
+            return
         try:
             if self.path == "/api/chat":
                 message = (payload.get("message") or "").strip()
                 out = chat(message) if message else {"error": "empty message"}
             elif self.path == "/api/connections":
-                result = apply_integration(payload.get("key", ""), payload.get("values") or {},
-                                           tuple(payload.get("clear") or ()), force=bool(payload.get("force")))
+                result = apply_integration(
+                    payload.get("key", ""),
+                    payload.get("values") or {},
+                    tuple(payload.get("clear") or ()),
+                    force=bool(payload.get("force")),
+                )
                 if result.ok and payload.get("key") == "notion":
                     invalidate_notion_cache()
                 out = asdict(result)
@@ -1056,8 +1322,11 @@ class Handler(BaseHTTPRequestHandler):
                 # A payload that only toggles availability goes to the enable/
                 # disable path; everything else is the existing provider apply.
                 if "disabled" in payload and set(payload) <= {"provider", "disabled"}:
-                    out = asdict(apply_provider_disabled(payload.get("provider", ""),
-                                                         disabled=bool(payload["disabled"])))
+                    out = asdict(
+                        apply_provider_disabled(
+                            payload.get("provider", ""), disabled=bool(payload["disabled"])
+                        )
+                    )
                 else:
                     out = asdict(apply_provider(**payload))
             else:
