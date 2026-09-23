@@ -1343,9 +1343,14 @@ def main() -> None:
     # Port precedence: TINI_DASHBOARD_PORT, then the conventional PORT (used by
     # deploy platforms and IDE preview panes), then 9000. If it's taken, walk on.
     base = int(os.getenv("TINI_DASHBOARD_PORT") or os.getenv("PORT") or PORT)
+    # Loopback-only by default — a dashboard with no auth has no business on a
+    # real network interface. TINI_DASHBOARD_HOST=0.0.0.0 is the documented
+    # escape hatch for the Docker image (Dockerfile), where 127.0.0.1 inside
+    # the container is unreachable through the port mapping to the host.
+    host = os.getenv("TINI_DASHBOARD_HOST", "127.0.0.1").strip() or "127.0.0.1"
     for port in range(base, base + 10):  # walk past a busy port instead of crashing
         try:
-            server = ThreadingHTTPServer(("127.0.0.1", port), Handler)
+            server = ThreadingHTTPServer((host, port), Handler)
         except OSError:
             print(f"port {port} busy, trying {port + 1}…")
             continue

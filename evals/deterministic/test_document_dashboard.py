@@ -16,6 +16,14 @@ def settings(tmp_path):
         document_chunk_max_tokens=80,
         document_chunk_min_tokens=10,
         document_chunk_overlap_tokens=8,
+        # Pinned rather than left to fall through to os.getenv: this suite
+        # must stay green regardless of a contributor's own .env (e.g.
+        # TINI_DOCUMENT_INDEX=qdrant / TINI_EMBEDDING_PROVIDER=... configured
+        # for real local use, which this repo's own .env now has — see
+        # docs/document-ingestion.md). Assertions below are sqlite/no-vector
+        # specific (raw document_chunks queries, embedded==0).
+        document_index="sqlite",
+        embedding_provider="none",
     )
 
 

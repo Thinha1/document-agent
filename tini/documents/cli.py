@@ -9,7 +9,7 @@ from tini.config import load_settings
 from tini.db import connect
 from tini.documents.embeddings import make_embedding_provider
 from tini.documents.pipeline import IngestionPipeline
-from tini.documents.store import SqliteDocumentIndex
+from tini.documents.store import make_document_index
 
 
 def ingest_main(argv: list[str]) -> int:
@@ -30,7 +30,7 @@ def ingest_main(argv: list[str]) -> int:
     try:
         embedder = make_embedding_provider(settings)
         pipeline = IngestionPipeline(
-            SqliteDocumentIndex(conn, embedder),
+            make_document_index(settings, conn, embedder),
             embedder=embedder,
             chunk_max_tokens=args.chunk_max_tokens,
             chunk_min_tokens=args.chunk_min_tokens,
@@ -66,7 +66,7 @@ def documents_main(argv: list[str]) -> int:
 
     settings.ensure_home()
     conn = connect(settings.home)
-    index = SqliteDocumentIndex(conn, make_embedding_provider(settings))
+    index = make_document_index(settings, conn, make_embedding_provider(settings))
     try:
         if args.search:
             for hit in index.search(args.search, args.limit, args.workspace):

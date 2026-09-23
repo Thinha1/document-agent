@@ -79,6 +79,12 @@ voice-neural = [
 supabase = [
     "supabase>=2.0",
 ]
+# Optional document-index upgrade path: self-hosted Qdrant (see docker-compose.yml
+# and tini/documents/qdrant_store.py). qdrant-client's local mode (":memory:"/
+# on-disk) needs no server and is what the deterministic evals exercise.
+qdrant = [
+    "qdrant-client>=1.9",
+]
 # Compatibility alias: document parsers are now core because ingestion is a
 # first-class dashboard feature. Existing `pip install '.[documents]'` commands
 # remain valid.

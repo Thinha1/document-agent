@@ -8,7 +8,7 @@
 # `source .venv/bin/activate` — both work, this is just fewer steps.
 PY := $(shell [ -x .venv/bin/python ] && echo .venv/bin/python || echo python)
 
-.PHONY: run voice telegram discord whatsapp dashboard ingest trace eval eval-judge gate lint
+.PHONY: run voice telegram discord whatsapp dashboard ingest trace eval eval-judge gate lint document-shootout
 
 run:            ## chat with Tini in the terminal
 	$(PY) -m tini
@@ -50,6 +50,9 @@ shootout:       ## same tasks, different brains: make shootout RUNS="kimi:kimi-k
 
 shootout-coding: ## coding round via pi, scored by tests: make shootout-coding RUNS="kimi:kimi-k3 anthropic:claude-opus-4-8"
 	$(PY) scripts/shootout.py $(RUNS) --coding
+
+document-shootout: ## document-index backends, speed + accuracy: make document-shootout BACKENDS="sqlite qdrant"
+	$(PY) scripts/document_shootout.py $(BACKENDS)
 
 lint:
 	$(PY) -m ruff check tini evals scripts
