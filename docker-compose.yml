@@ -1,0 +1,89 @@
+# The full self-hosted stack: Tini itself (Dockerfile) + Qdrant (vector index)
+# + Ollama (embeddings). (tini/documents/qdrant_store.py,
+# tini/documents/embeddings.py, docs/document-ingestion.md)
+#
+#   cp .env.example .env           # fill in your keys first — required, see below
+#   docker compose up -d --build
+#   docker compose exec ollama ollama pull nomic-embed-text   # first time only
+#   docker compose down            # add -v to also drop vector data + models + .tini
+#
+# Dashboard: http://localhost:9000. One-off commands against the same image:
+#   docker compose run --rm tini python -m tini ingest examples/denso_mock_docs --workspace denso
+#   docker compose run --rm tini python -m tini
+#
+# `tini` reads TINI_QDRANT_URL / TINI_EMBEDDING_BASE_URL from `environment:`
+# below (service-name DNS: `qdrant`/`ollama`, not localhost — containers don't
+# share the host's loopback). Everything else — provider keys, TINI_PROVIDER,
+# TINI_DOCUMENT_INDEX=qdrant, TINI_EMBEDDING_PROVIDER=openai_compatible — comes
+# from your own `.env` via `env_file:`, same file a bare-metal `tini` reads.
+# No hidden network calls, nothing the operator didn't ask to run — see
+# CONTRIBUTING.md.
+services:
+  qdrant:
+    image: qdrant/qdrant:v1.19.1 # matches qdrant-client>=1.9 pinned in pyproject.toml's [qdrant] extra
+    restart: unless-stopped
+    ports:
+      - "6333:6333" # HTTP + Web UI (http://localhost:6333/dashboard)
+      - "6334:6334" # gRPC
+    volumes:
+      - qdrant_data:/qdrant/storage
+    healthcheck:
+      # The image has no curl/wget (verified inside the container — an
+      # earlier version of this file assumed curl existed and the healthcheck
+      # silently reported unhealthy forever while qdrant itself was fine).
+      # bash IS present with its /dev/tcp feature, but CMD-SHELL runs /bin/sh
+      # (dash here, no /dev/tcp) — bash must be invoked explicitly.
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/6333"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  ollama:
+    image: ollama/ollama:latest
+    restart: unless-stopped
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    healthcheck:
+      test: ["CMD-SHELL", "ollama list || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    # CPU-only by default — works everywhere with no host setup. For an
+    # NVIDIA GPU (needs the NVIDIA Container Toolkit on the host), uncomment:
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
+
+  tini:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "9000:9000" # dashboard
+    env_file:
+      - .env # provider keys, TINI_PROVIDER, TINI_DOCUMENT_INDEX, TINI_EMBEDDING_PROVIDER, ...
+    environment:
+      # Override the host-facing URLs .env has (http://localhost:...) with
+      # the compose network's service-name DNS — these two are the only
+      # settings that differ between "tini running on your machine" and
+      # "tini running in this container", so env_file supplies everything
+      # else unchanged.
+      TINI_QDRANT_URL: http://qdrant:6333
+      TINI_EMBEDDING_BASE_URL: http://ollama:11434/v1
+    volumes:
+      - tini_home:/app/.tini # memory db, traces, MCP config — see CLAUDE.md
+    depends_on:
+      qdrant:
+        condition: service_healthy
+      ollama:
+        condition: service_healthy
+
+volumes:
+  qdrant_data:
+  ollama_data:
+  tini_home:

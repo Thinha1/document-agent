@@ -27,12 +27,12 @@ class Tini:
         # Memory and retrieval tools share the same settings, but remain
         # separate modules with small interfaces.
         from tini.documents.embeddings import make_embedding_provider
-        from tini.documents.store import SqliteDocumentIndex
+        from tini.documents.store import make_document_index
         from tini.memory import Memory
 
         self.memory = Memory(self.conn, self.settings, self.client)
         self.embedding_provider = make_embedding_provider(self.settings)
-        self.documents = SqliteDocumentIndex(self.conn, self.embedding_provider)
+        self.documents = make_document_index(self.settings, self.conn, self.embedding_provider)
         self.tools = build_registry(self.settings, self.documents)
         self.mcp_bridge = getattr(self.tools, "mcp_bridge", None)
         self.session = Session(self.settings, memory=self.memory)

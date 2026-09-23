@@ -140,6 +140,22 @@ class Settings:
     document_max_text_chars: int = field(
         default_factory=lambda: int(os.getenv("TINI_DOCUMENT_MAX_TEXT_CHARS", "5000000"))
     )
+    # 'sqlite' (default, zero setup) or 'qdrant' (self-hosted vector upgrade
+    # path — see docker-compose.yml and tini/documents/qdrant_store.py).
+    document_index: str = field(
+        default_factory=lambda: os.getenv("TINI_DOCUMENT_INDEX", "sqlite").strip().lower()
+        or "sqlite"
+    )
+    qdrant_url: str = field(
+        default_factory=lambda: os.getenv("TINI_QDRANT_URL", "").strip() or "http://localhost:6333"
+    )
+    qdrant_api_key: str | None = field(
+        default_factory=lambda: os.getenv("TINI_QDRANT_API_KEY", "").strip() or None
+    )
+    qdrant_collection: str = field(
+        default_factory=lambda: os.getenv("TINI_QDRANT_COLLECTION", "").strip()
+        or "tini_documents"
+    )
 
     # --- Orchestration
     # Route every message through the triage graph workflow first (a small model

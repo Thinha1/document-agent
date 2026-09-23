@@ -15,7 +15,7 @@ from tini.db import connect
 from tini.documents.embeddings import make_embedding_provider
 from tini.documents.loaders import SUPPORTED_SUFFIXES
 from tini.documents.pipeline import IngestionPipeline
-from tini.documents.store import SqliteDocumentIndex
+from tini.documents.store import make_document_index
 
 _WORKSPACE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
 
@@ -25,16 +25,25 @@ def documents_payload(settings: Settings | None = None) -> dict:
     settings.ensure_home()
     conn = connect(settings.home)
     try:
-        index = SqliteDocumentIndex(conn)
-        items = [asdict(item) for item in index.list_documents(settings.document_workspace)]
-        chunks = conn.execute(
-            "SELECT COUNT(*) FROM document_chunks WHERE workspace_id=?",
-            (settings.document_workspace,),
-        ).fetchone()[0]
-        vectors = conn.execute(
-            "SELECT COUNT(*) FROM document_chunk_embeddings WHERE workspace_id=?",
-            (settings.document_workspace,),
-        ).fetchone()[0]
+        index = make_document_index(settings, conn, make_embedding_provider(settings))
+        docs = index.list_documents(settings.document_workspace)
+        items = [asdict(item) for item in docs]
+        if settings.document_index == "sqlite":
+            chunks = conn.execute(
+                "SELECT COUNT(*) FROM document_chunks WHERE workspace_id=?",
+                (settings.document_workspace,),
+            ).fetchone()[0]
+            vectors = conn.execute(
+                "SELECT COUNT(*) FROM document_chunk_embeddings WHERE workspace_id=?",
+                (settings.document_workspace,),
+            ).fetchone()[0]
+        else:
+            # Every other backend is pure-vector (see qdrant_store.py's module
+            # docstring): a chunk that exists at all is, by construction, embedded.
+            # list_documents' own limit caps this the same way the library view
+            # is already capped, so it is an undercount past that many documents.
+            chunks = sum(item.chunk_count for item in docs)
+            vectors = chunks
     finally:
         conn.close()
     return {
@@ -93,7 +102,7 @@ def ingest_upload(
     try:
         embedder = make_embedding_provider(settings)
         pipeline = IngestionPipeline(
-            SqliteDocumentIndex(conn, embedder),
+            make_document_index(settings, conn, embedder),
             embedder=embedder,
             chunk_max_tokens=settings.document_chunk_max_tokens,
             chunk_min_tokens=settings.document_chunk_min_tokens,
@@ -121,7 +130,7 @@ def search(payload: dict, settings: Settings | None = None) -> dict:
     settings.ensure_home()
     conn = connect(settings.home)
     try:
-        index = SqliteDocumentIndex(conn, make_embedding_provider(settings))
+        index = make_document_index(settings, conn, make_embedding_provider(settings))
         hits = [asdict(hit) for hit in index.search(query, top_k, workspace)]
     finally:
         conn.close()
@@ -135,6 +144,13 @@ def chunks(
     settings: Settings | None = None,
 ) -> dict:
     settings = settings or load_settings()
+    if settings.document_index != "sqlite":
+        # The inspector reads document_chunks/document_chunk_embeddings
+        # directly for per-chunk char offsets and an embedded flag — fields
+        # the DocumentIndex protocol doesn't expose generically. Rather than
+        # run this query against tables a non-sqlite backend never writes
+        # (which would misreport "document not found"), say so plainly.
+        return {"error": f"Chunk inspection isn't available on the {settings.document_index} backend."}
     workspace_id = _valid_workspace(workspace_id or settings.document_workspace)
     settings.ensure_home()
     conn = connect(settings.home)
@@ -168,19 +184,19 @@ def action(payload: dict, settings: Settings | None = None) -> dict:
     settings.ensure_home()
     conn = connect(settings.home)
     embedder = make_embedding_provider(settings)
-    index = SqliteDocumentIndex(conn, embedder)
+    index = make_document_index(settings, conn, embedder)
     try:
         if payload.get("action") == "delete":
             return {"ok": index.delete_document(document_id, workspace)}
         if payload.get("action") != "reindex":
             return {"error": "Unknown document action."}
-        row = conn.execute(
-            "SELECT source_uri FROM documents WHERE id=? AND workspace_id=?",
-            (document_id, workspace),
-        ).fetchone()
-        if row is None:
+        match = next(
+            (d for d in index.list_documents(workspace, limit=1000) if d.document_id == document_id),
+            None,
+        )
+        if match is None:
             return {"error": "Document not found in this workspace."}
-        source = _file_uri_to_path(row["source_uri"])
+        source = _file_uri_to_path(match.source_uri)
         reports = IngestionPipeline(
             index,
             embedder=embedder,

@@ -57,8 +57,38 @@ PDF and DOCX parsers are included in the default installation.
 
 `EmbeddingProvider` isolates Gemini and OpenAI-compatible APIs from ingestion.
 `DocumentIndex` is the storage seam. `SqliteDocumentIndex` stores float32 vectors
-locally and scans them for cosine similarity; a future pgvector adapter can keep
-the same interface while moving ANN search and RLS into Postgres.
+locally and scans them for cosine similarity; `QdrantDocumentIndex` is the
+self-hosted vector upgrade path described below, and a future pgvector adapter
+could keep the same interface while moving ANN search and RLS into Postgres.
+
+## Self-hosted vector index (Qdrant)
+
+```bash
+docker compose up -d qdrant                 # http://localhost:6333/dashboard
+pip install 'tini-agent[qdrant]'
+```
+
+```dotenv
+TINI_DOCUMENT_INDEX=qdrant
+TINI_QDRANT_URL=http://localhost:6333
+# TINI_QDRANT_API_KEY=                      # only if you put Qdrant behind auth
+# TINI_QDRANT_COLLECTION=tini_documents
+TINI_EMBEDDING_PROVIDER=gemini              # required — see the trade-off below
+TINI_EMBEDDING_MODEL=gemini-embedding-2
+TINI_EMBEDDING_DIMENSIONS=768
+```
+
+`python -m tini ingest`, `tini documents`, the dashboard's Knowledge page, and
+`search_documents` all pick up the backend from `TINI_DOCUMENT_INDEX` through
+one shared factory (`tini.documents.store.make_document_index`) — nothing else
+changes. `QdrantDocumentIndex` (`tini/documents/qdrant_store.py`) is semantic
+search only: Qdrant has no BM25-equivalent ranked full-text search, so it skips
+the RRF fusion `SqliteDocumentIndex` does with FTS5 and requires an embedder. A
+chunk that would ingest without an embedding is refused rather than silently
+dropped. The dashboard's per-chunk inspector (char offsets, embedded flag)
+still reads SQLite's tables directly and returns an explicit "not available on
+this backend" message under Qdrant — everything else (search, list, ingest,
+delete, reindex) works the same on both backends.
 
 ## Chunking strategy
 

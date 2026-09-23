@@ -10,6 +10,8 @@ import struct
 import uuid
 from collections.abc import Sequence
 
+from tini.config import Settings
+from tini.documents.base import DocumentIndex
 from tini.documents.embeddings import EmbeddingProvider
 from tini.documents.models import (
     DEFAULT_WORKSPACE,
@@ -20,6 +22,22 @@ from tini.documents.models import (
     SearchHit,
 )
 from tini.memory.semantic.store import _fts_query
+
+
+def make_document_index(
+    settings: Settings, conn: sqlite3.Connection, embedder: EmbeddingProvider | None
+) -> DocumentIndex:
+    """Pick the document index backend, the same seam `Memory._make_fact_store`
+    uses for semantic memory: one place both `Tini.__init__` and `tini ingest`/
+    `tini documents` go through, so a new backend is wired once, not per call site."""
+    backend = settings.document_index
+    if backend == "qdrant":
+        from tini.documents.qdrant_store import QdrantDocumentIndex
+
+        return QdrantDocumentIndex(settings, embedder)
+    if backend == "sqlite":
+        return SqliteDocumentIndex(conn, embedder)
+    raise ValueError(f"Unsupported document index backend: {backend}")
 
 
 class SqliteDocumentIndex:
