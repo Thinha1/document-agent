@@ -8,5 +8,7 @@ a third-party CDN at runtime.
   [Simple Icons 16.21.0](https://github.com/simple-icons/simple-icons), licensed
   under CC0 1.0. Colors and rounded backgrounds are Tini presentation wrappers.
 - `searxng.svg` is a project-local search glyph used for the self-hosted connection.
+- `jev.svg` is a project-local reorder glyph (shrinking bars + an up arrow,
+  standing in for reranking) — Jev/TypeSafe has no entry in Simple Icons.
 
 Brand names and marks remain the property of their respective owners.

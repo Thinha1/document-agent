@@ -73,6 +73,12 @@ def make_tini(home: Path, client=None, **settings_overrides):
     # corpus lives in (TINI_DOCUMENT_WORKSPACE=denso), while these tests ingest
     # into "default" — the search tool would then look in the wrong workspace.
     settings_overrides.setdefault("document_workspace", "default")
+    # ...and reranking: a maintainer's .env may have TINI_RERANK_PROVIDER=jev
+    # set (trying it out, see tini/documents/rerank.py) without a working key
+    # yet, which makes make_document_index() raise for every test built
+    # through this helper — found the hard way when it broke over 50
+    # unrelated tests the moment a real .env picked up that setting.
+    settings_overrides.setdefault("rerank_provider", "none")
     settings = Settings(home=home, **settings_overrides)
     if client is not None and not settings.api_key:
         settings.api_key = "offline"  # never read the real key for scripted runs

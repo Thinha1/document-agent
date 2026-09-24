@@ -26,6 +26,10 @@ def isolated(tmp_path, monkeypatch):
     monkeypatch.setenv("TINI_HOME", str(tmp_path))
     monkeypatch.setenv("TINI_PROVIDER", "anthropic")
     monkeypatch.setenv("ANTHROPIC_API_KEY", "fake-key-for-tests")
+    # A maintainer .env may have TINI_RERANK_PROVIDER=jev set (trying it,
+    # tini/documents/rerank.py) without a working key yet, which would make
+    # every Tini() build here raise in make_document_index.
+    monkeypatch.delenv("TINI_RERANK_PROVIDER", raising=False)
     monkeypatch.setattr(browser_agent, "_agent", None)
     monkeypatch.setattr(browser_agent, "_dashboard_session", None)
     return tmp_path

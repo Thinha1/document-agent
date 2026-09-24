@@ -405,6 +405,48 @@ INTEGRATIONS: tuple[Integration, ...] = (
         lambda env: bool(env.get("OTEL_EXPORTER_OTLP_ENDPOINT")),
         None,
     ),
+    Integration(
+        "jev",
+        "Documents & Retrieval",
+        "Jev reranking",
+        "Reorders retrieved document chunks with TypeSafe's Jev decision model "
+        "before they reach the loop or a Retrieval eval run.",
+        (
+            EnvField(
+                "TINI_RERANK_PROVIDER",
+                "Provider",
+                FieldKind.CHOICE,
+                default="none",
+                options=("none", "jev"),
+                help="'none' keeps every retrieved chunk on this machine. 'jev' sends the "
+                "question and each candidate chunk's TEXT to api.typesafe.ai on every "
+                "search — see tini/documents/rerank.py before turning this on for "
+                "anything sensitive.",
+            ),
+            EnvField(
+                "TINI_RERANK_API_KEY",
+                "API key",
+                required=True,
+                secret=True,
+                help="From typesafe.ai (early access). Falls back to TYPESAFE_API_KEY if "
+                "already set some other way, but this field always wins when filled in.",
+            ),
+            EnvField("TINI_RERANK_MODEL", "Model", default="jev-latest"),
+            EnvField(
+                "TINI_RERANK_CANDIDATES",
+                "Candidate pool size",
+                default="20",
+                help="How many vector hits to fetch and rerank before keeping the top_k. "
+                "Up to 30 fit in one Jev call.",
+            ),
+        ),
+        None,
+        None,
+        "https://typesafe.ai/blog/introducing-system-one-models-and-jev",
+        ReloadMode.LIVE,
+        lambda env: env.get("TINI_RERANK_PROVIDER", "none") not in ("", "none"),
+        None,
+    ),
 )
 
 
