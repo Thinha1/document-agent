@@ -10,8 +10,12 @@ environment, so the PDFs couldn't be fetched automatically. Download them
 yourself (a regular browser works fine) and drop them in this folder:
 
 Already have (checked into this folder): the Code of Conduct
-(`compliance-doc-employee-behavior-guideline-en.pdf`) and the 2021 Basic
-Policies on Corporate Governance (`management-doc-corporate-governance-policy-2021-en.pdf`).
+(`compliance-doc-employee-behavior-guideline-en.pdf`), the 2021 Basic
+Policies on Corporate Governance (`management-doc-corporate-governance-policy-2021-en.pdf`),
+and the Integrated Report 2025 — Japanese edition, 56 pages
+(`annual-report-doc-2025-viewing-ja.pdf`; the English edition linked below is
+the alternative if you want that language instead). Its questions live in
+`evals/documents/denso_qa_multilingual.jsonl` under the `ir-*` ids.
 
 More candidates, same source, organized by kind:
 
