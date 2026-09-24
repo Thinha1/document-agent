@@ -557,6 +557,7 @@ def collect() -> dict:
         "documents": {
             **document_api.documents_payload(settings),
             "question_sets": document_eval.list_question_sets(settings),
+            "rerank": document_eval.rerank_info(settings),
         },
         "usage": usage_summary(home),
     }

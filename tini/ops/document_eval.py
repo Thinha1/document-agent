@@ -28,12 +28,14 @@ import math
 import re
 import time
 from collections.abc import Callable
+from dataclasses import replace as _replace
 from datetime import datetime
 from pathlib import Path
 
 from tini.config import Settings, load_settings
 from tini.db import connect
 from tini.documents.embeddings import make_embedding_provider
+from tini.documents.rerank import RerankingIndex
 from tini.documents.store import make_document_index
 
 QUESTION_SET_DIR = Path(__file__).resolve().parents[2] / "evals" / "documents"
@@ -66,6 +68,16 @@ def _percentile(values: list[float], pct: float) -> float:
     return ordered[min(rank, len(ordered)) - 1]
 
 
+def rerank_info(settings: Settings) -> dict:
+    """What the dashboard needs to offer the rerank toggle. Never the key."""
+    provider = settings.rerank_provider
+    return {
+        "configured": provider not in ("", "none") and bool(settings.rerank_api_key),
+        "provider": provider,
+        "candidates": settings.rerank_candidates,
+    }
+
+
 def _pipeline_config(settings: Settings, index, workspace: str, k: int) -> dict:
     """What the pipeline WAS when these numbers were measured. A recall figure
     with no record of the embedding model, chunk sizes or index behind it
@@ -89,6 +101,12 @@ def _pipeline_config(settings: Settings, index, workspace: str, k: int) -> dict:
             "overlap_tokens": settings.document_chunk_overlap_tokens,
         },
         "ocr": {"provider": settings.ocr_provider, "model": settings.ocr_model},
+        "rerank": {
+            "enabled": isinstance(index, RerankingIndex),
+            "provider": settings.rerank_provider,
+            "model": settings.rerank_model or None,
+            "candidates": settings.rerank_candidates,
+        },
         "search_k": k,
         "workspace": workspace,
         "corpus": [
@@ -282,6 +300,13 @@ def run_eval(
     workspace = str(payload.get("workspace") or settings.document_workspace).strip()
     k = max(1, min(int(payload.get("k") or 3), 20))
     use_llm = bool(payload.get("use_llm"))
+    # None: follow settings. True: require reranking. False: force it off, so
+    # one process can measure the same questions with and without it.
+    rerank = payload.get("rerank")
+    if rerank is False:
+        settings = _replace(settings, rerank_provider="none")
+    elif rerank is True and not rerank_info(settings)["configured"]:
+        return {"error": "Reranking is not configured (set TINI_RERANK_PROVIDER and its API key)."}
     try:
         cases = _load_cases(name, settings)
     except ValueError as exc:
@@ -302,7 +327,10 @@ def run_eval(
             return {"error": f"Chat model unavailable: {type(exc).__name__}: {exc}"}
     conn = connect(settings.home)
     try:
-        index = make_document_index(settings, conn, make_embedding_provider(settings))
+        try:
+            index = make_document_index(settings, conn, make_embedding_provider(settings))
+        except ValueError as exc:
+            return {"error": str(exc)}
         rows = []
         by_lang: dict[str, dict[str, int]] = {}
         by_format: dict[str, dict[str, int]] = {}
@@ -396,7 +424,11 @@ def run_eval(
         "p95_latency_ms": round(_percentile(latencies, 95), 1),
         "max_latency_ms": round(max(latencies), 1) if latencies else 0.0,
         "first_query_ms": round(latencies[0], 1) if latencies else 0.0,
+        "reranked": isinstance(index, RerankingIndex),
+        "rerank_errors": index.errors if isinstance(index, RerankingIndex) else 0,
     }
+    if isinstance(index, RerankingIndex) and index.last_error:
+        result["rerank_last_error"] = index.last_error
     if use_llm:
         result["model"] = settings.model
         result["answer_keyword_rate"] = (

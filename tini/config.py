@@ -84,6 +84,19 @@ def _ocr_base_url() -> str | None:
     return env_override or _OCR_PROVIDER_DEFAULT_BASE_URL.get(provider)
 
 
+def _rerank_api_key() -> str:
+    """Dedicated key first, then the provider's own conventional variable.
+    There is deliberately no base-URL setting: a reranker receives document
+    text, so its destination is fixed in tini/documents/rerank.py rather than
+    configurable."""
+    configured = os.getenv("TINI_RERANK_API_KEY", "").strip()
+    if configured:
+        return configured
+    provider = os.getenv("TINI_RERANK_PROVIDER", "none").strip().lower()
+    fallback = {"jev": "TYPESAFE_API_KEY"}.get(provider)
+    return os.getenv(fallback, "").strip() if fallback else ""
+
+
 @dataclass
 class Settings:
     # --- LLM: pick a provider, set its key. See tini/loop/models.py PROVIDERS.
@@ -122,6 +135,18 @@ class Settings:
     ocr_model: str = field(default_factory=lambda: os.getenv("TINI_OCR_MODEL", "").strip())
     ocr_api_key: str = field(default_factory=_ocr_api_key)
     ocr_base_url: str | None = field(default_factory=_ocr_base_url)
+    # Reranking (tini/documents/rerank.py): retrieve more candidates than
+    # needed, then let a second model reorder them against the question.
+    # Off by default. OFF means candidate chunks never leave this machine;
+    # turning on a hosted provider (jev) sends them to that provider.
+    rerank_provider: str = field(
+        default_factory=lambda: os.getenv("TINI_RERANK_PROVIDER", "none").strip().lower()
+    )
+    rerank_model: str = field(default_factory=lambda: os.getenv("TINI_RERANK_MODEL", "").strip())
+    rerank_api_key: str = field(default_factory=_rerank_api_key)
+    rerank_candidates: int = field(
+        default_factory=lambda: int(os.getenv("TINI_RERANK_CANDIDATES", "").strip() or "20")
+    )
     # Providers the user turned off in the dashboard (comma-separated ids).
     # Disabled providers are hidden from pickers/switchers; the ACTIVE provider
     # can't be disabled (guarded in integrations.apply_provider_disabled).

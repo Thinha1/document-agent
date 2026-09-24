@@ -62,10 +62,17 @@ def main() -> None:
     parser.add_argument("--workspace", default="", help="default: TINI_DOCUMENT_WORKSPACE")
     parser.add_argument("--k", type=int, default=3)
     parser.add_argument("--compare", type=Path, help="an earlier snapshot to diff against")
+    parser.add_argument(
+        "--rerank",
+        choices=["auto", "on", "off"],
+        default="auto",
+        help="auto: follow TINI_RERANK_PROVIDER; on: require it; off: force vector order only",
+    )
     args = parser.parse_args()
 
     settings = load_settings()
     workspace = args.workspace or settings.document_workspace
+    rerank = {"auto": None, "on": True, "off": False}[args.rerank]
     sets = [
         s["name"] for s in document_eval.list_question_sets(settings) if s["source"] == "built-in"
     ]
@@ -74,14 +81,28 @@ def main() -> None:
 
     print(f"warming up on {sets[0]} (not recorded)…", file=sys.stderr)
     document_eval.run_eval(
-        {"question_set": sets[0], "workspace": workspace, "k": args.k, "save": False}, settings
+        {
+            "question_set": sets[0],
+            "workspace": workspace,
+            "k": args.k,
+            "save": False,
+            "rerank": rerank,
+        },
+        settings,
     )
 
     runs = {}
     for name in sets:
         print(f"running {name}…", file=sys.stderr)
         result = document_eval.run_eval(
-            {"question_set": name, "workspace": workspace, "k": args.k, "save": False}, settings
+            {
+                "question_set": name,
+                "workspace": workspace,
+                "k": args.k,
+                "save": False,
+                "rerank": rerank,
+            },
+            settings,
         )
         if "error" in result:
             raise SystemExit(f"{name}: {result['error']}")
@@ -102,7 +123,9 @@ def main() -> None:
     print(
         f"embedding `{emb['model']}` ({emb['dimensions']}d) · index `{config['index']['backend']}"
         f"/{config['index']['collection']}` · chunk max {config['chunking']['max_tokens']} tokens · "
-        f"k={config['search_k']} · {len(config['corpus'])} docs, "
+        f"k={config['search_k']} · rerank "
+        f"{config['rerank']['provider'] + ' ×' + str(config['rerank']['candidates']) if config['rerank']['enabled'] else 'off'}"
+        f" · {len(config['corpus'])} docs, "
         f"{sum(d['chunks'] for d in config['corpus'])} chunks\n"
     )
     print("| question set | recall@k | by language | by format | latency median / p95 |")

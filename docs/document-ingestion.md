@@ -135,6 +135,51 @@ you compare both models on the same questions from the dashboard's Retrieval
 eval. Numbers are one run on CPU; embeddings are not perfectly deterministic,
 so expect a question or two of run-to-run variation.
 
+## Reranking (optional, hosted provider only so far)
+
+Vector search returns the chunks nearest the question. In the
+[baseline](eval-baseline.md) the right document is found ~95% of the time but
+for table-heavy sources only 62% of the expected facts appear in the returned
+chunks: the answer chunk is near, not nearest. Reranking fetches a wider pool
+(`TINI_RERANK_CANDIDATES`, default 20), lets a second model score each
+candidate against the question, and keeps the best `top_k`. It wraps any
+index (`RerankingIndex`), so the agent's `search_documents` tool, the CLI and
+the dashboard all get it.
+
+```dotenv
+TINI_RERANK_PROVIDER=jev
+TYPESAFE_API_KEY=...
+```
+
+**Status: implemented against the documented API, not yet run against the
+live one.** The tests fake the HTTP layer (request shape, batching past 30
+candidates, retry on 429/529, malformed responses, key never in errors). No
+measured effect on retrieval quality exists yet: run
+`python scripts/document_baseline.py with-jev --rerank on --compare evals/baselines/bge-m3-dense-2026-09-24.json`
+and read which questions were fixed and which regressed before believing any
+claim about it.
+
+- **Jev is not a purpose-built reranker.** It is TypeSafe's hosted "System
+  One" decision model (typed answers with calibrated probabilities). Here it
+  is asked one yes/no question per candidate ("does this document contain what
+  the query asks for?") and the returned probability is the score. Its docs
+  do not state language support, so Japanese and Vietnamese quality is an
+  open question the eval has to answer.
+- **Privacy.** Every search sends the question and the candidate chunks' text
+  to `api.typesafe.ai`. The endpoint is fixed in the code on purpose — a
+  setting that could redirect document text elsewhere is a way to leak it.
+  Provider `none` keeps everything local.
+- **Failure is visible, not silent.** If the provider errors, the search falls
+  back to vector order and the failure is counted; the eval reports
+  "N of M searches fell back", so an outage cannot pass as "reranking made no
+  difference".
+- **Latency.** One extra network call per search. TypeSafe reports 70-500 ms;
+  measure from your network (the service is hosted in the US West).
+- **Self-hosted alternative (researched, not built).** `bge-reranker-v2-m3`
+  (Apache-2.0, same family as bge-m3) behind Hugging Face text-embeddings-
+  inference's CPU image exposes `POST /rerank`. Ollama has no rerank endpoint.
+  No CPU latency was verified for it.
+
 ## OCR fallback for scanned/image-only pages
 
 A PDF page averaging under ~40 extracted characters is treated as scanned:

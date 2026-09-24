@@ -9,7 +9,7 @@ let kbState = {
   busy:false, stage:"", failed:false, filename:"", message:"",
   recent:[], selected:null, chunks:[], chunksLoading:false,
   query:"", hits:[], searching:false,
-  evalSet:"", evalRunning:false, evalResult:null, evalError:"", evalUseLlm:false, evalNote:"",
+  evalSet:"", evalRunning:false, evalResult:null, evalError:"", evalUseLlm:false, evalRerank:false, evalNote:"",
 };
 
 function kbRerender(){
@@ -146,6 +146,8 @@ function kbEvalPick(select){
   editing = false; kbRerender();
 }
 
+function kbEvalRerank(box){ kbState.evalRerank = box.checked; kbState.evalResult = null; editing = false; kbRerender(); }
+
 function kbEvalLlm(box){ kbState.evalUseLlm = box.checked; kbState.evalResult = null; editing = false; kbRerender(); }
 
 function kbEvalImportPick(){ const input = document.getElementById("kb-eval-file"); if (input) input.click(); }
@@ -167,7 +169,7 @@ async function kbRunEval(){
   if (!kbState.evalSet || kbState.evalRunning) return;
   kbState.evalRunning = true; kbState.evalError = ""; kbState.evalResult = null; kbRerender();
   const workspace = (D.documents && D.documents.workspace) || "default";
-  const result = await postJSON("/api/documents/eval", {question_set:kbState.evalSet, workspace, k:3, use_llm:kbState.evalUseLlm});
+  const result = await postJSON("/api/documents/eval", {question_set:kbState.evalSet, workspace, k:3, use_llm:kbState.evalUseLlm, rerank:kbState.evalRerank});
   kbState.evalRunning = false;
   if (result.error) kbState.evalError = result.error;
   else kbState.evalResult = result;
@@ -245,6 +247,14 @@ function kbEvalChips(groups){
   return `<div class="kb-eval-langs">${entries.map(([name, t]) => `<span class="kb-lang">${esc(name)}</span><b>${Math.round(t.recall*100)}%</b><small>${t.hits}/${t.total}</small>`).join("")}</div>`;
 }
 
+function kbEvalRerankNote(result){
+  if (!result.reranked) return "";
+  const bad = result.rerank_errors
+    ? `<b class="kb-answer-bad">${result.rerank_errors} of ${result.total} searches fell back to vector order</b> (${esc(result.rerank_last_error||"rerank failed")}) — these numbers are partly NOT reranked.`
+    : "All searches were reranked.";
+  return `<div class="kb-run-message">Reranked · ${esc(result.config.rerank.provider)} · ${result.config.rerank.candidates} candidates. ${bad}</div>`;
+}
+
 function kbEvalColdNote(result){
   // One query that loaded a local model into memory can dwarf the rest;
   // say so instead of letting it read as the typical latency.
@@ -265,11 +275,12 @@ function kbEvalSection(data){
       <button onclick="kbRunEval()" ${(!kbState.evalSet||kbState.evalRunning)?"disabled":""}>${kbState.evalRunning?"Running…":"Run eval"}</button>
       <button class="quiet" onclick="kbEvalImportPick()">Import JSON</button>
     </div>
+    ${((data.documents && data.documents.rerank) || {}).configured ? `<label class="kb-eval-llm"><input type="checkbox" onchange="kbEvalRerank(this)" ${kbState.evalRerank?"checked":""}> Rerank the top ${data.documents.rerank.candidates} candidates with ${esc(data.documents.rerank.provider)} <small>— sends the question and those chunks' text to ${esc(data.documents.rerank.provider)}, one call per question. Unchecked = vector order only.</small></label>` : ""}
     <label class="kb-eval-llm"><input type="checkbox" onchange="kbEvalLlm(this)" ${kbState.evalUseLlm?"checked":""}> Also answer with the chat model <small>${esc((D.provider||"")+" · "+(D.model||"chat model"))} — sends the retrieved chunks to it, one call per question</small></label>` : `<div class="kb-empty"><b>No question sets yet.</b><span>Import a JSON/JSONL file — each case needs a query and an expected_title (see evals/documents/denso_qa.jsonl).</span><div class="kb-eval-controls" style="margin-top:10px"><button onclick="kbEvalImportPick()">Import JSON</button></div></div>`}
     <input id="kb-eval-file" hidden type="file" accept=".json,.jsonl,application/json" onchange="kbEvalImport(this)">
     ${kbState.evalNote ? `<div class="kb-run-message">${esc(kbState.evalNote)}</div>` : ""}
     ${kbState.evalError ? `<div class="kb-run-message bad">${esc(kbState.evalError)}</div>` : ""}
-    ${result ? `${kbEvalChips(result.by_lang)}${kbEvalChips(result.by_format)}<div class="kb-eval-totals"><div><b>${Math.round(result.recall*100)}%</b><span>recall @${result.k}</span></div><div><b>${result.hits}/${result.total}</b><span>hits</span></div><div><b>${result.median_latency_ms}ms</b><span>median latency</span></div><div><b>${result.p95_latency_ms}ms</b><span>p95</span></div>${result.use_llm?`<div><b>${result.answer_keyword_rate==null?"—":Math.round(result.answer_keyword_rate*100)+"%"}</b><span>answer keywords</span></div><div><b>${result.llm_median_ms}ms</b><span>median LLM · p95 ${result.llm_p95_ms}ms${result.llm_errors?` · ${result.llm_errors} failed`:""}</span></div>`:""}</div>${kbEvalColdNote(result)}${result.saved_as?`<div class="kb-run-message">Run saved as .tini/eval_runs/${esc(result.saved_as)}</div>`:""}${kbEvalRows(result)}` : ""}
+    ${result ? `${kbEvalChips(result.by_lang)}${kbEvalChips(result.by_format)}<div class="kb-eval-totals"><div><b>${Math.round(result.recall*100)}%</b><span>recall @${result.k}</span></div><div><b>${result.hits}/${result.total}</b><span>hits</span></div><div><b>${result.median_latency_ms}ms</b><span>median latency</span></div><div><b>${result.p95_latency_ms}ms</b><span>p95</span></div>${result.use_llm?`<div><b>${result.answer_keyword_rate==null?"—":Math.round(result.answer_keyword_rate*100)+"%"}</b><span>answer keywords</span></div><div><b>${result.llm_median_ms}ms</b><span>median LLM · p95 ${result.llm_p95_ms}ms${result.llm_errors?` · ${result.llm_errors} failed`:""}</span></div>`:""}</div>${kbEvalRerankNote(result)}${kbEvalColdNote(result)}${result.saved_as?`<div class="kb-run-message">Run saved as .tini/eval_runs/${esc(result.saved_as)}</div>`:""}${kbEvalRows(result)}` : ""}
   </section>`;
 }
 

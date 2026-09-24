@@ -34,10 +34,17 @@ def make_document_index(
     if backend == "qdrant":
         from tini.documents.qdrant_store import QdrantDocumentIndex
 
-        return QdrantDocumentIndex(settings, embedder)
-    if backend == "sqlite":
-        return SqliteDocumentIndex(conn, embedder)
-    raise ValueError(f"Unsupported document index backend: {backend}")
+        index: DocumentIndex = QdrantDocumentIndex(settings, embedder)
+    elif backend == "sqlite":
+        index = SqliteDocumentIndex(conn, embedder)
+    else:
+        raise ValueError(f"Unsupported document index backend: {backend}")
+    from tini.documents.rerank import RerankingIndex, make_reranker
+
+    reranker = make_reranker(settings)
+    if reranker is not None:
+        index = RerankingIndex(index, reranker, settings.rerank_candidates)
+    return index
 
 
 class SqliteDocumentIndex:
