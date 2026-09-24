@@ -8,6 +8,7 @@ from pathlib import Path
 from tini.config import load_settings
 from tini.db import connect
 from tini.documents.embeddings import make_embedding_provider
+from tini.documents.ocr import make_ocr_provider
 from tini.documents.pipeline import IngestionPipeline
 from tini.documents.store import make_document_index
 
@@ -32,6 +33,7 @@ def ingest_main(argv: list[str]) -> int:
         pipeline = IngestionPipeline(
             make_document_index(settings, conn, embedder),
             embedder=embedder,
+            ocr=make_ocr_provider(settings),
             chunk_max_tokens=args.chunk_max_tokens,
             chunk_min_tokens=args.chunk_min_tokens,
             chunk_overlap_tokens=args.chunk_overlap_tokens,

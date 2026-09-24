@@ -40,7 +40,7 @@ from tini.integrations import (
     list_providers,
     test_integration,
 )
-from tini.ops import browser_agent, commands, compare_history, document_api
+from tini.ops import browser_agent, commands, compare_history, document_api, document_eval
 from tini.ops.arena import (
     compare_clear,
     compare_delete_run,
@@ -554,7 +554,10 @@ def collect() -> dict:
         "providers": [asdict(view) for view in list_providers()],
         "connections": [asdict(view) for view in list_connections()],
         "tools": tools_info(),
-        "documents": document_api.documents_payload(settings),
+        "documents": {
+            **document_api.documents_payload(settings),
+            "question_sets": document_eval.list_question_sets(settings),
+        },
         "usage": usage_summary(home),
     }
 
@@ -1288,6 +1291,8 @@ class Handler(BaseHTTPRequestHandler):
             "/api/pin": pin_action,
             "/api/documents/search": document_api.search,
             "/api/documents/action": document_api.action,
+            "/api/documents/eval": document_eval.run_eval,
+            "/api/documents/eval/import": document_eval.import_set,
             "/api/connections": None,
             "/api/connections/test": None,
             "/api/providers": None,

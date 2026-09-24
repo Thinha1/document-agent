@@ -12,8 +12,8 @@ from evals.helpers import ScriptedClient, make_tini, response, text_block, tool_
 from tini.config import Settings
 from tini.db import connect
 from tini.documents.base import DocumentIndex
-from tini.documents.chunking import chunk_text
-from tini.documents.loaders import DocumentLoadError, discover_documents
+from tini.documents.chunking import chunk_text, estimate_tokens
+from tini.documents.loaders import DocumentLoadError, discover_documents, load_document
 from tini.documents.pipeline import IngestionPipeline
 from tini.documents.store import SqliteDocumentIndex
 from tini.tools import build_registry
@@ -148,6 +148,74 @@ def test_explicit_unsupported_file_is_rejected(tmp_path):
         discover_documents(source)
 
 
+def _minimal_pdf_with_text(text: str) -> bytes:
+    """A hand-built single-page PDF with a real, extractable text stream —
+    pypdf can read arbitrary PDFs but has no from-scratch text-drawing API
+    (that's reportlab's job, not a dependency here), so this writes the
+    handful of PDF objects a viewer needs directly, with byte offsets
+    computed rather than guessed."""
+    objects = [
+        b"<< /Type /Catalog /Pages 2 0 R >>",
+        b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+        (
+            b"<< /Type /Page /Parent 2 0 R /Resources << /Font << /F1 4 0 R >> >> "
+            b"/MediaBox [0 0 200 200] /Contents 5 0 R >>"
+        ),
+        b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+    ]
+    stream = f"BT /F1 12 Tf 20 100 Td ({text}) Tj ET".encode()
+    objects.append(b"<< /Length " + str(len(stream)).encode() + b" >>\nstream\n" + stream + b"\nendstream")
+
+    out = bytearray(b"%PDF-1.4\n")
+    offsets = [0]
+    for i, obj in enumerate(objects, start=1):
+        offsets.append(len(out))
+        out += f"{i} 0 obj\n".encode() + obj + b"\nendobj\n"
+    xref_offset = len(out)
+    out += f"xref\n0 {len(objects) + 1}\n".encode() + b"0000000000 65535 f \n"
+    for offset in offsets[1:]:
+        out += f"{offset:010d} 00000 n \n".encode()
+    out += (
+        b"trailer\n<< /Size " + str(len(objects) + 1).encode() + b" /Root 1 0 R >>\n"
+        b"startxref\n" + str(xref_offset).encode() + b"\n%%EOF"
+    )
+    return bytes(out)
+
+
+def _encrypted_pdf_bytes(*, user_password: str, owner_password: str = "owner") -> bytes:
+    import io
+
+    from pypdf import PdfWriter
+
+    writer = PdfWriter(clone_from=io.BytesIO(_minimal_pdf_with_text("Restricted DENSO filing content")))
+    buf = io.BytesIO()
+    writer.encrypt(user_password=user_password, owner_password=owner_password)
+    writer.write(buf)
+    return buf.getvalue()
+
+
+def test_pdf_with_only_an_empty_user_password_is_readable(tmp_path):
+    """Official/government PDFs (Japan's EDINET securities filings, for one)
+    are often "encrypted" only to restrict printing/copying in a viewer, with
+    an empty user password — reading the text is not actually gated. Rejecting
+    these outright would silently exclude a whole category of real-world
+    documents a "just point it at a folder" pipeline should handle."""
+    source = tmp_path / "restricted.pdf"
+    source.write_bytes(_encrypted_pdf_bytes(user_password=""))
+
+    loaded = load_document(source, 26_214_400)
+
+    assert "Restricted DENSO filing content" in loaded.text
+
+
+def test_pdf_with_a_real_password_is_rejected_not_silently_empty(tmp_path):
+    source = tmp_path / "locked.pdf"
+    source.write_bytes(_encrypted_pdf_bytes(user_password="realsecret"))
+
+    with pytest.raises(DocumentLoadError, match="encrypted"):
+        load_document(source, 26_214_400)
+
+
 def test_document_tool_returns_evidence_with_a_source(tmp_path, index, pipeline):
     source = _write(tmp_path / "handbook.md", "Employees rotate credentials every ninety days.")
     pipeline.ingest_path(source)
@@ -195,6 +263,39 @@ def test_chunking_respects_semantic_boundaries_and_stable_ordinals():
     assert all(chunk.metadata["estimated_tokens"] <= 30 for chunk in chunks)
     assert any(left.char_end > right.char_start for left, right in pairwise(chunks))
     assert any(chunk.text.startswith("# Beta") for chunk in chunks)
+
+
+def test_cjk_text_is_not_undercounted_as_a_handful_of_giant_words():
+    """`\\w+` is greedy and CJK scripts have no spaces between words, so the
+    OLD regex counted an entire unbroken Japanese paragraph as one "token" —
+    found against a real EDINET (Japanese securities filing) PDF, where a
+    295-character passage estimated at 31 tokens instead of ~295. That lets
+    max_tokens stop meaning anything for CJK content: a chunk could grow
+    several times past its guardrail before the estimate ever caught up."""
+    japanese = "会社は、株主の権利を確保し、平等性を保証するために、正確な情報を提供いたします" * 3
+
+    tokens = estimate_tokens(japanese)
+
+    # Not asserting an exact ratio (that's an implementation detail); asserting
+    # it's in the right ORDER OF MAGNITUDE for a size guardrail is what matters.
+    assert tokens >= len(japanese) * 0.5, (
+        f"{tokens} tokens for {len(japanese)} CJK characters — still undercounting"
+    )
+
+
+def test_cjk_chunking_actually_respects_max_tokens():
+    japanese_paragraph = "会社は株主の権利を確保し平等性を保証するため正確な情報を提供いたします。" * 20
+    text = f"# Section\n\n{japanese_paragraph}"
+
+    chunks = chunk_text(text, max_tokens=60, min_tokens=10, overlap_tokens=8)
+
+    assert len(chunks) > 1, "one oversized chunk means the guardrail never tripped for CJK text"
+    assert all(chunk.metadata["estimated_tokens"] <= 60 for chunk in chunks)
+
+
+def test_ascii_word_counting_is_unchanged_by_the_cjk_fix():
+    text = "The quick brown fox jumps over the lazy dog, 123 times!"
+    assert estimate_tokens(text) == 13
 
 
 @pytest.mark.parametrize(

@@ -12,6 +12,7 @@ from tini.documents.chunking import chunk_text
 from tini.documents.embeddings import EmbeddingProvider
 from tini.documents.loaders import discover_documents, load_document
 from tini.documents.models import DEFAULT_WORKSPACE, DocumentSource, IngestReport
+from tini.documents.ocr import OcrProvider
 
 IngestObserver = Callable[[str, dict[str, Any]], None]
 
@@ -22,6 +23,7 @@ class IngestionPipeline:
         index: DocumentIndex,
         *,
         embedder: EmbeddingProvider | None = None,
+        ocr: OcrProvider | None = None,
         chunk_max_tokens: int = 512,
         chunk_min_tokens: int = 120,
         chunk_overlap_tokens: int = 48,
@@ -42,6 +44,7 @@ class IngestionPipeline:
             raise ValueError("max_text_chars must be positive")
         self.index = index
         self.embedder = embedder or getattr(index, "embedder", None)
+        self.ocr = ocr
         self.chunk_max_tokens = chunk_max_tokens
         self.chunk_min_tokens = chunk_min_tokens
         self.chunk_overlap_tokens = chunk_overlap_tokens
@@ -66,7 +69,10 @@ class IngestionPipeline:
             try:
                 notify("loading", {"path": str(source_path)})
                 loaded = load_document(
-                    source_path, self.max_file_bytes, max_text_chars=self.max_text_chars
+                    source_path,
+                    self.max_file_bytes,
+                    max_text_chars=self.max_text_chars,
+                    ocr=self.ocr,
                 )
                 notify("chunking", {"path": str(source_path), "characters": len(loaded.text)})
                 chunks = chunk_text(

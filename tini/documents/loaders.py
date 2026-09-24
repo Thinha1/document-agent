@@ -8,7 +8,10 @@ from dataclasses import dataclass, field
 from html.parser import HTMLParser
 from io import BytesIO
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from tini.documents.ocr import OcrProvider
 
 PLAIN_TEXT_SUFFIXES = {
     ".txt",
@@ -96,7 +99,10 @@ def discover_documents(path: Path, recursive: bool = True) -> list[Path]:
 
 
 def load_document(
-    path: Path, max_file_bytes: int, max_text_chars: int = 5_000_000
+    path: Path,
+    max_file_bytes: int,
+    max_text_chars: int = 5_000_000,
+    ocr: OcrProvider | None = None,
 ) -> LoadedDocument:
     path = path.expanduser()
     if path.is_symlink():
@@ -131,7 +137,7 @@ def load_document(
         parser.feed(_decode_utf8(raw, path))
         text = parser.text()
     elif suffix == ".pdf":
-        text, pdf_meta = _load_pdf(raw, path)
+        text, pdf_meta = _load_pdf(raw, path, ocr=ocr)
         metadata.update(pdf_meta)
     else:
         text, docx_meta = _load_docx(raw, path)
@@ -171,7 +177,17 @@ def _normalise_text(text: str) -> str:
     return "\n".join(lines).strip()
 
 
-def _load_pdf(raw: bytes, path: Path) -> tuple[str, dict[str, Any]]:
+# Below this average extracted characters per page, a PDF is treated as
+# scanned/image-only rather than a normal text PDF. Calibrated against real
+# documents: a genuinely image-only 15-page PDF averaged ~17 chars/page
+# (stray glyphs pypdf still catches), while every text PDF sampled averaged
+# in the hundreds. 40 sits well inside that gap.
+_MIN_CHARS_PER_PAGE = 40
+
+
+def _load_pdf(
+    raw: bytes, path: Path, ocr: OcrProvider | None = None
+) -> tuple[str, dict[str, Any]]:
     try:
         from pypdf import PdfReader
     except ImportError as exc:
@@ -180,14 +196,92 @@ def _load_pdf(raw: bytes, path: Path) -> tuple[str, dict[str, Any]]:
         ) from exc
     try:
         reader = PdfReader(BytesIO(raw))
-        if reader.is_encrypted:
+        # Many official/government PDFs (e.g. Japan's EDINET securities
+        # filings) are "encrypted" only to restrict printing/copying in a
+        # viewer, with an empty user password — reading is not actually
+        # gated. pypdf's is_encrypted stays True even after a successful
+        # decrypt (it reflects the file format, not decryption state), so
+        # the empty-password attempt's own return value is the real check.
+        if reader.is_encrypted and not reader.decrypt(""):
             raise DocumentLoadError(f"encrypted PDF is not supported: {path.name}")
         pages = [page.extract_text() or "" for page in reader.pages]
     except DocumentLoadError:
         raise
     except Exception as exc:
         raise DocumentLoadError(f"could not parse PDF {path.name}: {exc}") from exc
-    return "\n\n".join(pages), {"page_count": len(pages)}
+
+    page_count = len(pages)
+    text = "\n\n".join(pages)
+    metadata: dict[str, Any] = {"page_count": page_count}
+    scanned = page_count > 0 and len(text) / page_count < _MIN_CHARS_PER_PAGE
+    if scanned:
+        if ocr is None:
+            # Honest, not silent: an operator inspecting this document's
+            # metadata (dashboard, `tini documents`) can see WHY a document
+            # that "ingested fine" has almost no content, rather than the
+            # near-empty chunk just looking like a thin source document.
+            metadata["ocr_skipped"] = (
+                "page text looks scanned/image-only; no OCR provider configured "
+                "(TINI_OCR_PROVIDER, see tini/documents/ocr.py)"
+            )
+        else:
+            ocr_text, failed_pages = _ocr_pdf_pages(raw, ocr)
+            if ocr_text.strip():
+                text = ocr_text
+                metadata["ocr_applied"] = True
+                if failed_pages:
+                    metadata["ocr_failed_pages"] = failed_pages
+    return text, metadata
+
+
+def _ocr_pdf_pages(raw: bytes, ocr: OcrProvider) -> tuple[str, int]:
+    """Render each page to a bitmap — exactly what a viewer would show — and
+    run `ocr` over it, stitching results back together in page order.
+
+    Tried pulling the page's embedded image out via pypdf first
+    (page.images), since a scanned page is virtually always stored as one
+    full-page raster XObject and that would have needed no rasterizer at
+    all. Abandoned it against this corpus's real scanned PDFs: pypdf reported
+    "Image and mask size not matching" and returned a broken 2x2-pixel image
+    for the genuine scan on most pages (the real content lives in a
+    differently-sized soft mask pypdf doesn't reconcile), silently losing
+    the page's content rather than erroring — the exact failure mode a
+    pipeline that must work "without manual editing" cannot have. Rendering
+    the fully composed page with pypdfium2 (PDFium, the engine Chrome uses)
+    sidesteps the mask-decoding question entirely: whatever a human would
+    see on the page is what gets rasterized and sent to the model.
+
+    Returns (text, failed_page_count): one page's OCR call failing does not
+    sink the whole document, but the count stays visible in the caller's
+    metadata rather than vanishing silently."""
+    from io import BytesIO as _BytesIO
+
+    import pypdfium2 as pdfium
+
+    from tini.documents.ocr import OcrError
+
+    pdf = pdfium.PdfDocument(raw)
+    parts: list[str] = []
+    failed = 0
+    try:
+        for page in pdf:
+            try:
+                # scale=2.0 ≈ 144 DPI — legible for a vision model without
+                # the request bodies of a full 300 DPI scan.
+                image = page.render(scale=2.0).to_pil()
+                buf = _BytesIO()
+                image.convert("RGB").save(buf, format="PNG")
+                text = ocr.ocr_image(buf.getvalue(), "image/png")
+            except OcrError:
+                failed += 1
+                continue
+            finally:
+                page.close()
+            if text:
+                parts.append(text)
+    finally:
+        pdf.close()
+    return "\n\n".join(parts), failed
 
 
 def _load_docx(raw: bytes, path: Path) -> tuple[str, dict[str, Any]]:

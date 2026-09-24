@@ -7,7 +7,19 @@ from dataclasses import dataclass
 
 from tini.documents.models import DocumentChunk
 
-_TOKEN_RE = re.compile(r"\w+|[^\w\s]", re.UNICODE)
+# CJK scripts (CJK Unified Ideographs, Hiragana, Katakana, Hangul, fullwidth
+# forms) carry no spaces between words, so plain `\w+` — which greedily
+# consumes an entire unbroken run as ONE match — collapses a whole Japanese
+# paragraph into a handful of "tokens" and lets max_tokens stop meaning
+# anything for it. Matched a real EDINET (Japanese securities filing) PDF:
+# 295 characters of continuous Japanese prose estimated at 31 tokens instead
+# of the ~295 a subword tokenizer would count, letting a chunk grow ~8x past
+# its guardrail. Counting each CJK character as its own token is a
+# deliberate overestimate (real tokenizers run closer to 0.5-1 token/char
+# for CJK) — safe direction for a size guardrail, and English/Latin text
+# (the `[^\W\d_...]+` word-run branch) is completely unaffected.
+_CJK = "一-鿿぀-ヿ゠-ヿ가-힯＀-￯"
+_TOKEN_RE = re.compile(rf"[{_CJK}]|[^\W\d_{_CJK}]+|\d+|[^\w\s]", re.UNICODE)
 _BLOCK_RE = re.compile(r"\S.*?(?=[ \t]*\n[ \t]*\n|\s*\Z)", re.DOTALL)
 _SENTENCE_RE = re.compile(r".*?(?:[.!?。！？]+(?:\s+|$)|\Z)", re.DOTALL)
 _HEADING_RE = re.compile(r"^(?:#{1,6}\s+|[A-ZÀ-Ỹ\d][^\n]{0,100}\n[-=]{3,}\s*$)", re.MULTILINE)

@@ -1,0 +1,31 @@
+{"id": "ja-founded", "lang": "ja", "query": "デンソーはいつ、どの会社から分離独立して設立されましたか？", "expected_title": "edinet_securities_report_candidate", "expected_keywords": ["1949年12月", "トヨタ自動車工業"]}
+{"id": "ja-deming", "lang": "ja", "query": "デンソーがデミング賞を受賞したのはいつですか？", "expected_title": "edinet_securities_report_candidate", "expected_keywords": ["1961年11月", "デミング賞"]}
+{"id": "ja-fujitsu-ten", "lang": "ja", "query": "富士通テンを買収したのはいつですか？", "expected_title": "edinet_securities_report_candidate", "expected_keywords": ["2017年11月", "富士通テン"]}
+{"id": "ja-zero-emission", "lang": "ja", "query": "ゼロエミッションを達成したのはいつですか？", "expected_title": "edinet_securities_report_candidate", "expected_keywords": ["2002年11月", "ゼロエミッション"]}
+{"id": "ja-group-size", "lang": "ja", "query": "デンソーの連結会社は子会社と関連会社を何社含みますか？", "expected_title": "edinet_securities_report_candidate", "expected_keywords": ["子会社190社", "関連会社83社"]}
+{"id": "ja-employees", "lang": "ja", "query": "連結ベースの従業員数の合計は何人ですか？", "expected_title": "edinet_securities_report_candidate", "expected_keywords": ["164,572"]}
+{"id": "ja-avg-salary", "lang": "ja", "query": "提出会社の従業員の平均年間給与はいくらですか？", "expected_title": "edinet_securities_report_candidate", "expected_keywords": ["8,113,982"]}
+{"id": "ja-women-managers", "lang": "ja", "query": "管理職に占める女性労働者の割合はどれくらいですか？", "expected_title": "edinet_securities_report_candidate", "expected_keywords": ["1.8％", "139人"]}
+{"id": "ja-thermal-products", "lang": "ja", "query": "サーマルシステムの主要製品は何ですか？", "expected_title": "edinet_securities_report_candidate", "expected_keywords": ["ＨＶＡＣ", "コンプレッサ"]}
+{"id": "ja-auto-id", "lang": "ja", "query": "AUTO-ID関連の製品にはどのようなものがありますか？", "expected_title": "edinet_securities_report_candidate", "expected_keywords": ["バーコードハンディスキャナ", "ＱＲコード"]}
+{"id": "ja-production", "lang": "ja", "query": "日本セグメントの生産実績はいくらですか？", "expected_title": "edinet_securities_report_candidate", "expected_keywords": ["2,609,060"]}
+{"id": "ja-x-supplier-forced-labor", "lang": "ja", "query": "サプライヤーは強制労働や児童労働を使用してもよいですか？", "expected_title": "supply-chain-doc-sustainability-guidelines-en", "expected_keywords": ["forced labor", "child labor"]}
+{"id": "ja-x-mission", "lang": "ja", "query": "DENSOの使命（ミッション）は何ですか？", "expected_title": "compliance-doc-employee-behavior-guideline-en", "expected_keywords": ["better world"]}
+{"id": "ja-x-hr-scope", "lang": "ja", "query": "人権方針は誰に適用されますか？", "expected_title": "humanrights-doc-human-rights-policy-en", "expected_keywords": ["all employees"]}
+{"id": "ja-x-qa-core-tools", "lang": "ja", "query": "DENSO TENの品質保証マニュアルが求めるコアツールは何ですか？", "expected_title": "denso-ten_qa_manual", "expected_keywords": ["FMEA", "APQP"]}
+{"id": "vi-mission", "lang": "vi", "query": "Sứ mệnh của DENSO trong Triết lý DENSO là gì?", "expected_title": "compliance-doc-employee-behavior-guideline-en", "expected_keywords": ["better world"]}
+{"id": "vi-code-scope", "lang": "vi", "query": "Bộ quy tắc ứng xử của DENSO áp dụng cho những ai?", "expected_title": "compliance-doc-employee-behavior-guideline-en", "expected_keywords": ["executives"]}
+{"id": "vi-shareholder", "lang": "vi", "query": "DENSO đảm bảo quyền và sự đối xử bình đẳng của cổ đông như thế nào?", "expected_title": "management-doc-corporate-governance-policy-2021-en", "expected_keywords": ["shareholders", "voting rights"]}
+{"id": "vi-supplier-child-labor", "lang": "vi", "query": "Nhà cung cấp có được sử dụng lao động cưỡng bức hoặc lao động trẻ em không?", "expected_title": "supply-chain-doc-sustainability-guidelines-en", "expected_keywords": ["forced labor", "child labor"]}
+{"id": "vi-hr-scope", "lang": "vi", "query": "Chính sách nhân quyền của DENSO áp dụng cho những ai?", "expected_title": "humanrights-doc-human-rights-policy-en", "expected_keywords": ["all employees"]}
+{"id": "vi-qa-standard", "lang": "vi", "query": "Sổ tay đảm bảo chất lượng của DENSO TEN dựa trên tiêu chuẩn nào?", "expected_title": "denso-ten_qa_manual", "expected_keywords": ["IATF 16949"]}
+{"id": "vi-nomination", "lang": "vi", "query": "Ai chủ trì Hội đồng Đề cử và Thù lao Điều hành của DENSO?", "expected_title": "management-doc-corporate-governance-2025-en", "expected_keywords": ["independent outside Board member"]}
+{"id": "vi-cross-shareholding", "lang": "vi", "query": "DENSO xử lý việc nắm giữ cổ phần chéo như thế nào?", "expected_title": "management-doc-corporate-governance-2025-en", "expected_keywords": ["cross-shareholdings"]}
+{"id": "vi-x-employees", "lang": "vi", "query": "Tổng số nhân viên hợp nhất của DENSO là bao nhiêu?", "expected_title": "edinet_securities_report_candidate", "expected_keywords": ["164,572"]}
+{"id": "vi-x-founded", "lang": "vi", "query": "DENSO được thành lập năm nào và tách ra từ công ty nào?", "expected_title": "edinet_securities_report_candidate", "expected_keywords": ["1949年12月", "トヨタ自動車工業"]}
+{"id": "vi-x-deming", "lang": "vi", "query": "Khi nào DENSO nhận giải Deming?", "expected_title": "edinet_securities_report_candidate", "expected_keywords": ["1961年11月"]}
+{"id": "vi-x-women", "lang": "vi", "query": "Tỷ lệ nữ giới trong vị trí quản lý của DENSO là bao nhiêu?", "expected_title": "edinet_securities_report_candidate", "expected_keywords": ["1.8％"]}
+{"id": "en-x-employees", "lang": "en", "query": "How many employees does the DENSO group have in total?", "expected_title": "edinet_securities_report_candidate", "expected_keywords": ["164,572"]}
+{"id": "en-x-founded", "lang": "en", "query": "When was DENSO founded and from which company was it spun off?", "expected_title": "edinet_securities_report_candidate", "expected_keywords": ["1949年12月", "トヨタ自動車工業"]}
+{"id": "en-x-fujitsu-ten", "lang": "en", "query": "When did DENSO acquire Fujitsu Ten?", "expected_title": "edinet_securities_report_candidate", "expected_keywords": ["2017年11月"]}
+{"id": "en-x-women", "lang": "en", "query": "What share of managers at DENSO are women?", "expected_title": "edinet_securities_report_candidate", "expected_keywords": ["1.8％"]}
