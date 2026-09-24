@@ -164,13 +164,31 @@ TINI_RERANK_PROVIDER=jev
 TYPESAFE_API_KEY=...
 ```
 
-**Status: implemented against the documented API, not yet run against the
-live one.** The tests fake the HTTP layer (request shape, batching past 30
-candidates, retry on 429/529, malformed responses, key never in errors). No
-measured effect on retrieval quality exists yet: run
-`python scripts/document_baseline.py with-jev --rerank on --compare evals/baselines/bge-m3-dense-2026-09-24.json`
-and read which questions were fixed and which regressed before believing any
-claim about it.
+**Status: measured against the live API, once (2026-09-24), on the 47-question
+multilingual set at k=3.** Recall went from 40/47 (85%) to 43/47 (92%) — a
+real gain, but concentrated and uneven, and it comes at a steep latency cost:
+
+| | off | on (Jev) |
+|---|---|---|
+| recall@3 | 40/47 (85%) | 43/47 (92%) |
+| ja | 25/28 (89%) | 27/28 (96%) |
+| vi | 10/13 (77%) | 10/13 (77%) — **no change** |
+| en | 5/6 (83%) | 6/6 (100%) |
+| table-heavy-pdf | 23/27 (85%) | 24/27 (89%) |
+| text-pdf | 15/18 (83%) | 17/18 (94%) |
+| scanned-pdf | 2/2 (100%) | 2/2 (100%) — n too small to move |
+| median latency | 20.5 ms | 1378.4 ms |
+| p95 latency | 98.7 ms | 1652.2 ms |
+
+Vietnamese got zero benefit — the exact risk the "language support
+undocumented" caveat below was flagging, now confirmed rather than
+hypothetical. Median latency went from 20.5 ms to 1378.4 ms, ~67x — one
+search now costs over a second, well above TypeSafe's own 70-500 ms claim
+(see the Latency bullet below); if a brief asks for "retrieval latency" as
+the headline number, this is not a free accuracy win. One run, one corpus —
+re-run `python scripts/document_baseline.py with-jev --rerank on --compare
+evals/baselines/bge-m3-dense-2026-09-24.json` before trusting this further
+or deciding whether the tradeoff is worth it for a given use case.
 
 - **Jev is not a purpose-built reranker.** It is TypeSafe's hosted "System
   One" decision model (typed answers with calibrated probabilities). Here it
@@ -187,7 +205,9 @@ claim about it.
   "N of M searches fell back", so an outage cannot pass as "reranking made no
   difference".
 - **Latency.** One extra network call per search. TypeSafe reports 70-500 ms;
-  measure from your network (the service is hosted in the US West).
+  measured from this network median latency was 1378 ms (p95 1652 ms) —
+  well above that claim, whether from geography (the service is hosted in
+  US West), the 20-candidate batch per call, or something else unmeasured.
 - **Self-hosted alternative (researched, not built).** `bge-reranker-v2-m3`
   (Apache-2.0, same family as bge-m3) behind Hugging Face text-embeddings-
   inference's CPU image exposes `POST /rerank`. Ollama has no rerank endpoint.
