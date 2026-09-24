@@ -2,6 +2,7 @@ __pycache__/
 *.pyc
 .venv/
 .env
+docker-compose.override.yml
 state.db
 traces/
 *.ics

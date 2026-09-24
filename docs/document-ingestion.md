@@ -135,6 +135,19 @@ you compare both models on the same questions from the dashboard's Retrieval
 eval. Numbers are one run on CPU; embeddings are not perfectly deterministic,
 so expect a question or two of run-to-run variation.
 
+**GPU**: embedding is CPU-compute-bound, not request-bound — client-side
+batching/concurrency has little effect, but an NVIDIA GPU does. Uncomment the
+`deploy.resources.reservations` block under the `ollama` service in
+`docker-compose.yml` (needs the [NVIDIA Container
+Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html)
+on the host; verify with `docker run --rm --gpus all nvidia/cuda:12.4.0-base-ubuntu22.04 nvidia-smi`
+before assuming it's wired up). Measured on an RTX 3050 laptop GPU (6 GB VRAM,
+comfortably fits bge-m3's ~1.2 GB): steady-state bge-m3 throughput went from
+~1.3 s/chunk on CPU to ~55-60 ms/chunk on GPU, about 22x on raw embedding
+calls; a full re-ingest of this corpus dropped from 11 min to well under a
+minute end to end (chunking/indexing overhead included, so the wall-clock
+speedup is somewhat less than the raw per-chunk number).
+
 ## Reranking (optional, hosted provider only so far)
 
 Vector search returns the chunks nearest the question. In the

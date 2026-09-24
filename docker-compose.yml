@@ -51,14 +51,23 @@ services:
       timeout: 5s
       retries: 5
     # CPU-only by default — works everywhere with no host setup. For an
-    # NVIDIA GPU (needs the NVIDIA Container Toolkit on the host), uncomment:
-    # deploy:
-    #   resources:
-    #     reservations:
-    #       devices:
-    #         - driver: nvidia
-    #           count: all
-    #           capabilities: [gpu]
+    # NVIDIA GPU (needs the NVIDIA Container Toolkit on the host — verify
+    # with `docker run --rm --gpus all nvidia/cuda:12.4.0-base-ubuntu22.04
+    # nvidia-smi` first), embeddings are CPU-compute-bound (see
+    # docs/document-ingestion.md), so GPU offload is the real lever, not
+    # client-side batching/concurrency. Don't uncomment this in the shared
+    # file — a host without a GPU/toolkit fails to start this service
+    # entirely. Instead put it in a git-ignored docker-compose.override.yml
+    # (auto-merged by `docker compose`, no -f flag needed):
+    #   services:
+    #     ollama:
+    #       deploy:
+    #         resources:
+    #           reservations:
+    #             devices:
+    #               - driver: nvidia
+    #                 count: all
+    #                 capabilities: [gpu]
 
   tini:
     build: .
