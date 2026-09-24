@@ -190,6 +190,18 @@ re-run `python scripts/document_baseline.py with-jev --rerank on --compare
 evals/baselines/bge-m3-dense-2026-09-24.json` before trusting this further
 or deciding whether the tradeoff is worth it for a given use case.
 
+**With an LLM on top (DeepSeek, same run + reranking on):** recall/by-lang/
+by-format matched the retrieval-only Jev run above (43/47, ja 27/28, vi
+10/13, en 6/6) — reassuring, not a fluke of that one run — with median
+retrieval latency 1520.5 ms (p95 1958.2 ms, in the same range as before).
+The new number is **answer keyword rate: 77%** — of the expected keywords,
+how many actually appear in DeepSeek's generated answer text (not just the
+retrieved chunks) — plus a median **~5496 ms** per LLM call on top of
+retrieval. End to end, one question costs roughly 1.5 s retrieval+rerank +
+5.5 s generation ≈ 7 s. No LLM-mode run without reranking exists yet to
+isolate how much of that 77% the reranking step itself is responsible for
+versus DeepSeek's own answer quality.
+
 - **Jev is not a purpose-built reranker.** It is TypeSafe's hosted "System
   One" decision model (typed answers with calibrated probabilities). Here it
   is asked one yes/no question per candidate ("does this document contain what
