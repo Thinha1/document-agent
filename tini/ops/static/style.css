@@ -792,8 +792,8 @@ details.subterm > summary.subterm-h::-webkit-details-marker{ display:none; }
 .kb-eval-table th{text-align:left;color:var(--ink3);font:600 10px/1.4 var(--mono);text-transform:uppercase;
   letter-spacing:.03em;padding:6px 8px;border-bottom:1px solid var(--line)}
 .kb-eval-table td{padding:7px 8px;border-bottom:1px solid var(--line);color:var(--ink2);vertical-align:top}
-.kb-eval-table tr.ok td:nth-child(4){color:var(--good)}
-.kb-eval-table tr.bad td:nth-child(4){color:var(--bad)}
+.kb-eval-table td.got{color:var(--good)}
+.kb-eval-table tr.bad td.got{color:var(--bad)}
 .kb-lang{display:inline-block;font:600 9.5px/1 var(--mono);text-transform:uppercase;color:var(--kb);
   background:var(--kb-soft);border-radius:4px;padding:3px 5px}
 .kb-eval-totals{display:flex;flex-wrap:wrap;gap:8px 28px;margin:2px 0 4px}

@@ -69,6 +69,10 @@ def make_tini(home: Path, client=None, **settings_overrides):
     # local Qdrant collection.
     settings_overrides.setdefault("document_index", "sqlite")
     settings_overrides.setdefault("embedding_provider", "none")
+    # ...and the workspace: a maintainer's .env may name the workspace their real
+    # corpus lives in (TINI_DOCUMENT_WORKSPACE=denso), while these tests ingest
+    # into "default" — the search tool would then look in the wrong workspace.
+    settings_overrides.setdefault("document_workspace", "default")
     settings = Settings(home=home, **settings_overrides)
     if client is not None and not settings.api_key:
         settings.api_key = "offline"  # never read the real key for scripted runs
