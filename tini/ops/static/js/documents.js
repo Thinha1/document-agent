@@ -225,12 +225,13 @@ function kbEvidence(){
 
 function kbEvalRows(result){
   if (!result.cases.length) return `<div class="kb-empty"><b>No cases in this question set.</b></div>`;
-  return `<table class="kb-eval-table"><thead><tr><th>Lang</th><th>Query</th><th>Expected</th><th>Got</th><th>Keywords</th><th>Latency</th>${result.use_llm?"<th>Answer</th>":""}</tr></thead><tbody>
+  return `<table class="kb-eval-table"><thead><tr><th>Lang</th>${result.cases.some(r => r.format)?"<th>Format</th>":""}<th>Query</th><th>Expected</th><th>Got</th><th>Keywords</th><th>Latency</th>${result.use_llm?"<th>Answer</th>":""}</tr></thead><tbody>
     ${result.cases.map(row => `<tr class="${row.hit?"ok":"bad"}">
       <td><span class="kb-lang">${esc(row.lang||"en")}</span></td>
+      ${result.cases.some(r => r.format)?`<td>${row.format?`<span class="kb-lang">${esc(row.format)}</span>`:""}</td>`:""}
       <td>${esc(row.query)}</td>
       <td>${esc(row.expected_title)}</td>
-      <td>${row.hit?"✓ "+esc(row.expected_title):esc((row.got_titles||[]).join(", ")||"(nothing)")}</td>
+      <td class="got">${row.hit?"✓ "+esc(row.expected_title):esc((row.got_titles||[]).join(", ")||"(nothing)")}</td>
       <td>${row.keyword_total?`${row.keyword_hits.length}/${row.keyword_total}`:"—"}</td>
       <td>${row.latency_ms}ms</td>
       ${result.use_llm?`<td>${row.answer_error?`<span class="kb-answer-bad">${esc(row.answer_error)}</span>`:`<details class="kb-answer"><summary>${row.keyword_total?`${(row.answer_keyword_hits||[]).length}/${row.keyword_total} kw`:"answer"} · ${row.llm_ms}ms</summary><p>${esc(row.answer||"(empty)")}</p></details>`}</td>`:""}
@@ -238,10 +239,18 @@ function kbEvalRows(result){
   </tbody></table>`;
 }
 
-function kbEvalLangs(result){
-  const langs = Object.entries(result.by_lang || {});
-  if (langs.length < 2) return "";
-  return `<div class="kb-eval-langs">${langs.map(([lang, t]) => `<span class="kb-lang">${esc(lang)}</span><b>${Math.round(t.recall*100)}%</b><small>${t.hits}/${t.total}</small>`).join("")}</div>`;
+function kbEvalChips(groups){
+  const entries = Object.entries(groups || {});
+  if (entries.length < 2) return "";
+  return `<div class="kb-eval-langs">${entries.map(([name, t]) => `<span class="kb-lang">${esc(name)}</span><b>${Math.round(t.recall*100)}%</b><small>${t.hits}/${t.total}</small>`).join("")}</div>`;
+}
+
+function kbEvalColdNote(result){
+  // One query that loaded a local model into memory can dwarf the rest;
+  // say so instead of letting it read as the typical latency.
+  if (result.median_latency_ms > 0 && result.first_query_ms > Math.max(500, result.median_latency_ms * 5))
+    return `<div class="kb-run-message">First query took ${result.first_query_ms}ms (model cold start) — median excludes its influence, average does not (${result.avg_latency_ms}ms).</div>`;
+  return "";
 }
 
 function kbEvalSection(data){
@@ -260,7 +269,7 @@ function kbEvalSection(data){
     <input id="kb-eval-file" hidden type="file" accept=".json,.jsonl,application/json" onchange="kbEvalImport(this)">
     ${kbState.evalNote ? `<div class="kb-run-message">${esc(kbState.evalNote)}</div>` : ""}
     ${kbState.evalError ? `<div class="kb-run-message bad">${esc(kbState.evalError)}</div>` : ""}
-    ${result ? `${kbEvalLangs(result)}<div class="kb-eval-totals"><div><b>${Math.round(result.recall*100)}%</b><span>recall @${result.k}</span></div><div><b>${result.hits}/${result.total}</b><span>hits</span></div><div><b>${result.avg_latency_ms}ms</b><span>avg latency</span></div>${result.use_llm?`<div><b>${result.answer_keyword_rate==null?"—":Math.round(result.answer_keyword_rate*100)+"%"}</b><span>answer keywords</span></div><div><b>${result.llm_avg_ms}ms</b><span>avg LLM${result.llm_errors?` · ${result.llm_errors} failed`:""}</span></div>`:""}</div>${kbEvalRows(result)}` : ""}
+    ${result ? `${kbEvalChips(result.by_lang)}${kbEvalChips(result.by_format)}<div class="kb-eval-totals"><div><b>${Math.round(result.recall*100)}%</b><span>recall @${result.k}</span></div><div><b>${result.hits}/${result.total}</b><span>hits</span></div><div><b>${result.median_latency_ms}ms</b><span>median latency</span></div><div><b>${result.p95_latency_ms}ms</b><span>p95</span></div>${result.use_llm?`<div><b>${result.answer_keyword_rate==null?"—":Math.round(result.answer_keyword_rate*100)+"%"}</b><span>answer keywords</span></div><div><b>${result.llm_median_ms}ms</b><span>median LLM · p95 ${result.llm_p95_ms}ms${result.llm_errors?` · ${result.llm_errors} failed`:""}</span></div>`:""}</div>${kbEvalColdNote(result)}${result.saved_as?`<div class="kb-run-message">Run saved as .tini/eval_runs/${esc(result.saved_as)}</div>`:""}${kbEvalRows(result)}` : ""}
   </section>`;
 }
 

@@ -164,7 +164,9 @@ def _minimal_pdf_with_text(text: str) -> bytes:
         b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
     ]
     stream = f"BT /F1 12 Tf 20 100 Td ({text}) Tj ET".encode()
-    objects.append(b"<< /Length " + str(len(stream)).encode() + b" >>\nstream\n" + stream + b"\nendstream")
+    objects.append(
+        b"<< /Length " + str(len(stream)).encode() + b" >>\nstream\n" + stream + b"\nendstream"
+    )
 
     out = bytearray(b"%PDF-1.4\n")
     offsets = [0]
@@ -187,7 +189,9 @@ def _encrypted_pdf_bytes(*, user_password: str, owner_password: str = "owner") -
 
     from pypdf import PdfWriter
 
-    writer = PdfWriter(clone_from=io.BytesIO(_minimal_pdf_with_text("Restricted DENSO filing content")))
+    writer = PdfWriter(
+        clone_from=io.BytesIO(_minimal_pdf_with_text("Restricted DENSO filing content"))
+    )
     buf = io.BytesIO()
     writer.encrypt(user_password=user_password, owner_password=owner_password)
     writer.write(buf)
@@ -219,7 +223,7 @@ def test_pdf_with_a_real_password_is_rejected_not_silently_empty(tmp_path):
 def test_document_tool_returns_evidence_with_a_source(tmp_path, index, pipeline):
     source = _write(tmp_path / "handbook.md", "Employees rotate credentials every ninety days.")
     pipeline.ingest_path(source)
-    registry = build_registry(Settings(home=tmp_path), index)
+    registry = build_registry(Settings(home=tmp_path, document_workspace="default"), index)
 
     output = registry.execute("search_documents", {"query": "rotate credentials"})
 
@@ -284,7 +288,9 @@ def test_cjk_text_is_not_undercounted_as_a_handful_of_giant_words():
 
 
 def test_cjk_chunking_actually_respects_max_tokens():
-    japanese_paragraph = "会社は株主の権利を確保し平等性を保証するため正確な情報を提供いたします。" * 20
+    japanese_paragraph = (
+        "会社は株主の権利を確保し平等性を保証するため正確な情報を提供いたします。" * 20
+    )
     text = f"# Section\n\n{japanese_paragraph}"
 
     chunks = chunk_text(text, max_tokens=60, min_tokens=10, overlap_tokens=8)

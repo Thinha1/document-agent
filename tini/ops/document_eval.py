@@ -24,9 +24,11 @@ configured chat provider, which is why it is opt-in per run.
 from __future__ import annotations
 
 import json
+import math
 import re
 import time
 from collections.abc import Callable
+from datetime import datetime
 from pathlib import Path
 
 from tini.config import Settings, load_settings
@@ -36,6 +38,7 @@ from tini.documents.store import make_document_index
 
 QUESTION_SET_DIR = Path(__file__).resolve().parents[2] / "evals" / "documents"
 IMPORTED_DIRNAME = "eval_sets"
+RUNS_DIRNAME = "eval_runs"
 MAX_IMPORT_CHARS = 1_000_000
 MAX_IMPORT_CASES = 1000
 MAX_LLM_CASES = 100
@@ -50,6 +53,65 @@ def _squash(text: str) -> str:
     # keyword split across a line break (or written with full-width spacing)
     # still counts as present.
     return re.sub(r"\s+", "", text).lower()
+
+
+def _percentile(values: list[float], pct: float) -> float:
+    """Nearest-rank percentile. Latency reports use median and p95, not the
+    mean: one cold-start query (a local model loading into memory) can be
+    100x the rest and drags an average far from what a warm query costs."""
+    if not values:
+        return 0.0
+    ordered = sorted(values)
+    rank = max(1, math.ceil(pct / 100 * len(ordered)))
+    return ordered[min(rank, len(ordered)) - 1]
+
+
+def _pipeline_config(settings: Settings, index, workspace: str, k: int) -> dict:
+    """What the pipeline WAS when these numbers were measured. A recall figure
+    with no record of the embedding model, chunk sizes or index behind it
+    can't be compared with a later run, which is the whole point of saving it.
+    Never includes keys or URLs that carry credentials."""
+    return {
+        "embedding": {
+            "provider": settings.embedding_provider,
+            "model": settings.embedding_model,
+            "dimensions": settings.embedding_dimensions,
+        },
+        "index": {
+            "backend": settings.document_index,
+            "collection": settings.qdrant_collection
+            if settings.document_index == "qdrant"
+            else None,
+        },
+        "chunking": {
+            "max_tokens": settings.document_chunk_max_tokens,
+            "min_tokens": settings.document_chunk_min_tokens,
+            "overlap_tokens": settings.document_chunk_overlap_tokens,
+        },
+        "ocr": {"provider": settings.ocr_provider, "model": settings.ocr_model},
+        "search_k": k,
+        "workspace": workspace,
+        "corpus": [
+            {"title": d.title, "chunks": d.chunk_count}
+            for d in sorted(index.list_documents(workspace, limit=1000), key=lambda d: d.title)
+        ],
+    }
+
+
+def _save_run(settings: Settings, result: dict) -> str | None:
+    """Keep every run under TINI_HOME/eval_runs so results accumulate into a
+    history instead of vanishing when the page re-renders. A failure to write
+    must never fail the eval itself."""
+    try:
+        directory = settings.home / RUNS_DIRNAME
+        directory.mkdir(parents=True, exist_ok=True)
+        stem = re.sub(r"\.jsonl$", "", result["question_set"])
+        suffix = "-llm" if result.get("use_llm") else ""
+        target = directory / f"{result['run_at'].replace(':', '')}-{stem}{suffix}.json"
+        target.write_text(json.dumps(result, ensure_ascii=False, indent=1), encoding="utf-8")
+        return target.name
+    except OSError:
+        return None
 
 
 def _imported_dir(settings: Settings) -> Path:
@@ -100,8 +162,9 @@ def import_set(payload: dict, settings: Settings | None = None) -> dict:
     """Validate an uploaded question set and store it under TINI_HOME.
 
     Accepts JSONL (one case per line) or a JSON array / {"cases": [...]}.
-    Each case needs `query` (or `question`) and `expected_title`; `id`, `lang`
-    and `expected_keywords` are optional. Nothing is stored unless the whole
+    Each case needs `query` (or `question`) and `expected_title`; `id`, `lang`,
+    `format` (a free-text source-type label such as "scanned-pdf", used to
+    break results down) and `expected_keywords` are optional. Nothing is stored unless the whole
     file validates, and only known fields are kept."""
     settings = settings or load_settings()
     raw_name = str(payload.get("name") or "").strip()
@@ -157,6 +220,7 @@ def import_set(payload: dict, settings: Settings | None = None) -> dict:
             {
                 "id": str(item.get("id") or f"q{number}"),
                 "lang": str(item.get("lang") or "en"),
+                **({"format": str(item["format"]).strip()} if item.get("format") else {}),
                 "query": query,
                 "expected_title": title,
                 "expected_keywords": keywords,
@@ -241,6 +305,9 @@ def run_eval(
         index = make_document_index(settings, conn, make_embedding_provider(settings))
         rows = []
         by_lang: dict[str, dict[str, int]] = {}
+        by_format: dict[str, dict[str, int]] = {}
+        latencies: list[float] = []
+        llm_latencies: list[float] = []
         hits = 0
         total_latency_ms = 0.0
         answer_kw_hits = answer_kw_total = 0
@@ -254,6 +321,7 @@ def run_eval(
             results = index.search(query, top_k=k, workspace_id=workspace)
             latency_ms = (time.perf_counter() - t0) * 1000
             total_latency_ms += latency_ms
+            latencies.append(latency_ms)
             titles = [hit.title for hit in results]
             hit = expected_title in titles
             hits += hit
@@ -267,9 +335,14 @@ def run_eval(
             tally = by_lang.setdefault(lang, {"hits": 0, "total": 0})
             tally["total"] += 1
             tally["hits"] += hit
+            fmt = str(case.get("format") or "").strip()
+            if fmt:
+                by_format.setdefault(fmt, {"hits": 0, "total": 0})["total"] += 1
+                by_format[fmt]["hits"] += hit
             row = {
                 "id": case.get("id", ""),
                 "lang": lang,
+                "format": fmt,
                 "query": query,
                 "expected_title": expected_title,
                 "hit": hit,
@@ -287,6 +360,7 @@ def run_eval(
                     row["answer_error"] = f"{type(exc).__name__}: {exc}"
                 row["llm_ms"] = round((time.perf_counter() - t1) * 1000, 1)
                 llm_total_ms += row["llm_ms"]
+                llm_latencies.append(row["llm_ms"])
                 squashed = _squash(answer)
                 row["answer"] = answer
                 row["answer_keyword_hits"] = [
@@ -295,11 +369,14 @@ def run_eval(
                 answer_kw_hits += len(row["answer_keyword_hits"])
                 answer_kw_total += len(expected_keywords)
             rows.append(row)
+        config = _pipeline_config(settings, index, workspace, k)
     finally:
         conn.close()
 
     total = len(rows)
     result = {
+        "run_at": datetime.now().isoformat(timespec="seconds"),
+        "config": config,
         "question_set": name,
         "workspace": workspace,
         "k": k,
@@ -308,10 +385,17 @@ def run_eval(
         "by_lang": {
             lang: {**t, "recall": round(t["hits"] / t["total"], 3)} for lang, t in by_lang.items()
         },
+        "by_format": {
+            f: {**t, "recall": round(t["hits"] / t["total"], 3)} for f, t in by_format.items()
+        },
         "recall": round(hits / total, 3) if total else 0.0,
         "hits": hits,
         "total": total,
         "avg_latency_ms": round(total_latency_ms / total, 1) if total else 0.0,
+        "median_latency_ms": round(_percentile(latencies, 50), 1),
+        "p95_latency_ms": round(_percentile(latencies, 95), 1),
+        "max_latency_ms": round(max(latencies), 1) if latencies else 0.0,
+        "first_query_ms": round(latencies[0], 1) if latencies else 0.0,
     }
     if use_llm:
         result["model"] = settings.model
@@ -319,5 +403,9 @@ def run_eval(
             round(answer_kw_hits / answer_kw_total, 3) if answer_kw_total else None
         )
         result["llm_avg_ms"] = round(llm_total_ms / total, 1) if total else 0.0
+        result["llm_median_ms"] = round(_percentile(llm_latencies, 50), 1)
+        result["llm_p95_ms"] = round(_percentile(llm_latencies, 95), 1)
+    if payload.get("save", True):
+        result["saved_as"] = _save_run(settings, result)
         result["llm_errors"] = llm_errors
     return result

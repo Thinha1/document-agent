@@ -296,3 +296,124 @@ def test_llm_mode_refuses_oversized_sets_before_spending_anything(
     )
 
     assert "limited to 1" in result["error"]
+
+
+@pytest.mark.parametrize(
+    "values,pct,expected",
+    [
+        ([10, 20, 30, 40, 50, 60, 70, 80, 90, 1000], 50, 50),
+        ([10, 20, 30, 40, 50, 60, 70, 80, 90, 1000], 95, 1000),
+        (list(range(1, 101)), 95, 95),
+        ([7], 95, 7),
+        ([], 50, 0.0),
+    ],
+)
+def test_percentiles_are_nearest_rank_and_handle_tiny_inputs(values, pct, expected):
+    assert document_eval._percentile(values, pct) == expected
+
+
+def test_reports_median_p95_and_recall_by_source_format(tmp_path, settings, question_dir):
+    """Latency is reported as median + p95 (one cold-start query must not
+    define "typical"), and a question's `format` label groups recall by the
+    kind of source it had to be answered from."""
+    _ingest(settings, tmp_path, "vacation", "Employees accrue twenty vacation days per year.")
+    _write_set(
+        question_dir,
+        "fmt.jsonl",
+        [
+            {"query": "vacation days", "expected_title": "vacation", "format": "text-pdf"},
+            {"query": "vacation days", "expected_title": "nowhere", "format": "scanned-pdf"},
+            {"query": "vacation days", "expected_title": "vacation"},
+        ],
+    )
+
+    result = document_eval.run_eval({"question_set": "fmt.jsonl", "workspace": "eval-ws"}, settings)
+
+    assert result["by_format"] == {
+        "text-pdf": {"hits": 1, "total": 1, "recall": 1.0},
+        "scanned-pdf": {"hits": 0, "total": 1, "recall": 0.0},
+    }
+    assert result["cases"][2]["format"] == ""
+    assert 0 < result["median_latency_ms"] <= result["p95_latency_ms"] <= result["max_latency_ms"]
+    assert result["first_query_ms"] > 0
+
+
+def test_import_keeps_the_format_label(settings, question_dir):
+    document_eval.import_set(
+        {
+            "name": "f",
+            "content": _content({"query": "q", "expected_title": "t", "format": " table-pdf "}),
+        },
+        settings,
+    )
+
+    result = document_eval.run_eval({"question_set": "f.jsonl", "workspace": "none"}, settings)
+
+    assert result["cases"][0]["format"] == "table-pdf"
+
+
+def test_llm_mode_reports_median_and_p95_llm_latency(tmp_path, settings, question_dir):
+    _ingest(settings, tmp_path, "vacation", "Employees accrue twenty vacation days per year.")
+    _write_set(question_dir, "q.jsonl", [{"query": "vacation", "expected_title": "vacation"}])
+
+    result = document_eval.run_eval(
+        {"question_set": "q.jsonl", "workspace": "eval-ws", "use_llm": True},
+        settings,
+        answer_fn=lambda q, hits: "ok",
+    )
+
+    assert result["llm_median_ms"] >= 0 and result["llm_p95_ms"] >= result["llm_median_ms"]
+
+
+def test_every_run_is_saved_with_the_pipeline_config_it_was_measured_on(
+    tmp_path, settings, question_dir
+):
+    """A recall number with no record of the model/chunking/index behind it
+    can't be compared with a later run — so each run is stored with both."""
+    _ingest(settings, tmp_path, "vacation", "Employees accrue twenty vacation days per year.")
+    _write_set(question_dir, "q.jsonl", [{"query": "vacation", "expected_title": "vacation"}])
+
+    result = document_eval.run_eval({"question_set": "q.jsonl", "workspace": "eval-ws"}, settings)
+
+    saved = settings.home / "eval_runs" / result["saved_as"]
+    stored = json.loads(saved.read_text(encoding="utf-8"))
+    assert stored["recall"] == result["recall"] and stored["run_at"] == result["run_at"]
+    config = stored["config"]
+    assert config["index"]["backend"] == "sqlite" and config["search_k"] == 3
+    assert config["chunking"]["max_tokens"] == settings.document_chunk_max_tokens
+    assert config["corpus"] == [{"title": "vacation", "chunks": 1}]
+
+
+def test_saved_runs_never_contain_credentials(tmp_path, question_dir):
+    secret = "sk-super-secret-value"
+    settings = Settings(
+        home=tmp_path / "home",
+        document_index="sqlite",
+        embedding_provider="none",
+        embedding_api_key=secret,
+        ocr_api_key=secret,
+        api_key=secret,
+        qdrant_api_key=secret,
+    )
+    _write_set(question_dir, "q.jsonl", [{"query": "x", "expected_title": "t"}])
+
+    result = document_eval.run_eval({"question_set": "q.jsonl", "workspace": "w"}, settings)
+
+    assert secret not in (settings.home / "eval_runs" / result["saved_as"]).read_text(
+        encoding="utf-8"
+    )
+
+
+def test_a_run_can_opt_out_of_being_saved_and_a_write_failure_does_not_fail_the_eval(
+    settings, question_dir
+):
+    _write_set(question_dir, "q.jsonl", [{"query": "x", "expected_title": "t"}])
+
+    unsaved = document_eval.run_eval(
+        {"question_set": "q.jsonl", "workspace": "w", "save": False}, settings
+    )
+    assert "saved_as" not in unsaved and not (settings.home / "eval_runs").exists()
+
+    (settings.home / "eval_runs").write_text("a file where the history folder should be")
+    failed_save = document_eval.run_eval({"question_set": "q.jsonl", "workspace": "w"}, settings)
+    assert failed_save["saved_as"] is None and failed_save["total"] == 1
