@@ -2,6 +2,7 @@
 
 from tini.documents.base import DocumentIndex
 from tini.documents.embeddings import EmbeddingProvider, make_embedding_provider
+from tini.documents.ocr import OcrProvider, make_ocr_provider
 from tini.documents.pipeline import IngestionPipeline
 from tini.documents.store import SqliteDocumentIndex, make_document_index
 
@@ -9,7 +10,9 @@ __all__ = [
     "DocumentIndex",
     "EmbeddingProvider",
     "IngestionPipeline",
+    "OcrProvider",
     "SqliteDocumentIndex",
     "make_document_index",
     "make_embedding_provider",
+    "make_ocr_provider",
 ]

@@ -85,6 +85,22 @@ supabase = [
 qdrant = [
     "qdrant-client>=1.9",
 ]
+# Optional OCR fallback for image-only/scanned PDF pages (tini/documents/ocr.py).
+# CPU-only local OCR (PaddleOCR) was tried first and abandoned: across three
+# attempts it either crashed or hung on this project's oneDNN CPU backend (see
+# git history). This extra is deliberately light: pypdfium2 renders a full
+# page to a bitmap exactly as a viewer would (no external poppler binary,
+# pure-Python-installable wheels) — tried pypdf's own embedded-image
+# extraction first, but on real scanned PDFs it frequently decoded the wrong
+# or a corrupted fragment (mismatched image/soft-mask dimensions), silently
+# losing most of a document's content. Rendering the composed page sidesteps
+# that entirely. The actual OCR call goes through TINI_OCR_PROVIDER to a
+# vision-capable chat model over the openai package already in core
+# dependencies. Only reached when pypdf's plain text extraction comes back
+# too sparse to be useful, so a normal text PDF never pays this cost either way.
+ocr = [
+    "pypdfium2>=4.0",
+]
 # Compatibility alias: document parsers are now core because ingestion is a
 # first-class dashboard feature. Existing `pip install '.[documents]'` commands
 # remain valid.

@@ -51,6 +51,39 @@ def _embedding_api_key() -> str:
     return os.getenv(fallback, "").strip() if fallback else ""
 
 
+def _ocr_api_key() -> str:
+    """Resolve a dedicated OCR key before a provider-key fallback — same
+    shape as _embedding_api_key, for the same reason: OCR is a separate
+    concern from chat generation and may use a different account/model."""
+    configured = os.getenv("TINI_OCR_API_KEY", "").strip()
+    if configured:
+        return configured
+    provider = os.getenv("TINI_OCR_PROVIDER", "none").strip().lower()
+    fallback = {"deepseek": "DEEPSEEK_API_KEY", "openai": "OPENAI_API_KEY"}.get(provider)
+    return os.getenv(fallback, "").strip() if fallback else ""
+
+
+# Known-provider default endpoints — the openai SDK defaults to OpenAI's own
+# api.openai.com when base_url is left None, so a bare TINI_OCR_PROVIDER=
+# deepseek with no base_url would silently send the request (and the
+# provider's key) to OpenAI instead and fail loudly with an auth error there.
+# Found exactly that way: DEEPSEEK_API_KEY sent to OpenAI, 401 from
+# platform.openai.com. Mirrors PROVIDERS["deepseek"].base_url in
+# tini/loop/models.py.
+_OCR_PROVIDER_DEFAULT_BASE_URL = {"deepseek": "https://api.deepseek.com"}
+
+
+def _ocr_base_url() -> str | None:
+    configured = os.getenv("TINI_OCR_BASE_URL", "").strip()
+    if configured:
+        return configured
+    provider = os.getenv("TINI_OCR_PROVIDER", "none").strip().lower()
+    # DEEPSEEK_BASE_URL lets an operator already using DeepSeek for chat
+    # override the endpoint (e.g. a proxy) once and have OCR follow it too.
+    env_override = os.getenv("DEEPSEEK_BASE_URL", "").strip() if provider == "deepseek" else ""
+    return env_override or _OCR_PROVIDER_DEFAULT_BASE_URL.get(provider)
+
+
 @dataclass
 class Settings:
     # --- LLM: pick a provider, set its key. See tini/loop/models.py PROVIDERS.
@@ -79,6 +112,16 @@ class Settings:
     embedding_dimensions: int = field(
         default_factory=lambda: int(os.getenv("TINI_EMBEDDING_DIMENSIONS", "768"))
     )
+    # OCR fallback for image-only/scanned PDF pages (tini/documents/ocr.py) —
+    # same independent-of-chat-provider shape as embeddings above. Unset by
+    # default: a page that looks scanned is left as-is (see loaders.py) rather
+    # than silently calling an API nobody configured.
+    ocr_provider: str = field(
+        default_factory=lambda: os.getenv("TINI_OCR_PROVIDER", "none").strip().lower()
+    )
+    ocr_model: str = field(default_factory=lambda: os.getenv("TINI_OCR_MODEL", "").strip())
+    ocr_api_key: str = field(default_factory=_ocr_api_key)
+    ocr_base_url: str | None = field(default_factory=_ocr_base_url)
     # Providers the user turned off in the dashboard (comma-separated ids).
     # Disabled providers are hidden from pickers/switchers; the ACTIVE provider
     # can't be disabled (guarded in integrations.apply_provider_disabled).

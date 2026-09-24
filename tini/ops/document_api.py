@@ -14,6 +14,7 @@ from tini.config import Settings, load_settings
 from tini.db import connect
 from tini.documents.embeddings import make_embedding_provider
 from tini.documents.loaders import SUPPORTED_SUFFIXES
+from tini.documents.ocr import make_ocr_provider
 from tini.documents.pipeline import IngestionPipeline
 from tini.documents.store import make_document_index
 
@@ -104,6 +105,7 @@ def ingest_upload(
         pipeline = IngestionPipeline(
             make_document_index(settings, conn, embedder),
             embedder=embedder,
+            ocr=make_ocr_provider(settings),
             chunk_max_tokens=settings.document_chunk_max_tokens,
             chunk_min_tokens=settings.document_chunk_min_tokens,
             chunk_overlap_tokens=settings.document_chunk_overlap_tokens,
@@ -200,6 +202,7 @@ def action(payload: dict, settings: Settings | None = None) -> dict:
         reports = IngestionPipeline(
             index,
             embedder=embedder,
+            ocr=make_ocr_provider(settings),
             chunk_max_tokens=settings.document_chunk_max_tokens,
             chunk_min_tokens=settings.document_chunk_min_tokens,
             chunk_overlap_tokens=settings.document_chunk_overlap_tokens,

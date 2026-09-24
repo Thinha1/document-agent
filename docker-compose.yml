@@ -77,6 +77,10 @@ services:
       TINI_EMBEDDING_BASE_URL: http://ollama:11434/v1
     volumes:
       - tini_home:/app/.tini # memory db, traces, MCP config — see CLAUDE.md
+      # Question sets for the dashboard's Retrieval eval are read at run time,
+      # so mount them instead of baking them into the image: adding or editing
+      # a evals/documents/*.jsonl shows up on the next page refresh, no rebuild.
+      - ./evals/documents:/app/evals/documents:ro
     depends_on:
       qdrant:
         condition: service_healthy

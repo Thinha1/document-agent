@@ -9,6 +9,7 @@ let kbState = {
   busy:false, stage:"", failed:false, filename:"", message:"",
   recent:[], selected:null, chunks:[], chunksLoading:false,
   query:"", hits:[], searching:false,
+  evalSet:"", evalRunning:false, evalResult:null, evalError:"", evalUseLlm:false, evalNote:"",
 };
 
 function kbRerender(){
@@ -138,6 +139,41 @@ async function kbSearch(){
 
 function kbSearchKey(event){ if (event.key === "Enter") kbSearch(); }
 
+function kbEvalPick(select){
+  // Re-render so the Run button enables immediately, and release the
+  // auto-refresh edit-lock the select took on focus (see markEditing).
+  kbState.evalSet = select.value; kbState.evalResult = null; kbState.evalError = "";
+  editing = false; kbRerender();
+}
+
+function kbEvalLlm(box){ kbState.evalUseLlm = box.checked; kbState.evalResult = null; editing = false; kbRerender(); }
+
+function kbEvalImportPick(){ const input = document.getElementById("kb-eval-file"); if (input) input.click(); }
+
+async function kbEvalImport(input){
+  const file = (input.files || [])[0];
+  input.value = "";
+  if (!file) return;
+  kbState.evalError = ""; kbState.evalNote = "";
+  const result = await postJSON("/api/documents/eval/import", {name:file.name, content:await file.text()});
+  if (result.error) kbState.evalError = result.error;
+  else { kbState.evalSet = result.name; kbState.evalResult = null; kbState.evalNote = `Imported ${result.name} · ${result.count} questions`; }
+  editing = false;
+  await refresh();
+  kbRerender();
+}
+
+async function kbRunEval(){
+  if (!kbState.evalSet || kbState.evalRunning) return;
+  kbState.evalRunning = true; kbState.evalError = ""; kbState.evalResult = null; kbRerender();
+  const workspace = (D.documents && D.documents.workspace) || "default";
+  const result = await postJSON("/api/documents/eval", {question_set:kbState.evalSet, workspace, k:3, use_llm:kbState.evalUseLlm});
+  kbState.evalRunning = false;
+  if (result.error) kbState.evalError = result.error;
+  else kbState.evalResult = result;
+  kbRerender();
+}
+
 async function kbViewChunks(documentId){
   kbState.selected = documentId; kbState.chunks = []; kbState.chunksLoading = true; kbRerender();
   const workspace = (D.documents && D.documents.workspace) || "default";
@@ -187,6 +223,47 @@ function kbEvidence(){
     <p>${esc(hit.text)}</p><small>${esc(hit.source_uri)}</small></article>`).join("")}</div>`;
 }
 
+function kbEvalRows(result){
+  if (!result.cases.length) return `<div class="kb-empty"><b>No cases in this question set.</b></div>`;
+  return `<table class="kb-eval-table"><thead><tr><th>Lang</th><th>Query</th><th>Expected</th><th>Got</th><th>Keywords</th><th>Latency</th>${result.use_llm?"<th>Answer</th>":""}</tr></thead><tbody>
+    ${result.cases.map(row => `<tr class="${row.hit?"ok":"bad"}">
+      <td><span class="kb-lang">${esc(row.lang||"en")}</span></td>
+      <td>${esc(row.query)}</td>
+      <td>${esc(row.expected_title)}</td>
+      <td>${row.hit?"✓ "+esc(row.expected_title):esc((row.got_titles||[]).join(", ")||"(nothing)")}</td>
+      <td>${row.keyword_total?`${row.keyword_hits.length}/${row.keyword_total}`:"—"}</td>
+      <td>${row.latency_ms}ms</td>
+      ${result.use_llm?`<td>${row.answer_error?`<span class="kb-answer-bad">${esc(row.answer_error)}</span>`:`<details class="kb-answer"><summary>${row.keyword_total?`${(row.answer_keyword_hits||[]).length}/${row.keyword_total} kw`:"answer"} · ${row.llm_ms}ms</summary><p>${esc(row.answer||"(empty)")}</p></details>`}</td>`:""}
+    </tr>`).join("")}
+  </tbody></table>`;
+}
+
+function kbEvalLangs(result){
+  const langs = Object.entries(result.by_lang || {});
+  if (langs.length < 2) return "";
+  return `<div class="kb-eval-langs">${langs.map(([lang, t]) => `<span class="kb-lang">${esc(lang)}</span><b>${Math.round(t.recall*100)}%</b><small>${t.hits}/${t.total}</small>`).join("")}</div>`;
+}
+
+function kbEvalSection(data){
+  const sets = (data.documents && data.documents.question_sets) || [];
+  const result = kbState.evalResult;
+  return `<section class="kb-eval"><div class="kb-section-head"><div><span class="kb-kicker">Retrieval eval</span><h3>Score real questions against this workspace</h3></div></div>
+    ${sets.length ? `<div class="kb-eval-controls">
+      <select onfocus="markEditing()" onchange="kbEvalPick(this)">
+        <option value="">Choose a question set…</option>
+        ${sets.map(s => `<option value="${esc(s.name)}" ${kbState.evalSet===s.name?"selected":""}>${esc(s.name)} (${s.count})${s.source==="imported"?" · imported":""}</option>`).join("")}
+      </select>
+      <button onclick="kbRunEval()" ${(!kbState.evalSet||kbState.evalRunning)?"disabled":""}>${kbState.evalRunning?"Running…":"Run eval"}</button>
+      <button class="quiet" onclick="kbEvalImportPick()">Import JSON</button>
+    </div>
+    <label class="kb-eval-llm"><input type="checkbox" onchange="kbEvalLlm(this)" ${kbState.evalUseLlm?"checked":""}> Also answer with the chat model <small>${esc((D.provider||"")+" · "+(D.model||"chat model"))} — sends the retrieved chunks to it, one call per question</small></label>` : `<div class="kb-empty"><b>No question sets yet.</b><span>Import a JSON/JSONL file — each case needs a query and an expected_title (see evals/documents/denso_qa.jsonl).</span><div class="kb-eval-controls" style="margin-top:10px"><button onclick="kbEvalImportPick()">Import JSON</button></div></div>`}
+    <input id="kb-eval-file" hidden type="file" accept=".json,.jsonl,application/json" onchange="kbEvalImport(this)">
+    ${kbState.evalNote ? `<div class="kb-run-message">${esc(kbState.evalNote)}</div>` : ""}
+    ${kbState.evalError ? `<div class="kb-run-message bad">${esc(kbState.evalError)}</div>` : ""}
+    ${result ? `${kbEvalLangs(result)}<div class="kb-eval-totals"><div><b>${Math.round(result.recall*100)}%</b><span>recall @${result.k}</span></div><div><b>${result.hits}/${result.total}</b><span>hits</span></div><div><b>${result.avg_latency_ms}ms</b><span>avg latency</span></div>${result.use_llm?`<div><b>${result.answer_keyword_rate==null?"—":Math.round(result.answer_keyword_rate*100)+"%"}</b><span>answer keywords</span></div><div><b>${result.llm_avg_ms}ms</b><span>avg LLM${result.llm_errors?` · ${result.llm_errors} failed`:""}</span></div>`:""}</div>${kbEvalRows(result)}` : ""}
+  </section>`;
+}
+
 function kbChunkPreview(documents){
   if (!kbState.selected) return "";
   const document = documents.find(item => item.document_id === kbState.selected);
@@ -220,5 +297,6 @@ function documentsView(data){
       <div class="kb-doc-list">${kbDocumentRows(documents)}</div></section></div>
     <section class="kb-probe"><div class="kb-section-head"><div><span class="kb-kicker">Retrieval probe</span><h3>Test what the agent can find</h3></div><span class="kb-limit">top 6 chunks</span></div>
       <div class="kb-search"><input id="kb-query" value="${esc(kbState.query)}" placeholder="e.g. What is the incident rollback procedure?" onfocus="markEditing()" onkeydown="kbSearchKey(event)"><button onclick="kbSearch()">Search index</button></div>${kbEvidence()}</section>
+    ${kbEvalSection(data)}
     ${kbChunkPreview(documents)}`;
 }
