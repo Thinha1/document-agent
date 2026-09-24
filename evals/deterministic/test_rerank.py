@@ -289,7 +289,10 @@ def test_the_factory_wraps_only_when_reranking_is_configured(tmp_path):
     base = {"home": tmp_path, "document_index": "sqlite", "embedding_provider": "none"}
     conn = connect(tmp_path)
 
-    plain = make_document_index(Settings(**base), conn, None)
+    # rerank_provider pinned "none" here like document_index/embedding_provider
+    # above — otherwise a maintainer .env with TINI_RERANK_PROVIDER set (e.g.
+    # while trying Jev) makes "plain" wrap itself too.
+    plain = make_document_index(Settings(**base, rerank_provider="none"), conn, None)
     wrapped = make_document_index(
         Settings(**base, rerank_provider="jev", rerank_api_key="k", rerank_candidates=12),
         conn,

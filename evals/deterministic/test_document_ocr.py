@@ -15,6 +15,8 @@ accounts.
 from __future__ import annotations
 
 import os
+import threading
+import time
 from pathlib import Path
 
 import pytest
@@ -58,18 +60,76 @@ def _minimal_pdf_with_text(text: str) -> bytes:
     return bytes(out)
 
 
+def _minimal_pdf_with_pages(texts: list[str]) -> bytes:
+    """Same hand-built object model as `_minimal_pdf_with_text`, generalized
+    to N pages sharing one font — enough for pypdf and pypdfium2 to read N
+    genuinely separate pages, each short enough to trip the "looks scanned"
+    heuristic."""
+    count = len(texts)
+    font_num = 3 + count * 2
+    kids = " ".join(f"{3 + i * 2} 0 R" for i in range(count))
+    objects: dict[int, bytes] = {
+        1: b"<< /Type /Catalog /Pages 2 0 R >>",
+        2: f"<< /Type /Pages /Kids [{kids}] /Count {count} >>".encode(),
+        font_num: b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+    }
+    for i, text in enumerate(texts):
+        page_num = 3 + i * 2
+        content_num = 4 + i * 2
+        objects[page_num] = (
+            f"<< /Type /Page /Parent 2 0 R /Resources << /Font << /F1 {font_num} 0 R >> >> "
+            f"/MediaBox [0 0 200 200] /Contents {content_num} 0 R >>"
+        ).encode()
+        stream = f"BT /F1 12 Tf 20 100 Td ({text}) Tj ET".encode()
+        objects[content_num] = (
+            b"<< /Length " + str(len(stream)).encode() + b" >>\nstream\n" + stream + b"\nendstream"
+        )
+
+    out = bytearray(b"%PDF-1.4\n")
+    total = max(objects) + 1
+    offsets = [0] * total
+    for num in sorted(objects):
+        offsets[num] = len(out)
+        out += f"{num} 0 obj\n".encode() + objects[num] + b"\nendobj\n"
+    xref_offset = len(out)
+    out += f"xref\n0 {total}\n".encode() + b"0000000000 65535 f \n"
+    for num in range(1, total):
+        out += f"{offsets[num]:010d} 00000 n \n".encode()
+    out += (
+        b"trailer\n<< /Size " + str(total).encode() + b" /Root 1 0 R >>\n"
+        b"startxref\n" + str(xref_offset).encode() + b"\n%%EOF"
+    )
+    return bytes(out)
+
+
 class _FakeOcrProvider:
     """Records every image it's asked to transcribe and returns a scripted
-    answer per call — no network, no model, deterministic."""
+    answer per call — no network, no model, deterministic.
 
-    def __init__(self, script: list[str] | None = None, fail_on: set[int] | None = None):
+    `concurrency` defaults to 1 (matching every test written before
+    concurrent OCR existed): with one worker, `_ocr_pdf_pages` never fans
+    out, so `calls`/script indexing stay in page order exactly as before.
+    Tests that want the concurrent path pass `concurrency>1` explicitly.
+    The lock only protects `call_index` bookkeeping — which page a given
+    call happens to land on is still scheduler-dependent, so scripted
+    per-page responses are only meaningful at concurrency=1."""
+
+    def __init__(
+        self,
+        script: list[str] | None = None,
+        fail_on: set[int] | None = None,
+        concurrency: int = 1,
+    ):
         self.calls: list[bytes] = []
         self._script = list(script) if script is not None else None
         self._fail_on = fail_on or set()
+        self.concurrency = concurrency
+        self._lock = threading.Lock()
 
     def ocr_image(self, image_bytes: bytes, media_type: str = "image/png") -> str:
-        call_index = len(self.calls)
-        self.calls.append(image_bytes)
+        with self._lock:
+            call_index = len(self.calls)
+            self.calls.append(image_bytes)
         if call_index in self._fail_on:
             raise OcrError("scripted failure")
         if self._script is not None:
@@ -133,6 +193,71 @@ def test_an_ocr_failure_does_not_raise_and_is_counted(tmp_path):
     # recovered, so the original sparse pypdf extraction is what's left.
     assert loaded.metadata.get("ocr_applied") is not True
     assert len(ocr.calls) == 1
+
+
+def test_multi_page_ocr_is_stitched_in_page_order(tmp_path):
+    """At concurrency=1 (the fake's default) `_ocr_pdf_pages` never fans out,
+    so call order is guaranteed to match page order — this pins that the
+    render-then-OCR refactor didn't disturb it."""
+    source = tmp_path / "sparse.pdf"
+    source.write_bytes(_minimal_pdf_with_pages(["1", "2", "3"]))
+    ocr = _FakeOcrProvider(script=["FIRST-PAGE-MARKER", "SECOND-PAGE-MARKER", "THIRD-PAGE-MARKER"])
+
+    loaded = load_document(source, 26_214_400, ocr=ocr)
+
+    assert len(ocr.calls) == 3
+    first = loaded.text.index("FIRST-PAGE-MARKER")
+    second = loaded.text.index("SECOND-PAGE-MARKER")
+    third = loaded.text.index("THIRD-PAGE-MARKER")
+    assert first < second < third
+
+
+def test_ocr_pages_run_concurrently_up_to_the_providers_limit(tmp_path):
+    """The point of this feature: OCR is a multi-second network round trip
+    per page, and pages are independent, so wall-clock time for N pages at
+    concurrency=N should look like ~1 round trip, not N of them."""
+    source = tmp_path / "sparse.pdf"
+    source.write_bytes(_minimal_pdf_with_pages(["1", "2", "3", "4"]))
+
+    class _SlowOcrProvider:
+        def __init__(self, concurrency: int):
+            self.concurrency = concurrency
+            self.calls = 0
+            self._lock = threading.Lock()
+
+        def ocr_image(self, image_bytes: bytes, media_type: str = "image/png") -> str:
+            with self._lock:
+                self.calls += 1
+            time.sleep(0.1)
+            return "transcribed page content, well past the sparse-page threshold"
+
+    serial = _SlowOcrProvider(concurrency=1)
+    start = time.monotonic()
+    load_document(source, 26_214_400, ocr=serial)
+    serial_elapsed = time.monotonic() - start
+
+    concurrent = _SlowOcrProvider(concurrency=4)
+    start = time.monotonic()
+    loaded = load_document(source, 26_214_400, ocr=concurrent)
+    concurrent_elapsed = time.monotonic() - start
+
+    assert serial.calls == 4
+    assert concurrent.calls == 4
+    assert loaded.metadata["ocr_applied"] is True
+    # 4 pages x 0.1s serial ~= 0.4s; concurrency=4 collapses that toward one
+    # round trip. Generous threshold (half of serial) to avoid CI flakiness.
+    assert concurrent_elapsed < serial_elapsed / 2
+
+
+def test_failed_pages_are_still_counted_when_run_concurrently(tmp_path):
+    source = tmp_path / "sparse.pdf"
+    source.write_bytes(_minimal_pdf_with_pages(["1", "2", "3"]))
+    ocr = _FakeOcrProvider(fail_on={1}, concurrency=3)
+
+    loaded = load_document(source, 26_214_400, ocr=ocr)
+
+    assert len(ocr.calls) == 3
+    assert loaded.metadata.get("ocr_failed_pages") == 1
 
 
 TINI_TEST_OCR = os.getenv("TINI_TEST_OCR") == "1"
