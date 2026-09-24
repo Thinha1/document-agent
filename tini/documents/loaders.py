@@ -251,9 +251,17 @@ def _ocr_pdf_pages(raw: bytes, ocr: OcrProvider) -> tuple[str, int]:
     sidesteps the mask-decoding question entirely: whatever a human would
     see on the page is what gets rasterized and sent to the model.
 
+    Rendering stays single-threaded — libpdfium is not thread-safe for
+    concurrent page access — but the OCR call is a multi-second network
+    round trip and pages are independent, so THAT part runs up to
+    `ocr.concurrency` pages at once (`ThreadPoolExecutor.map` returns
+    results in submission order regardless of completion order, so page
+    order survives the reordering that concurrency introduces).
+
     Returns (text, failed_page_count): one page's OCR call failing does not
     sink the whole document, but the count stays visible in the caller's
     metadata rather than vanishing silently."""
+    from concurrent.futures import ThreadPoolExecutor
     from io import BytesIO as _BytesIO
 
     import pypdfium2 as pdfium
@@ -261,9 +269,8 @@ def _ocr_pdf_pages(raw: bytes, ocr: OcrProvider) -> tuple[str, int]:
     from tini.documents.ocr import OcrError
 
     pdf = pdfium.PdfDocument(raw)
-    parts: list[str] = []
-    failed = 0
     try:
+        images: list[bytes] = []
         for page in pdf:
             try:
                 # scale=2.0 ≈ 144 DPI — legible for a vision model without
@@ -271,16 +278,27 @@ def _ocr_pdf_pages(raw: bytes, ocr: OcrProvider) -> tuple[str, int]:
                 image = page.render(scale=2.0).to_pil()
                 buf = _BytesIO()
                 image.convert("RGB").save(buf, format="PNG")
-                text = ocr.ocr_image(buf.getvalue(), "image/png")
-            except OcrError:
-                failed += 1
-                continue
+                images.append(buf.getvalue())
             finally:
                 page.close()
-            if text:
-                parts.append(text)
     finally:
         pdf.close()
+
+    def _transcribe(image_bytes: bytes) -> str | None:
+        try:
+            return ocr.ocr_image(image_bytes, "image/png")
+        except OcrError:
+            return None
+
+    concurrency = max(1, min(int(getattr(ocr, "concurrency", 1)), len(images) or 1))
+    if concurrency <= 1:
+        results = [_transcribe(image) for image in images]
+    else:
+        with ThreadPoolExecutor(max_workers=concurrency) as pool:
+            results = list(pool.map(_transcribe, images))
+
+    failed = sum(1 for result in results if result is None)
+    parts = [text for text in results if text]
     return "\n\n".join(parts), failed
 
 

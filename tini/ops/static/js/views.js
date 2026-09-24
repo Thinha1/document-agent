@@ -304,6 +304,9 @@ const CONNECTION_GROUP_MAP = {
   "Channels": "Channels",
   "Memory & Storage": "Memory",
   "Search & Observability": "Tools",
+  // Jev also gets its own box on the Models page (js/models.js#rerankCard) —
+  // this entry just keeps it out of the "Tools" fallback here too.
+  "Documents & Retrieval": "Tools",
 };
 
 function connectionDisplayGroup(item){
@@ -525,9 +528,23 @@ const VIEWS = {
   documents(d){
     return documentsView(d);
   },
-  settings(d){
+  settings(d, sub){
+    sub = sub || "providers";
+    const tabs = [
+      ["providers", "Providers"],
+      ["integrations", "Integrations", (d.connections || []).length],
+      ["behaviour", "Behaviour"],
+    ];
+    const h = subtabBar("settings", tabs, sub);
+    if (sub === "providers") return h + modelsGrid(d);
+    if (sub === "integrations") {
+      const items = d.connections || [];
+      return h + (items.length
+        ? connectionsGrid(items)
+        : `<div class="card empty">No integrations configured.</div>`);
+    }
     const st = d.settings || {providers:[]};
-    return `<h2>Graph workflows</h2><div class="card">
+    return h + `<h2>Agent routing</h2><div class="card">
       <div class="meta" style="margin-bottom:8px">Off by default. When on, <b>every</b> message is triaged
         through a graph first: a small model classifies it — trivial messages get a fast small-model reply,
         while document questions run the exact same loop as a node. Any failure fails open to the plain loop.
@@ -541,6 +558,29 @@ const VIEWS = {
       <div style="margin-top:12px"><button class="save" onclick="saveSettings()">Save &amp; switch</button>
         <span class="meta" style="margin-left:10px">rebuilds the agent in-process — no restart</span></div>
     </div>`;
+  },
+  evaluations(d){
+    let h = `<div class="eval-intro card">
+      <div><span class="meta">Release confidence</span><h2>Test changes before they reach the agent</h2>
+      <p class="r">Deterministic checks protect behaviour; judge evaluations measure answer quality.
+      Model benchmark compares selected providers through the same harness.</p></div>
+      <a class="eval-benchmark" href="#compare/models">Open model benchmark &rarr;</a></div>`;
+    h += `<h2>Latest release gate</h2>`;
+    h += d.eval_report ? `<div class="card">
+        <span class="pill ${d.eval_report.deterministic}">deterministic · ${esc(d.eval_report.deterministic)}</span>
+        <span class="pill ${d.eval_report.judge==="pass"?"pass":d.eval_report.judge==="fail"?"fail":"skip"}" style="margin-left:8px">llm-judge · ${esc(d.eval_report.judge)}</span>
+        <div class="meta" style="margin-top:8px">Last run ${esc(d.eval_report.ran_at)} · run <code>make gate</code> to evaluate the current revision.</div></div>`
+      : `<div class="card empty"><b>No evaluation recorded.</b><span>Run <code>make gate</code> to create the first release result.</span></div>`;
+    if ((d.eval_history || []).length) {
+      const count = suite => suite ? `${suite.passed || 0} pass · ${suite.failed || 0} fail` : "—";
+      h += `<h2>Evaluation history</h2>`;
+      h += table(["when", "deterministic", "llm-judge", "counts"], d.eval_history.map(row =>
+        `<tr><td class="meta">${esc((row.ran_at||"").replace("T"," ").slice(0,19))}</td>
+         <td><span class="pill ${row.deterministic}">${esc(row.deterministic)}</span></td>
+         <td><span class="pill ${row.judge==="pass"?"pass":row.judge==="fail"?"fail":"skip"}">${esc(row.judge)}</span></td>
+         <td class="meta">det ${count(row.suites&&row.suites.deterministic)} · judge ${count(row.suites&&row.suites.judge)}</td></tr>`));
+    }
+    return h;
   },
   tools(d, sub){
     const t = d.tools || {catalog:[], mcp:{configured:false,servers:[],live:false}};

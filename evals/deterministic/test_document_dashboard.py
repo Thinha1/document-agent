@@ -24,6 +24,7 @@ def settings(tmp_path):
         # specific (raw document_chunks queries, embedded==0).
         document_index="sqlite",
         embedding_provider="none",
+        rerank_provider="none",
     )
 
 

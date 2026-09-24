@@ -48,11 +48,20 @@ class OcrProvider(Protocol):
 class VisionModelOcrProvider:
     provider = "vision-model"
 
-    def __init__(self, api_key: str, model: str, base_url: str | None = None):
+    def __init__(
+        self,
+        api_key: str,
+        model: str,
+        base_url: str | None = None,
+        concurrency: int = 4,
+    ):
         from openai import OpenAI
 
         self.model = model
         self.client = OpenAI(api_key=api_key, base_url=base_url)
+        # Read by loaders._ocr_pdf_pages to bound how many pages of the same
+        # document are in flight at once.
+        self.concurrency = max(1, int(concurrency))
 
     def ocr_image(self, image_bytes: bytes, media_type: str = "image/png") -> str:
         encoded = base64.b64encode(image_bytes).decode("ascii")
@@ -94,4 +103,9 @@ def make_ocr_provider(settings: Settings) -> OcrProvider | None:
         raise ValueError("TINI_OCR_MODEL is required when TINI_OCR_PROVIDER is set")
     if not settings.ocr_api_key:
         raise ValueError("TINI_OCR_API_KEY or the provider API key is required")
-    return VisionModelOcrProvider(settings.ocr_api_key, settings.ocr_model, settings.ocr_base_url)
+    return VisionModelOcrProvider(
+        settings.ocr_api_key,
+        settings.ocr_model,
+        settings.ocr_base_url,
+        concurrency=settings.ocr_concurrency,
+    )

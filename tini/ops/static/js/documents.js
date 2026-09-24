@@ -297,6 +297,15 @@ function kbChunkPreview(documents){
 
 function documentsView(data){
   const info = data.documents || {items:[], chunk_count:0, workspace:"default", max_file_bytes:0};
+  if (info.error){
+    return `<div class="kb-hero"><div><span class="kb-kicker">Workspace · ${esc(info.workspace||"default")}</span>
+        <p>Turn internal files into evidence the agent can cite.</p></div></div>
+      <div class="card" style="border-color:var(--bad)">
+        <b style="color:var(--bad)">Documents unavailable</b>
+        <p class="meta" style="margin-top:6px">${esc(info.error)}</p>
+        <p class="meta">Check the document index / embedding / reranking settings in your .env, then reload.</p>
+      </div>`;
+  }
   const documents = info.items || [];
   const latest = kbState.recent.slice(0,3).map(item => `<div class="kb-log ${item.ok?"ok":"bad"}"><span></span><b>${esc(item.name)}</b><small>${esc(item.detail)}</small></div>`).join("");
   return `<div class="kb-hero"><div><span class="kb-kicker">Workspace · ${esc(info.workspace)}</span>

@@ -29,3 +29,19 @@
 {"id": "en-x-founded", "lang": "en", "query": "When was DENSO founded and from which company was it spun off?", "expected_title": "edinet_securities_report_candidate", "expected_keywords": ["1949年12月", "トヨタ自動車工業"], "format": "table-heavy-pdf"}
 {"id": "en-x-fujitsu-ten", "lang": "en", "query": "When did DENSO acquire Fujitsu Ten?", "expected_title": "edinet_securities_report_candidate", "expected_keywords": ["2017年11月"], "format": "table-heavy-pdf"}
 {"id": "en-x-women", "lang": "en", "query": "What share of managers at DENSO are women?", "expected_title": "edinet_securities_report_candidate", "expected_keywords": ["1.8％"], "format": "table-heavy-pdf"}
+{"id": "ir-capital", "lang": "ja", "query": "デンソーの資本金はいくらですか？", "expected_title": "annual-report-doc-2025-viewing-ja", "expected_keywords": ["1,875億円"], "format": "table-heavy-pdf"}
+{"id": "ir-employees", "lang": "ja", "query": "2025年3月期のデンソーの連結従業員数は何名ですか？", "expected_title": "annual-report-doc-2025-viewing-ja", "expected_keywords": ["158,056"], "format": "table-heavy-pdf"}
+{"id": "ir-x-employees", "lang": "en", "query": "How many consolidated employees did DENSO have as of fiscal year 2025?", "expected_title": "annual-report-doc-2025-viewing-ja", "expected_keywords": ["158,056"], "format": "table-heavy-pdf"}
+{"id": "ir-x-employees-vi", "lang": "vi", "query": "Tính đến năm tài chính 2025, DENSO có bao nhiêu nhân viên hợp nhất?", "expected_title": "annual-report-doc-2025-viewing-ja", "expected_keywords": ["158,056"], "format": "table-heavy-pdf"}
+{"id": "ir-largest-shareholder", "lang": "ja", "query": "デンソーの筆頭株主はどこで、持株比率は何%ですか？", "expected_title": "annual-report-doc-2025-viewing-ja", "expected_keywords": ["トヨタ自動車", "21.25"], "format": "table-heavy-pdf"}
+{"id": "ir-stock-code", "lang": "ja", "query": "デンソーの証券コードは何番ですか？", "expected_title": "annual-report-doc-2025-viewing-ja", "expected_keywords": ["6902"], "format": "table-heavy-pdf"}
+{"id": "ir-revenue-fy2024", "lang": "ja", "query": "2024年度の売上収益の総計はいくらでしたか？", "expected_title": "annual-report-doc-2025-viewing-ja", "expected_keywords": ["71,618"], "format": "table-heavy-pdf"}
+{"id": "ir-x-revenue-fy2024", "lang": "en", "query": "What was DENSO's total revenue for fiscal year 2024?", "expected_title": "annual-report-doc-2025-viewing-ja", "expected_keywords": ["71,618"], "format": "table-heavy-pdf"}
+{"id": "ir-adas-sales", "lang": "ja", "query": "2024年度のADAS事業の売上はいくらで、過去最高でしたか？", "expected_title": "annual-report-doc-2025-viewing-ja", "expected_keywords": ["2.0兆円"], "format": "text-pdf"}
+{"id": "ir-ceo", "lang": "ja", "query": "デンソーの代表取締役社長（CEO）は誰ですか？", "expected_title": "annual-report-doc-2025-viewing-ja", "expected_keywords": ["林新之助"], "format": "text-pdf"}
+{"id": "ir-cfo", "lang": "ja", "query": "デンソーのCFOは誰ですか？", "expected_title": "annual-report-doc-2025-viewing-ja", "expected_keywords": ["松井靖"], "format": "text-pdf"}
+{"id": "ir-chro", "lang": "ja", "query": "デンソーのCHROは誰ですか？", "expected_title": "annual-report-doc-2025-viewing-ja", "expected_keywords": ["山崎康彦"], "format": "text-pdf"}
+{"id": "ir-tcfd", "lang": "ja", "query": "デンソーがTCFD（気候関連財務情報開示タスクフォース）への賛同を表明したのは何年ですか？", "expected_title": "annual-report-doc-2025-viewing-ja", "expected_keywords": ["2019年", "TCFD"], "format": "text-pdf"}
+{"id": "ir-share-sale", "lang": "ja", "query": "2024年度の政策保有株式の売却金額はいくらで、過去最高でしたか？", "expected_title": "annual-report-doc-2025-viewing-ja", "expected_keywords": ["4,385億円"], "format": "text-pdf"}
+{"id": "ir-75th-anniversary", "lang": "ja", "query": "デンソーが創立75周年を迎えたのは何年ですか？", "expected_title": "annual-report-doc-2025-viewing-ja", "expected_keywords": ["2024年", "75周年"], "format": "text-pdf"}
+{"id": "ir-outside-directors-dialogue", "lang": "ja", "query": "社外取締役鼎談に参加した社外取締役の氏名を教えてください。", "expected_title": "annual-report-doc-2025-viewing-ja", "expected_keywords": ["三屋裕子", "櫛田誠希"], "format": "text-pdf"}

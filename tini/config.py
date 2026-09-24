@@ -135,6 +135,15 @@ class Settings:
     ocr_model: str = field(default_factory=lambda: os.getenv("TINI_OCR_MODEL", "").strip())
     ocr_api_key: str = field(default_factory=_ocr_api_key)
     ocr_base_url: str | None = field(default_factory=_ocr_base_url)
+    # A scanned page's OCR call is a multi-second network round trip; pages
+    # within one document are independent, so running several at once is a
+    # straightforward win. Rendering itself (pypdfium2) stays single-threaded
+    # — libpdfium is not thread-safe for concurrent page access — only the
+    # OCR request is parallelized. 4 is a conservative default against a
+    # hosted vision API's own rate limits.
+    ocr_concurrency: int = field(
+        default_factory=lambda: int(os.getenv("TINI_OCR_CONCURRENCY", "4"))
+    )
     # Reranking (tini/documents/rerank.py): retrieve more candidates than
     # needed, then let a second model reorder them against the question.
     # Off by default. OFF means candidate chunks never leave this machine;

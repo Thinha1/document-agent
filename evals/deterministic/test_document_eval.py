@@ -21,6 +21,10 @@ def settings(tmp_path):
         document_workspace="eval-ws",
         document_index="sqlite",
         embedding_provider="none",
+        # Pinned like the other backends above — a maintainer .env with
+        # TINI_RERANK_PROVIDER set (e.g. trying Jev, no key yet) would
+        # otherwise make every test in this file raise in make_document_index.
+        rerank_provider="none",
     )
 
 
@@ -390,6 +394,7 @@ def test_saved_runs_never_contain_credentials(tmp_path, question_dir):
         home=tmp_path / "home",
         document_index="sqlite",
         embedding_provider="none",
+        rerank_provider="none",
         embedding_api_key=secret,
         ocr_api_key=secret,
         api_key=secret,

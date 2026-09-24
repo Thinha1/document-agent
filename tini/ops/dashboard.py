@@ -554,13 +554,25 @@ def collect() -> dict:
         "providers": [asdict(view) for view in list_providers()],
         "connections": [asdict(view) for view in list_connections()],
         "tools": tools_info(),
-        "documents": {
+        "documents": _documents_section(settings),
+        "usage": usage_summary(home),
+    }
+
+
+def _documents_section(settings) -> dict:
+    # A misconfigured document backend (e.g. TINI_RERANK_PROVIDER set without
+    # its key while trying Jev) must not 500 the WHOLE dashboard — every
+    # other section above (chat, graph, providers, connections...) is
+    # unrelated and was already computed. Surfaced as an honest error the
+    # frontend can show, not swallowed. See make_document_index/make_reranker.
+    try:
+        return {
             **document_api.documents_payload(settings),
             "question_sets": document_eval.list_question_sets(settings),
             "rerank": document_eval.rerank_info(settings),
-        },
-        "usage": usage_summary(home),
-    }
+        }
+    except Exception as exc:
+        return {"error": f"{type(exc).__name__}: {exc}", "workspace": settings.document_workspace}
 
 
 def _rel_to_home(path, home) -> str:

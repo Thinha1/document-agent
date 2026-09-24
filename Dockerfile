@@ -14,13 +14,14 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Install the package (core + the qdrant extra, since this image's reason to
-# exist is the self-hosted RAG stack) before copying the rest of the source,
-# so an ordinary code change doesn't invalidate the dependency layer.
+# Install the package (core + qdrant + ocr, since this image's reason to
+# exist is the self-hosted RAG stack, including scanned-PDF ingestion) before
+# copying the rest of the source, so an ordinary code change doesn't
+# invalidate the dependency layer.
 COPY pyproject.toml README.md ./
 COPY tini ./tini
 COPY skills ./skills
-RUN pip install --no-cache-dir '.[qdrant]'
+RUN pip install --no-cache-dir '.[qdrant,ocr]'
 
 # Everything else a contributor might run from inside the container: scripts,
 # evals, docs, examples (including the Denso mock corpus).

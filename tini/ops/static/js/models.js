@@ -238,7 +238,22 @@ function modelsGrid(d){
   const providers = (d.providers || []).slice()
     .sort((a, b) => rank(a) - rank(b) || a.name.localeCompare(b.name));
   return `<div class="provgrid">` + providers.map(p => providerCard(p, st)).join("") +
-    `</div><div id="prov-modal-root"></div>`;
+    `</div><div id="prov-modal-root"></div>` + rerankCard(d);
+}
+
+// Reranking (currently just Jev) reorders retrieved chunks, not the chat
+// loop — a different concern from the providers above, but the same "which
+// model touches my documents" question a reader of this page is already
+// asking. Registered as an ordinary Connections-registry entry
+// (tini/integrations.py, key "jev"), so this reuses connectionCard/
+// openConnectionModal (js/views.js) instead of a second edit-modal
+// implementation — only the "where it's shown" differs.
+function rerankCard(d){
+  const item = (d.connections || []).find(c => c.key === "jev");
+  if (!item) return "";
+  return `<h2>Reranking <span class="meta" style="font-weight:400">— reorders retrieved document chunks before they reach the loop</span></h2>
+    <div class="provgrid">${connectionCard(item)}</div>
+    <div id="connection-modal-root"></div>`;
 }
 
 function providerCard(p, st){
