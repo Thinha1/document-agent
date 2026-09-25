@@ -192,6 +192,11 @@ class RerankingIndex:
     def delete_document(self, document_id: str, workspace_id: str = DEFAULT_WORKSPACE) -> bool:
         return self.inner.delete_document(document_id, workspace_id)
 
+    def opening_text(
+        self, document_id: str, workspace_id: str = DEFAULT_WORKSPACE, chars: int = 3000
+    ) -> str:
+        return self.inner.opening_text(document_id, workspace_id, chars)
+
     def search(
         self, query: str, top_k: int = 6, workspace_id: str = DEFAULT_WORKSPACE
     ) -> list[SearchHit]:

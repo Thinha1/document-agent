@@ -7,7 +7,7 @@ const KB_EVENT_STAGE = {
 };
 let kbState = {
   busy:false, stage:"", failed:false, filename:"", message:"",
-  recent:[], selected:null, chunks:[], chunksLoading:false,
+  recent:[], selected:null, chunks:[], chunksLoading:false, catFilter:"all", catEdit:null,
   query:"", hits:[], searching:false,
   evalSet:"", evalRunning:false, evalResult:null, evalError:"", evalUseLlm:false, evalRerank:false, evalNote:"",
 };
@@ -204,16 +204,96 @@ async function kbDocumentAction(action, documentId){
   await refresh();
 }
 
+// --- Document catalog: type / period / status per document, editable ---------
+// Editing here is a metadata write (POST /api/documents/catalog): no chunk is
+// re-embedded and nothing is OCR'd again, and an edited field is locked against
+// later automatic re-classification. Re-index is cheap too: OCR is cached per
+// page and vectors per chunk, so only genuinely new content costs anything.
+function kbCat(document){ return ((D.documents && D.documents.catalog) || {})[document.source_uri]; }
+function kbCatOptions(){ return (D.documents && D.documents.catalog_options) || {types:{}, statuses:{}}; }
+
+function kbCatalogVisible(documents){
+  const f = kbState.catFilter;
+  if (f === "all") return documents;
+  return documents.filter(d => { const c = kbCat(d); return f === "review" ? !!(c && c.needs_review) : !!(c && c.doc_type === f); });
+}
+
+function kbCatalogBar(documents){
+  const types = kbCatOptions().types, counts = {}, review = documents.filter(d => (kbCat(d) || {}).needs_review).length;
+  documents.forEach(d => { const c = kbCat(d); if (c) counts[c.doc_type] = (counts[c.doc_type] || 0) + 1; });
+  const chip = (key, label, n) => `<button class="quiet" style="${kbState.catFilter===key?"font-weight:700;text-decoration:underline":""}" onclick="kbCatalogFilter('${key}')">${esc(label)}${n==null?"":` (${n})`}</button>`;
+  const uncatalogued = documents.filter(d => !kbCat(d)).length;
+  return `<div style="display:flex;flex-wrap:wrap;gap:4px 10px;align-items:center;margin:0 0 8px">
+    ${chip("all","All",documents.length)}${Object.keys(types).filter(k => counts[k]).map(k => chip(k, types[k], counts[k])).join("")}
+    ${review ? chip("review","Needs review",review) : ""}
+    <button class="quiet" style="margin-left:auto" title="Re-ingests every document so each gets a catalog entry. Free for unchanged files: vectors and OCR pages come from the cache." onclick="kbCatalogRefresh()">${uncatalogued ? `Catalogue ${uncatalogued} uncatalogued` : "Refresh catalog"}</button></div>`;
+}
+
+function kbCatalogLine(document){
+  const c = kbCat(document);
+  if (!c) return `<small>not catalogued yet</small>`;
+  const types = kbCatOptions().types, statuses = kbCatOptions().statuses;
+  const bits = [types[c.doc_type] || c.doc_type, c.subtype, c.period, c.issuer].filter(Boolean).map(esc).join(" · ");
+  const status = c.status !== "current" ? ` · <b>${esc(statuses[c.status] || c.status)}</b>` : "";
+  const review = c.needs_review ? ` · <b style="color:var(--bad)" title="${esc(c.evidence)} (confidence ${Math.round(c.confidence*100)}%)">needs review</b>` : "";
+  return `<small>${bits}${status}${review}</small>`;
+}
+
+function kbCatalogEditor(document){
+  if (kbState.catEdit !== document.document_id) return "";
+  const c = kbCat(document) || {}, id = esc(document.document_id), o = kbCatOptions(), p = c.profile || {};
+  const opts = (map, cur) => Object.keys(map).map(k => `<option value="${esc(k)}" ${k===cur?"selected":""}>${esc(map[k])}</option>`).join("");
+  const field = (name, label, value) => `<label style="display:grid;gap:2px;font-size:11px">${label}<input id="kb-cat-${name}-${id}" value="${esc(value||"")}" onfocus="markEditing()"></label>`;
+  const facts = [p.pages ? `${p.pages} pages` : "", p.language ? `language ${p.language}` : "", p.scanned ? "scanned (OCR)" : "text PDF", p.table_heavy ? "table-heavy" : ""].filter(Boolean).join(" · ");
+  return `<div style="padding:8px 10px 10px;border-top:1px solid var(--line);display:grid;gap:8px;background:var(--panel)">
+    <small style="color:var(--ink3)">${esc(facts)}${c.evidence ? ` · guessed from ${esc(c.evidence)} (${Math.round((c.confidence||0)*100)}%)` : ""}${(c.locked||[]).length ? ` · edited by you: ${esc(c.locked.join(", "))}` : ""}</small>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px">
+      <label style="display:grid;gap:2px;font-size:11px">Type<select id="kb-cat-doc_type-${id}" onfocus="markEditing()">${opts(o.types, c.doc_type)}</select></label>
+      ${field("subtype","Kind",c.subtype)}${field("period","Period / version",c.period)}${field("issuer","Issuer",c.issuer)}
+      <label style="display:grid;gap:2px;font-size:11px">Status<select id="kb-cat-status-${id}" onfocus="markEditing()">${opts(o.statuses, c.status)}</select></label>
+    </div>
+    <label style="display:grid;gap:2px;font-size:11px">Summary (optional)<textarea id="kb-cat-summary-${id}" rows="2" onfocus="markEditing()">${esc(c.summary||"")}</textarea></label>
+    <div style="display:flex;gap:8px;align-items:center"><button class="save" onclick="kbCatalogSave('${id}')">Save</button>
+      <button class="quiet" onclick="kbCatalogEdit(null)">Cancel</button>
+      <small style="color:var(--ink3)">Metadata only: nothing is re-embedded or re-OCR'd, and these fields stay yours on re-index.</small></div></div>`;
+}
+
+function kbCatalogFilter(key){ kbState.catFilter = key; kbRerender(); }
+function kbCatalogEdit(id){ kbState.catEdit = kbState.catEdit === id ? null : id; if (id) markEditing(); else editing = false; kbRerender(); }
+
+async function kbCatalogSave(id){
+  const get = name => (document.getElementById(`kb-cat-${name}-${id}`) || {}).value || "";
+  const workspace = (D.documents && D.documents.workspace) || "default";
+  const fields = {doc_type:get("doc_type"), subtype:get("subtype"), period:get("period"), issuer:get("issuer"), status:get("status"), summary:get("summary")};
+  const result = await postJSON("/api/documents/catalog", {document_id:id, workspace, fields});
+  kbState.message = result.error || "Catalog entry saved.";
+  if (!result.error) kbState.catEdit = null;
+  editing = false;
+  await refresh();
+}
+
+async function kbCatalogRefresh(){
+  if (kbState.busy) return;
+  const workspace = (D.documents && D.documents.workspace) || "default";
+  kbState.busy = true; kbState.message = "Refreshing catalog…"; kbRerender();
+  const result = await postJSON("/api/documents/catalog/refresh", {workspace});
+  kbState.busy = false;
+  kbState.message = result.error || `Catalog refreshed: ${result.documents} documents (${result.catalogued} new, ${result.updated} updated, ${result.unchanged} unchanged). Nothing was re-read, OCR'd or embedded.`;
+  editing = false;
+  await refresh();
+}
+
 function kbDocumentRows(documents){
   if (!documents.length) return `<div class="kb-empty"><b>No documents indexed.</b><span>Choose files or drop a folder to build the first searchable collection.</span></div>`;
   return documents.map(document => `<article class="kb-doc ${kbState.selected===document.document_id?"selected":""}">
     <button class="kb-doc-main" onclick="kbViewChunks('${document.document_id}')">
       <span class="kb-filemark">${esc((document.title||"D").slice(0,1).toUpperCase())}</span>
-      <span class="kb-doc-copy"><b>${esc(document.title)}</b><small>${document.chunk_count} chunks · ${esc(document.media_type)} · ${(document.source_uri||"").startsWith("s3://")?"MinIO":"local file"}</small></span>
+      <span class="kb-doc-copy"><b>${esc(document.title)}</b><small>${document.chunk_count} chunks · ${esc(document.media_type)} · ${(document.source_uri||"").startsWith("s3://")?"MinIO":"local file"}</small>${kbCatalogLine(document)}</span>
       <span class="kb-ready">${esc(document.status)}</span>
     </button>
-    <div class="kb-doc-actions"><button onclick="kbDocumentAction('reindex','${document.document_id}')">Re-index</button>
-      <button class="danger" onclick="kbDocumentAction('delete','${document.document_id}')">Remove</button></div>
+    <div class="kb-doc-actions"><button onclick="kbCatalogEdit('${document.document_id}')">Edit</button>
+      <button title="Re-reads the original. Unchanged content costs nothing: OCR pages and vectors come from the cache." onclick="kbDocumentAction('reindex','${document.document_id}')">Re-index</button>
+      <button class="danger" onclick="kbDocumentAction('delete','${document.document_id}')">Remove</button></div>${kbCatalogEditor(document)}
   </article>`).join("");
 }
 
@@ -331,7 +411,7 @@ function documentsView(data){
       ${kbFlow()}<div class="kb-run-message ${kbState.failed?"bad":""}">${esc(kbState.message || "Files are hashed, chunked, and committed transactionally.")}</div>${latest}
     </section>
     <section class="kb-library-panel"><div class="kb-section-head"><div><span class="kb-kicker">Document library</span><h3>Indexed sources</h3></div><span class="kb-limit">${documents.length} total</span></div>
-      <div class="kb-doc-list">${kbDocumentRows(documents)}</div></section></div>
+      ${kbCatalogBar(documents)}<div class="kb-doc-list">${kbDocumentRows(kbCatalogVisible(documents))}</div></section></div>
     <section class="kb-probe"><div class="kb-section-head"><div><span class="kb-kicker">Retrieval probe</span><h3>Test what the agent can find</h3></div><span class="kb-limit">top 6 chunks</span></div>
       <div class="kb-search"><input id="kb-query" value="${esc(kbState.query)}" placeholder="e.g. What is the incident rollback procedure?" onfocus="markEditing()" onkeydown="kbSearchKey(event)"><button onclick="kbSearch()">Search index</button></div>${kbEvidence()}</section>
     ${kbEvalSection(data)}

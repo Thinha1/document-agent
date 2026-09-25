@@ -361,6 +361,51 @@ chunk size still re-embeds — those really are different vectors. Queries are
 never cached. The cache stores vectors, not chunk text; deleting a document
 does not delete its cached vectors, and removing the file is always safe.
 
+## Managing documents: the catalog
+
+The dashboard's Knowledge page keeps a **catalog** next to the index: for each
+document a type (report, governance, internal policy, supplier requirements,
+other), a kind, a period/version (e.g. `FY2024`), an issuer, a status (current,
+superseded, needs checking, excluded), an optional summary, and a profile of how
+it is built (pages, language, scanned or text, table density). It lives in
+`TINI_HOME/state.db` (`tini/documents/catalog.py`), keyed by (workspace,
+source URI), so it works the same under SQLite and Qdrant. The library can be
+filtered by type or by "needs review", and **Edit** opens the entry.
+
+**Classification** is rule-based (title, filename, the first ~3,000 characters),
+reports a confidence and the text that triggered it, and flags anything under
+80% for review instead of trusting it. A document names itself at the top
+("統合報告書2025", "Corporate Governance Report") and only *mentions* other
+types later, so the earliest match wins, not the most confident one (picking by
+confidence labelled the Integrated Report a securities filing). On the 9 DENSO
+files it matches my hand labels 9/9, but the rules were tuned on those same
+files, so this is a sanity check, not an independent accuracy figure. The
+"table-heavy" threshold (0.10) rests on one example. No model is called.
+
+**Refresh catalog** classifies every indexed document from the text the index
+already holds (`opening_text`): no original is re-read, nothing is OCR'd or
+embedded, so it costs nothing (9 documents: 2 s) and works for documents whose
+original this machine cannot open. That matters here: 8 of the 9 DENSO
+documents were ingested from a Windows host path (`file:///D:/...`) that the
+container cannot read, so **Re-index fails for them** while cataloguing works.
+
+**What editing and re-ingesting cost:**
+
+| action | API/model cost | time |
+|---|---|---|
+| edit type / period / status / summary | none — metadata only, no re-ingest | instant |
+| refresh catalog (9 documents) | none | ~2 s |
+| re-index an unchanged file | none: OCR pages and chunk vectors come from their caches | dominated by PDF parsing, ~17.5 s for a 56-page Japanese PDF (pypdf, CPU) |
+| one paragraph of a document edited | 1 of 338 chunks embedded | ~1 s for text files; PDFs add the parse time |
+| scanned file, unchanged | 0 OCR pages (cached) | render only |
+
+An edited field is **locked**: a later re-ingest of a changed file refreshes the
+profile and the automatic fields but never overwrites a locked one, and if an
+automatic field would have changed it flags the entry for review. Unchanged
+content (same hash) is not re-classified at all. Removing a document removes its
+catalog entry. Re-parsing the same unchanged PDF is the one remaining repeated
+cost, and it is time, not money.
+
 ## Chunking strategy
 
 Chunks are not cut at a fixed character count. The chunker follows headings,

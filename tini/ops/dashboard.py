@@ -1304,6 +1304,8 @@ class Handler(BaseHTTPRequestHandler):
             "/api/pin": pin_action,
             "/api/documents/search": document_api.search,
             "/api/documents/action": document_api.action,
+            "/api/documents/catalog": document_api.catalog_update,
+            "/api/documents/catalog/refresh": document_api.catalog_refresh,
             "/api/documents/eval": document_eval.run_eval,
             "/api/documents/eval/import": document_eval.import_set,
             "/api/connections": None,

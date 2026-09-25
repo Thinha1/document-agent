@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from tini.documents.base import DocumentIndex
+from tini.documents.catalog import profile_document
 from tini.documents.chunking import chunk_text
 from tini.documents.embeddings import EmbeddingProvider
 from tini.documents.loaders import discover_documents, load_document
@@ -30,6 +31,7 @@ class IngestionPipeline:
         max_file_bytes: int = 25 * 1024 * 1024,
         max_text_chars: int = 5_000_000,
         usage_log: Callable[[dict[str, Any]], None] | None = None,
+        catalog_log: Callable[[dict[str, Any]], None] | None = None,
     ):
         if chunk_max_tokens <= 0:
             raise ValueError("chunk_max_tokens must be positive")
@@ -52,6 +54,7 @@ class IngestionPipeline:
         self.max_file_bytes = max_file_bytes
         self.max_text_chars = max_text_chars
         self.usage_log = usage_log
+        self.catalog_log = catalog_log
 
     def ingest_path(
         self,
@@ -154,6 +157,23 @@ class IngestionPipeline:
                             "source_uri": source_uri or loaded.source_uri,
                             "action": report.action,
                             **loaded.metadata["ocr_usage"],
+                        }
+                    )
+                if self.catalog_log:
+                    # Profile + rule classification happen here, from text the
+                    # pipeline already has: no extra model call, no extra
+                    # embedding, so cataloguing a document is free. Unchanged
+                    # content is left alone by catalog.record_ingest.
+                    self.catalog_log(
+                        {
+                            "workspace": workspace_id,
+                            "source_uri": source_uri or loaded.source_uri,
+                            "title": loaded.title,
+                            "content_hash": loaded.content_hash,
+                            "text": loaded.text[:3000],
+                            "profile": profile_document(
+                                loaded.text, loaded.metadata, loaded.media_type, loaded.size_bytes
+                            ),
                         }
                     )
                 notify(report.action, {"path": str(source_path), "chunks": len(chunks)})

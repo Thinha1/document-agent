@@ -288,6 +288,16 @@ class SqliteDocumentIndex:
             for row in rows
         ]
 
+    def opening_text(
+        self, document_id: str, workspace_id: str = DEFAULT_WORKSPACE, chars: int = 3000
+    ) -> str:
+        rows = self.conn.execute(
+            """SELECT text FROM document_chunks WHERE document_id=? AND workspace_id=?
+               ORDER BY ordinal LIMIT 4""",
+            (document_id, workspace_id),
+        ).fetchall()
+        return "\n".join(row["text"] for row in rows)[:chars]
+
     def delete_document(self, document_id: str, workspace_id: str = DEFAULT_WORKSPACE) -> bool:
         with self.conn:
             row = self.conn.execute(

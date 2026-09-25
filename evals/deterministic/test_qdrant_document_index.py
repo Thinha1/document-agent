@@ -147,3 +147,17 @@ def test_list_documents_reports_chunk_counts_newest_first(tmp_path, index, pipel
 
     assert [d.title for d in docs] == ["newer", "older"]
     assert all(d.chunk_count >= 1 and d.status == "ready" for d in docs)
+
+
+def test_opening_text_returns_the_first_chunks_in_order_and_stays_in_its_workspace(index, pipeline, tmp_path):
+    body = "\n\n".join(f"# Part {n}\n\n" + f"sentence number {n} of the document. " * 6 for n in range(10))
+    (report,) = pipeline.ingest_path(_write(tmp_path / "long.md", body), workspace_id="a")
+    pipeline.ingest_path(_write(tmp_path / "other.md", "unrelated words " * 30), workspace_id="b")
+
+    opening = index.opening_text(report.document_id, "a", chars=100_000)
+
+    assert opening.startswith("# Part 0") and "Part 1" in opening
+    assert "Part 9" not in opening, "only the first few chunks, not the whole document"
+    assert "unrelated" not in opening
+    assert index.opening_text(report.document_id, "b") == "", "a document is invisible from another workspace"
+    assert len(index.opening_text(report.document_id, "a", chars=50)) <= 50

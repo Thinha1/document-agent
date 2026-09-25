@@ -168,6 +168,26 @@ class QdrantDocumentIndex:
             document_id=document_id,
         )
 
+    def opening_text(
+        self, document_id: str, workspace_id: str = DEFAULT_WORKSPACE, chars: int = 3000
+    ) -> str:
+        from qdrant_client import models
+
+        points, _ = self.client.scroll(
+            collection_name=self.collection,
+            scroll_filter=models.Filter(
+                must=[
+                    models.FieldCondition(key="document_id", match=models.MatchValue(value=document_id)),
+                    models.FieldCondition(key="workspace_id", match=models.MatchValue(value=workspace_id)),
+                    models.FieldCondition(key="ordinal", range=models.Range(lt=4)),
+                ]
+            ),
+            limit=8,
+            with_payload=True,
+        )
+        ordered = sorted(points, key=lambda point: point.payload["ordinal"])
+        return "\n".join(point.payload["text"] for point in ordered)[:chars]
+
     def delete_document(self, document_id: str, workspace_id: str = DEFAULT_WORKSPACE) -> bool:
         from qdrant_client import models
 
