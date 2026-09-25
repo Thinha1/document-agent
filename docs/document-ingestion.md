@@ -291,6 +291,40 @@ composed-page render doesn't have that failure mode. One page's OCR call
 failing doesn't sink the whole document; the failure count lands in
 `ocr_failed_pages` instead of vanishing.
 
+### What OCR costs per document
+
+Every OCR'd document appends one row to `TINI_HOME/ocr_usage.jsonl` — title,
+pages, prompt and completion tokens, provider/model, and whether the run was
+kept (`created`/`updated`) or discarded (`skipped`). Tokens only: dollars are
+derived when read (`tini/ops/ocr_cost.py`), so correcting a rate fixes past
+rows. The dashboard's Documents header shows the average per document once
+any scanned file has been ingested (hover for per-page cost and the rate).
+
+Measured 2026-09-25 with `deepseek-v4-flash-vision-exp` on the one scanned
+file in the corpus (`supply-chain-doc-sustainability-guidelines-en.pdf`,
+15 pages, rendered at 2x):
+
+| | per page | per 15-page document |
+|---|---|---|
+| prompt tokens | 1,080 (identical every run: a page image is a fixed size) | 16,200 |
+| completion tokens | ~400-430 (the transcription; varied 5,979 vs 6,431 between runs) | ~6,000-6,400 |
+| cost at $0.15 / $0.30 per M tokens | ~$0.00029 | ~$0.0043 |
+| cost at the provider-level $0.435 / $0.87 estimate | ~$0.00084 | ~$0.0126 |
+
+The two rate rows are the same tokens priced two ways: the model is documented
+as priced like `deepseek-v4-flash` ($0.15/$0.30) but `tini/ops/pricing.py`'s
+generic `deepseek` fallback is ~2.9x higher, so treat the dollar figure as an
+estimate and check your provider's current price. Average cost per document
+scales with page count: **cost ≈ pages x ~$0.0003** at the lower rate. One
+sample document, so the per-document average is really a per-page average
+times your page count. Wall-clock for the 15 pages with 4-way concurrency was
+~15 s.
+
+**Known waste:** OCR runs *before* the index checks whether the file is
+unchanged, so re-ingesting or re-indexing an identical scanned file pays for
+OCR again and then reports `skipped` (the second run above: same ~$0.0042,
+~14 s, nothing new indexed). The ledger's `wasted_cost` counts exactly this.
+
 ## Chunking strategy
 
 Chunks are not cut at a fixed character count. The chunker follows headings,

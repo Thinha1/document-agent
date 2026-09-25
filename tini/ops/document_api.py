@@ -17,9 +17,10 @@ from tini.db import connect
 from tini.documents.blobstore import S3_SCHEME, BlobStoreError, make_blob_store
 from tini.documents.embeddings import make_embedding_provider
 from tini.documents.loaders import SUPPORTED_SUFFIXES
-from tini.documents.ocr import make_ocr_provider
+from tini.documents.ocr import make_ocr_provider, make_usage_logger
 from tini.documents.pipeline import IngestionPipeline
 from tini.documents.store import make_document_index
+from tini.ops import ocr_cost
 
 _WORKSPACE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
 
@@ -53,6 +54,7 @@ def documents_payload(settings: Settings | None = None) -> dict:
     return {
         "workspace": settings.document_workspace,
         "storage": settings.document_storage,
+        "ocr_cost": ocr_cost.summarize(settings.home, settings.document_workspace),
         "items": items,
         "chunk_count": chunks,
         "vector_count": vectors,
@@ -144,6 +146,7 @@ def _ingest_staged(target: Path, workspace_id: str, settings: Settings, emit, so
             chunk_overlap_tokens=settings.document_chunk_overlap_tokens,
             max_file_bytes=settings.document_max_file_bytes,
             max_text_chars=settings.document_max_text_chars,
+            usage_log=make_usage_logger(settings.home),
         )
         reports = pipeline.ingest_path(
             target,
@@ -241,6 +244,7 @@ def action(payload: dict, settings: Settings | None = None) -> dict:
             chunk_overlap_tokens=settings.document_chunk_overlap_tokens,
             max_file_bytes=settings.document_max_file_bytes,
             max_text_chars=settings.document_max_text_chars,
+            usage_log=make_usage_logger(settings.home),
         )
         if urlparse(match.source_uri).scheme == S3_SCHEME:
             # The original lives in object storage: fetch it to a throwaway

@@ -225,13 +225,31 @@ def _load_pdf(
                 "(TINI_OCR_PROVIDER, see tini/documents/ocr.py)"
             )
         else:
+            before = _usage_of(ocr)
             ocr_text, failed_pages = _ocr_pdf_pages(raw, ocr)
+            after = _usage_of(ocr)
+            if before is not None and after is not None:
+                # What THIS document cost, in tokens (never a price — see
+                # tini/ops/ocr_cost.py). Recorded even when the run yields no
+                # text: a failed scan still spent the calls.
+                metadata["ocr_usage"] = {
+                    "provider": getattr(ocr, "provider_name", ""),
+                    "model": getattr(ocr, "model", ""),
+                    "pages": after["calls"] - before["calls"],
+                    "prompt_tokens": after["prompt_tokens"] - before["prompt_tokens"],
+                    "completion_tokens": after["completion_tokens"] - before["completion_tokens"],
+                }
             if ocr_text.strip():
                 text = ocr_text
                 metadata["ocr_applied"] = True
                 if failed_pages:
                     metadata["ocr_failed_pages"] = failed_pages
     return text, metadata
+
+
+def _usage_of(ocr: OcrProvider) -> dict[str, int] | None:
+    snapshot = getattr(ocr, "usage_snapshot", None)
+    return snapshot() if callable(snapshot) else None
 
 
 def _ocr_pdf_pages(raw: bytes, ocr: OcrProvider) -> tuple[str, int]:

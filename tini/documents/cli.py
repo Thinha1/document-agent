@@ -8,7 +8,7 @@ from pathlib import Path
 from tini.config import load_settings
 from tini.db import connect
 from tini.documents.embeddings import make_embedding_provider
-from tini.documents.ocr import make_ocr_provider
+from tini.documents.ocr import make_ocr_provider, make_usage_logger
 from tini.documents.pipeline import IngestionPipeline
 from tini.documents.store import make_document_index
 
@@ -39,6 +39,7 @@ def ingest_main(argv: list[str]) -> int:
             chunk_overlap_tokens=args.chunk_overlap_tokens,
             max_file_bytes=settings.document_max_file_bytes,
             max_text_chars=settings.document_max_text_chars,
+            usage_log=make_usage_logger(settings.home),
         )
         reports = pipeline.ingest_path(
             args.path, workspace_id=args.workspace, recursive=not args.no_recursive

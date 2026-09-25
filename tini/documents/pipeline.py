@@ -29,6 +29,7 @@ class IngestionPipeline:
         chunk_overlap_tokens: int = 48,
         max_file_bytes: int = 25 * 1024 * 1024,
         max_text_chars: int = 5_000_000,
+        usage_log: Callable[[dict[str, Any]], None] | None = None,
     ):
         if chunk_max_tokens <= 0:
             raise ValueError("chunk_max_tokens must be positive")
@@ -50,6 +51,7 @@ class IngestionPipeline:
         self.chunk_overlap_tokens = chunk_overlap_tokens
         self.max_file_bytes = max_file_bytes
         self.max_text_chars = max_text_chars
+        self.usage_log = usage_log
 
     def ingest_path(
         self,
@@ -121,7 +123,11 @@ class IngestionPipeline:
                         size_bytes=loaded.size_bytes,
                         content_hash=loaded.content_hash,
                         metadata={
-                            **loaded.metadata,
+                            # ocr_usage is a per-run measurement (token counts
+                            # vary between runs), not a property of the file:
+                            # stored, it would make an unchanged re-ingest look
+                            # changed and defeat the skip-if-identical check.
+                            **{k: v for k, v in loaded.metadata.items() if k != "ocr_usage"},
                             "_ingestion": {
                                 "chunker": "structure-v1",
                                 "max_tokens": self.chunk_max_tokens,
@@ -136,6 +142,20 @@ class IngestionPipeline:
                     ),
                     chunks,
                 )
+                if self.usage_log and "ocr_usage" in loaded.metadata:
+                    # After the upsert so the row can say whether the OCR was
+                    # kept ("created"/"updated") or thrown away ("skipped": the
+                    # file was unchanged but was OCR'd again before the index
+                    # noticed).
+                    self.usage_log(
+                        {
+                            "workspace": workspace_id,
+                            "title": loaded.title,
+                            "source_uri": source_uri or loaded.source_uri,
+                            "action": report.action,
+                            **loaded.metadata["ocr_usage"],
+                        }
+                    )
                 notify(report.action, {"path": str(source_path), "chunks": len(chunks)})
             except Exception as exc:
                 report = IngestReport(

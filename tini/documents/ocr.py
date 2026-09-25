@@ -28,6 +28,7 @@ openai, TINI_OCR_BASE_URL pointed at it) — this is not DeepSeek-specific.
 from __future__ import annotations
 
 import base64
+import threading
 from typing import Protocol
 
 from tini.config import Settings
@@ -54,10 +55,18 @@ class VisionModelOcrProvider:
         model: str,
         base_url: str | None = None,
         concurrency: int = 4,
+        provider_name: str = "vision-model",
     ):
         from openai import OpenAI
 
         self.model = model
+        self.provider_name = provider_name
+        # Running token totals for THIS instance (one per ingest call), so the
+        # loader can attribute cost to a document by diffing before/after. Only
+        # tokens are kept, never a price: prices change, tokens don't (same
+        # rule as tini/ops/pricing.py's ledger).
+        self._usage_lock = threading.Lock()
+        self._usage = {"calls": 0, "prompt_tokens": 0, "completion_tokens": 0}
         self.client = OpenAI(api_key=api_key, base_url=base_url)
         # Read by loaders._ocr_pdf_pages to bound how many pages of the same
         # document are in flight at once.
@@ -92,7 +101,16 @@ class VisionModelOcrProvider:
             )
         except Exception as exc:
             raise OcrError(f"OCR request failed: {exc}") from exc
+        usage = getattr(response, "usage", None)
+        with self._usage_lock:
+            self._usage["calls"] += 1
+            self._usage["prompt_tokens"] += int(getattr(usage, "prompt_tokens", 0) or 0)
+            self._usage["completion_tokens"] += int(getattr(usage, "completion_tokens", 0) or 0)
         return (response.choices[0].message.content or "").strip()
+
+    def usage_snapshot(self) -> dict[str, int]:
+        with self._usage_lock:
+            return dict(self._usage)
 
 
 def make_ocr_provider(settings: Settings) -> OcrProvider | None:
@@ -108,4 +126,23 @@ def make_ocr_provider(settings: Settings) -> OcrProvider | None:
         settings.ocr_model,
         settings.ocr_base_url,
         concurrency=settings.ocr_concurrency,
+        provider_name=provider,
     )
+
+
+def make_usage_logger(home):
+    """Append-only ledger of what each OCR'd document cost, one JSON line per
+    run (`<home>/ocr_usage.jsonl`). Tokens only — dollars are derived at read
+    time by tini/ops/ocr_cost.py so a corrected price fixes past rows too."""
+    import json
+    from datetime import UTC, datetime
+
+    path = home / "ocr_usage.jsonl"
+
+    def log(entry: dict) -> None:
+        row = {"ts": datetime.now(UTC).isoformat(timespec="seconds"), **entry}
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with path.open("a", encoding="utf-8") as handle:
+            handle.write(json.dumps(row, ensure_ascii=False) + "\n")
+
+    return log

@@ -213,40 +213,40 @@ def test_multi_page_ocr_is_stitched_in_page_order(tmp_path):
 
 
 def test_ocr_pages_run_concurrently_up_to_the_providers_limit(tmp_path):
-    """The point of this feature: OCR is a multi-second network round trip
-    per page, and pages are independent, so wall-clock time for N pages at
-    concurrency=N should look like ~1 round trip, not N of them."""
+    """The point of this feature: pages are independent network round trips, so
+    up to `concurrency` of them must be in flight at once. Measured as the peak
+    number of simultaneous calls rather than wall-clock time, which flaked
+    whenever the machine was busy."""
     source = tmp_path / "sparse.pdf"
     source.write_bytes(_minimal_pdf_with_pages(["1", "2", "3", "4"]))
 
     class _SlowOcrProvider:
         def __init__(self, concurrency: int):
             self.concurrency = concurrency
+            self.in_flight = 0
+            self.peak = 0
             self.calls = 0
             self._lock = threading.Lock()
 
         def ocr_image(self, image_bytes: bytes, media_type: str = "image/png") -> str:
             with self._lock:
                 self.calls += 1
-            time.sleep(0.1)
+                self.in_flight += 1
+                self.peak = max(self.peak, self.in_flight)
+            time.sleep(0.1)  # long enough for the other workers to overlap
+            with self._lock:
+                self.in_flight -= 1
             return "transcribed page content, well past the sparse-page threshold"
 
     serial = _SlowOcrProvider(concurrency=1)
-    start = time.monotonic()
     load_document(source, 26_214_400, ocr=serial)
-    serial_elapsed = time.monotonic() - start
-
-    concurrent = _SlowOcrProvider(concurrency=4)
-    start = time.monotonic()
+    concurrent = _SlowOcrProvider(concurrency=3)
     loaded = load_document(source, 26_214_400, ocr=concurrent)
-    concurrent_elapsed = time.monotonic() - start
 
-    assert serial.calls == 4
-    assert concurrent.calls == 4
+    assert serial.calls == 4 and concurrent.calls == 4
+    assert serial.peak == 1, "concurrency=1 must never overlap calls"
+    assert 1 < concurrent.peak <= 3, "concurrency=3 must overlap, but never exceed its limit"
     assert loaded.metadata["ocr_applied"] is True
-    # 4 pages x 0.1s serial ~= 0.4s; concurrency=4 collapses that toward one
-    # round trip. Generous threshold (half of serial) to avoid CI flakiness.
-    assert concurrent_elapsed < serial_elapsed / 2
 
 
 def test_failed_pages_are_still_counted_when_run_concurrently(tmp_path):
@@ -258,6 +258,87 @@ def test_failed_pages_are_still_counted_when_run_concurrently(tmp_path):
 
     assert len(ocr.calls) == 3
     assert loaded.metadata.get("ocr_failed_pages") == 1
+
+
+class _MeteredOcr:
+    """A fake provider that exposes the same usage_snapshot() the real vision
+    provider does, so document-level cost attribution is testable offline.
+    Completion tokens grow with every call, so two runs over the same file
+    report DIFFERENT usage — like real model output does."""
+
+    provider_name = "deepseek"
+    model = "deepseek-v4-flash-vision-exp"
+
+    def __init__(self, concurrency: int = 1):
+        self.concurrency = concurrency
+        self._lock = threading.Lock()
+        self._usage = {"calls": 0, "prompt_tokens": 0, "completion_tokens": 0}
+
+    def ocr_image(self, image_bytes: bytes, media_type: str = "image/png") -> str:
+        with self._lock:
+            self._usage["calls"] += 1
+            self._usage["prompt_tokens"] += 100
+            self._usage["completion_tokens"] += 39 + self._usage["calls"]
+        return "transcribed page content, well past the sparse-page threshold"
+
+    def usage_snapshot(self) -> dict:
+        with self._lock:
+            return dict(self._usage)
+
+
+def test_ocr_usage_is_attributed_to_the_document_that_spent_it(tmp_path):
+    source = tmp_path / "sparse.pdf"
+    source.write_bytes(_minimal_pdf_with_pages(["1", "2", "3"]))
+    ocr = _MeteredOcr(concurrency=2)
+
+    first = load_document(source, 26_214_400, ocr=ocr)
+    second = load_document(source, 26_214_400, ocr=ocr)
+
+    usage = first.metadata["ocr_usage"]
+    assert (usage["provider"], usage["model"]) == ("deepseek", "deepseek-v4-flash-vision-exp")
+    assert usage["pages"] == 3 and usage["prompt_tokens"] == 300
+    # The second document is billed for ITS calls only, not the running total.
+    assert second.metadata["ocr_usage"]["pages"] == 3
+    assert second.metadata["ocr_usage"]["prompt_tokens"] == 300
+    assert second.metadata["ocr_usage"]["completion_tokens"] != usage["completion_tokens"]
+
+
+def test_a_provider_without_usage_reporting_records_none(tmp_path):
+    source = tmp_path / "sparse.pdf"
+    source.write_bytes(_minimal_pdf_with_text("x"))
+
+    loaded = load_document(source, 26_214_400, ocr=_FakeOcrProvider())
+
+    assert "ocr_usage" not in loaded.metadata
+
+
+def test_usage_is_logged_after_the_upsert_but_never_stored_with_the_document(tmp_path):
+    """Token counts differ run to run. If they were stored as document
+    metadata, re-ingesting an unchanged file would look changed and be
+    'updated' instead of 'skipped' — so the pipeline must keep them out."""
+    from tini.db import connect
+    from tini.documents.pipeline import IngestionPipeline
+    from tini.documents.store import SqliteDocumentIndex
+
+    source = tmp_path / "sparse.pdf"
+    source.write_bytes(_minimal_pdf_with_pages(["1", "2"]))
+    rows: list[dict] = []
+    (tmp_path / "home").mkdir()
+    conn = connect(tmp_path / "home")
+    try:
+        pipeline = IngestionPipeline(
+            SqliteDocumentIndex(conn), ocr=_MeteredOcr(), usage_log=rows.append
+        )
+        (first,) = pipeline.ingest_path(source, workspace_id="w")
+        (second,) = pipeline.ingest_path(source, workspace_id="w")
+        stored = conn.execute("SELECT metadata FROM documents").fetchone()[0]
+    finally:
+        conn.close()
+
+    assert (first.action, second.action) == ("created", "skipped")
+    assert [row["action"] for row in rows] == ["created", "skipped"]
+    assert rows[0]["title"] == "sparse" and rows[0]["pages"] == 2 and rows[0]["workspace"] == "w"
+    assert "ocr_usage" not in stored
 
 
 TINI_TEST_OCR = os.getenv("TINI_TEST_OCR") == "1"

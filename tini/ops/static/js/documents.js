@@ -295,6 +295,14 @@ function kbChunkPreview(documents){
     <button class="kb-close" onclick="kbState.selected=null;kbRerender()" aria-label="Close chunk inspector">×</button></div>${content}</section>`;
 }
 
+function kbOcrCost(cost){
+  if (!cost || !cost.documents) return "";
+  const usd = value => "$" + (value >= 0.1 ? value.toFixed(2) : value.toFixed(4));
+  const rate = cost.rate_per_million ? ` · est. at $${cost.rate_per_million.in}/$${cost.rate_per_million.out} per M tokens in/out` : "";
+  const waste = cost.wasted_cost > 0 ? ` · ${usd(cost.wasted_cost)} spent re-OCRing unchanged files` : "";
+  return `<i></i><b title="${esc(`${cost.documents} scanned documents, ${cost.pages} pages, ${usd(cost.total_cost)} total, ${usd(cost.avg_cost_per_page)} per page${rate}${waste}`)}">${usd(cost.avg_cost_per_document)}</b><span>avg OCR / doc</span>`;
+}
+
 function documentsView(data){
   const info = data.documents || {items:[], chunk_count:0, workspace:"default", max_file_bytes:0};
   if (info.error){
@@ -310,7 +318,7 @@ function documentsView(data){
   const latest = kbState.recent.slice(0,3).map(item => `<div class="kb-log ${item.ok?"ok":"bad"}"><span></span><b>${esc(item.name)}</b><small>${esc(item.detail)}</small></div>`).join("");
   return `<div class="kb-hero"><div><span class="kb-kicker">Workspace · ${esc(info.workspace)}</span>
       <p>Turn internal files into evidence the agent can cite.</p></div>
-    <div class="kb-totals"><b>${documents.length}</b><span>documents</span><i></i><b>${info.chunk_count||0}</b><span>chunks</span><i></i><b>${info.vector_count||0}</b><span>vectors</span></div></div>
+    <div class="kb-totals"><b>${documents.length}</b><span>documents</span><i></i><b>${info.chunk_count||0}</b><span>chunks</span><i></i><b>${info.vector_count||0}</b><span>vectors</span>${kbOcrCost(info.ocr_cost)}</div></div>
     <div class="kb-grid"><section class="kb-ingest-panel">
       <div class="kb-section-head"><div><span class="kb-kicker">Ingestion desk</span><h3>Add knowledge</h3></div>
         <span class="kb-limit">max ${kbBytes(info.max_file_bytes)}</span></div>
