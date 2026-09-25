@@ -28,7 +28,11 @@ openai, TINI_OCR_BASE_URL pointed at it) — this is not DeepSeek-specific.
 from __future__ import annotations
 
 import base64
+import hashlib
+import os
 import threading
+import uuid
+from pathlib import Path
 from typing import Protocol
 
 from tini.config import Settings
@@ -46,6 +50,11 @@ class OcrProvider(Protocol):
         ...
 
 
+# Bump when the transcription prompt below changes, so old cached text is not
+# served as if the new prompt had produced it.
+PROMPT_VERSION = "1"
+
+
 class VisionModelOcrProvider:
     provider = "vision-model"
 
@@ -56,6 +65,7 @@ class VisionModelOcrProvider:
         base_url: str | None = None,
         concurrency: int = 4,
         provider_name: str = "vision-model",
+        cache_dir: Path | None = None,
     ):
         from openai import OpenAI
 
@@ -66,13 +76,36 @@ class VisionModelOcrProvider:
         # tokens are kept, never a price: prices change, tokens don't (same
         # rule as tini/ops/pricing.py's ledger).
         self._usage_lock = threading.Lock()
-        self._usage = {"calls": 0, "prompt_tokens": 0, "completion_tokens": 0}
+        self._usage = {"calls": 0, "prompt_tokens": 0, "completion_tokens": 0, "cache_hits": 0}
+        # Transcriptions are cached per page image, so ingesting the same
+        # scanned file again (unchanged re-ingest, a new embedding model, a
+        # different chunk size) does not pay for OCR twice. Off when None.
+        self.cache_dir = Path(cache_dir) if cache_dir else None
         self.client = OpenAI(api_key=api_key, base_url=base_url)
         # Read by loaders._ocr_pdf_pages to bound how many pages of the same
         # document are in flight at once.
         self.concurrency = max(1, int(concurrency))
 
+    def _cache_path(self, image_bytes: bytes) -> Path | None:
+        if self.cache_dir is None:
+            return None
+        key = hashlib.sha256()
+        for part in (self.model.encode(), PROMPT_VERSION.encode(), image_bytes):
+            key.update(part)
+            key.update(b"\0")
+        return self.cache_dir / f"{key.hexdigest()}.txt"
+
     def ocr_image(self, image_bytes: bytes, media_type: str = "image/png") -> str:
+        cache_path = self._cache_path(image_bytes)
+        if cache_path is not None:
+            try:
+                cached = cache_path.read_text(encoding="utf-8")
+            except OSError:
+                cached = None
+            if cached is not None:
+                with self._usage_lock:
+                    self._usage["cache_hits"] += 1
+                return cached
         encoded = base64.b64encode(image_bytes).decode("ascii")
         try:
             response = self.client.chat.completions.create(
@@ -106,7 +139,19 @@ class VisionModelOcrProvider:
             self._usage["calls"] += 1
             self._usage["prompt_tokens"] += int(getattr(usage, "prompt_tokens", 0) or 0)
             self._usage["completion_tokens"] += int(getattr(usage, "completion_tokens", 0) or 0)
-        return (response.choices[0].message.content or "").strip()
+        text = (response.choices[0].message.content or "").strip()
+        if cache_path is not None:
+            # Only a successful response is cached (a failure raised above), and
+            # a blank page is a valid result worth caching too. Best effort: a
+            # cache that cannot be written just means paying again next time.
+            try:
+                cache_path.parent.mkdir(parents=True, exist_ok=True)
+                temporary = cache_path.with_name(f".{cache_path.name}.{uuid.uuid4().hex}.tmp")
+                temporary.write_text(text, encoding="utf-8")
+                os.replace(temporary, cache_path)
+            except OSError:
+                pass
+        return text
 
     def usage_snapshot(self) -> dict[str, int]:
         with self._usage_lock:
@@ -127,6 +172,7 @@ def make_ocr_provider(settings: Settings) -> OcrProvider | None:
         settings.ocr_base_url,
         concurrency=settings.ocr_concurrency,
         provider_name=provider,
+        cache_dir=settings.home / "ocr_cache",
     )
 
 

@@ -320,10 +320,21 @@ sample document, so the per-document average is really a per-page average
 times your page count. Wall-clock for the 15 pages with 4-way concurrency was
 ~15 s.
 
-**Known waste:** OCR runs *before* the index checks whether the file is
-unchanged, so re-ingesting or re-indexing an identical scanned file pays for
-OCR again and then reports `skipped` (the second run above: same ~$0.0042,
-~14 s, nothing new indexed). The ledger's `wasted_cost` counts exactly this.
+**Each page is OCR'd once.** OCR runs before the index decides whether a file
+is unchanged, so a plain re-ingest used to pay for the whole document again and
+then report `skipped` (measured: the same ~$0.0042 and ~14 s for nothing). It
+would also have re-paid whenever the text had to be re-read for a new embedding
+model or chunk size. Instead the transcription of each page is cached under
+`TINI_HOME/ocr_cache/`, keyed by the page image, the OCR model and the prompt
+version (`PROMPT_VERSION` in `tini/documents/ocr.py` — bump it if you change the
+prompt). Only successful responses are cached (a failed page is retried next
+time; a blank page is a real result and is cached). Re-checked with the real
+API on the same 15-page file: run 1 paid (15 pages, ~$0.005), runs 2 and 3
+made no API call (30 cached pages, `wasted_cost` 0, ~5 s instead of ~14 s).
+The ledger's `cached_pages` counts the pages served this way. The cache holds
+document text in plain files under `TINI_HOME`, like the index does; deleting
+a document does not delete its cached pages, and `rm -r ocr_cache` is safe
+(the only cost is paying again).
 
 ## Chunking strategy
 

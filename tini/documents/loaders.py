@@ -236,6 +236,7 @@ def _load_pdf(
                     "provider": getattr(ocr, "provider_name", ""),
                     "model": getattr(ocr, "model", ""),
                     "pages": after["calls"] - before["calls"],
+                    "cached_pages": after.get("cache_hits", 0) - before.get("cache_hits", 0),
                     "prompt_tokens": after["prompt_tokens"] - before["prompt_tokens"],
                     "completion_tokens": after["completion_tokens"] - before["completion_tokens"],
                 }

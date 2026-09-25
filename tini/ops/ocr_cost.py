@@ -46,7 +46,6 @@ def summarize(home: Path, workspace: str | None = None) -> dict:
 
     pages = sum(r.get("pages", 0) for r in rows)
     total_cost = sum(_cost(r) for r in rows)
-    doc_costs = [sum(_cost(r) for r in runs) / len(runs) for runs in per_doc.values()]
     rate = _rate(rows[-1].get("provider", ""), rows[-1].get("model", "")) if rows else None
     return {
         "documents": len(per_doc),
@@ -55,7 +54,10 @@ def summarize(home: Path, workspace: str | None = None) -> dict:
         "prompt_tokens": sum(r.get("prompt_tokens", 0) for r in rows),
         "completion_tokens": sum(r.get("completion_tokens", 0) for r in rows),
         "total_cost": total_cost,
-        "avg_cost_per_document": (sum(doc_costs) / len(doc_costs)) if doc_costs else 0.0,
+        # Lifetime spend per scanned document: every run that paid counts, so a
+        # file re-OCR'd after a cache miss costs what it really cost.
+        "avg_cost_per_document": (total_cost / len(per_doc)) if per_doc else 0.0,
+        "cached_pages": sum(r.get("cached_pages", 0) for r in rows),
         "avg_cost_per_page": (total_cost / pages) if pages else 0.0,
         "avg_pages_per_document": (pages / len(rows)) if rows else 0.0,
         "avg_prompt_tokens_per_page": (sum(r.get("prompt_tokens", 0) for r in rows) / pages) if pages else 0.0,
