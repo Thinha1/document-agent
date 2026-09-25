@@ -58,11 +58,18 @@ class IngestionPipeline:
         workspace_id: str = DEFAULT_WORKSPACE,
         recursive: bool = True,
         observer: IngestObserver | None = None,
+        source_uri: str | None = None,
     ) -> list[IngestReport]:
+        """`source_uri` names where the ORIGINAL really lives when `path` is
+        only a local staging copy (e.g. an s3:// object downloaded to parse);
+        it replaces the file:// URI a document would otherwise be recorded
+        under, so a re-ingest of the same object matches the same document."""
         if not workspace_id.strip():
             raise ValueError("workspace_id must not be empty")
         notify = observer or (lambda stage, event: None)
         files = discover_documents(path, recursive=recursive)
+        if source_uri is not None and len(files) != 1:
+            raise ValueError("source_uri can only be set when ingesting a single file")
         notify("discovered", {"path": str(path), "files": len(files)})
         reports: list[IngestReport] = []
         for source_path in files:
@@ -108,7 +115,7 @@ class IngestionPipeline:
                 report = self.index.upsert_document(
                     DocumentSource(
                         workspace_id=workspace_id,
-                        source_uri=loaded.source_uri,
+                        source_uri=source_uri or loaded.source_uri,
                         title=loaded.title,
                         media_type=loaded.media_type,
                         size_bytes=loaded.size_bytes,

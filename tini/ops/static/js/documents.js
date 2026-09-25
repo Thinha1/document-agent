@@ -190,7 +190,7 @@ async function kbViewChunks(documentId){
 async function kbDocumentAction(action, documentId){
   const document = ((D.documents && D.documents.items) || []).find(item => item.document_id === documentId);
   const title = document ? document.title : "document";
-  if (action === "delete" && !confirm(`Remove “${title}” from the index? The source file will stay on disk.`)) return;
+  if (action === "delete" && !confirm(`Remove “${title}” from the index? The original file stays where it is stored (${(document && (document.source_uri||"").startsWith("s3://")) ? "MinIO" : "disk"}).`)) return;
   const workspace = (D.documents && D.documents.workspace) || "default";
   kbState.message = action === "delete" ? `Removing ${title}` : `Re-indexing ${title}`;
   kbState.busy = true; kbState.stage = action === "reindex" ? "index" : ""; kbRerender();
@@ -209,7 +209,7 @@ function kbDocumentRows(documents){
   return documents.map(document => `<article class="kb-doc ${kbState.selected===document.document_id?"selected":""}">
     <button class="kb-doc-main" onclick="kbViewChunks('${document.document_id}')">
       <span class="kb-filemark">${esc((document.title||"D").slice(0,1).toUpperCase())}</span>
-      <span class="kb-doc-copy"><b>${esc(document.title)}</b><small>${document.chunk_count} chunks · ${esc(document.media_type)}</small></span>
+      <span class="kb-doc-copy"><b>${esc(document.title)}</b><small>${document.chunk_count} chunks · ${esc(document.media_type)} · ${(document.source_uri||"").startsWith("s3://")?"MinIO":"local file"}</small></span>
       <span class="kb-ready">${esc(document.status)}</span>
     </button>
     <div class="kb-doc-actions"><button onclick="kbDocumentAction('reindex','${document.document_id}')">Re-index</button>

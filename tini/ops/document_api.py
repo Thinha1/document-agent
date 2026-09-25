@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import mimetypes
 import os
 import re
+import tempfile
 import uuid
 from dataclasses import asdict
 from pathlib import Path, PurePosixPath
@@ -12,6 +14,7 @@ from urllib.request import url2pathname
 
 from tini.config import Settings, load_settings
 from tini.db import connect
+from tini.documents.blobstore import S3_SCHEME, BlobStoreError, make_blob_store
 from tini.documents.embeddings import make_embedding_provider
 from tini.documents.loaders import SUPPORTED_SUFFIXES
 from tini.documents.ocr import make_ocr_provider
@@ -49,6 +52,7 @@ def documents_payload(settings: Settings | None = None) -> dict:
         conn.close()
     return {
         "workspace": settings.document_workspace,
+        "storage": settings.document_storage,
         "items": items,
         "chunk_count": chunks,
         "vector_count": vectors,
@@ -84,11 +88,38 @@ def ingest_upload(
             )
         }
 
-    upload_dir = settings.home / "documents" / workspace_id
-    upload_dir.mkdir(parents=True, exist_ok=True)
-    target = upload_dir.joinpath(*relative_name.parts)
+    try:
+        store = make_blob_store(settings)
+    except ValueError as exc:
+        return {"error": str(exc)}
+    source_uri = None
+    staging = None
+    try:
+        if store is None:
+            target = _stage(raw, settings.home / "documents" / workspace_id, relative_name)
+            emit("uploaded", {"path": str(target), "bytes": len(raw)})
+        else:
+            # The original goes to object storage; the pipeline still needs a
+            # local file to parse, so a throwaway copy is staged and removed.
+            content_type = mimetypes.guess_type(display_name)[0] or "application/octet-stream"
+            try:
+                source_uri = store.put(workspace_id, display_name, raw, content_type)
+            except BlobStoreError as exc:
+                return {"error": str(exc)}
+            staging = tempfile.TemporaryDirectory()
+            target = _stage(raw, Path(staging.name), relative_name)
+            emit("uploaded", {"path": source_uri, "bytes": len(raw)})
+        return _ingest_staged(target, workspace_id, settings, emit, source_uri)
+    finally:
+        if staging is not None:
+            staging.cleanup()
+
+
+def _stage(raw: bytes, base: Path, relative_name: PurePosixPath) -> Path:
+    base.mkdir(parents=True, exist_ok=True)
+    target = base.joinpath(*relative_name.parts)
     target.parent.mkdir(parents=True, exist_ok=True)
-    if upload_dir.resolve() not in target.resolve().parents:
+    if base.resolve() not in target.resolve().parents:
         raise ValueError("document path escapes its workspace")
     temporary = target.parent / f".{target.name}.{uuid.uuid4().hex}.upload"
     try:
@@ -97,8 +128,10 @@ def ingest_upload(
     finally:
         if temporary.exists():
             temporary.unlink()
-    emit("uploaded", {"path": str(target), "bytes": len(raw)})
+    return target
 
+
+def _ingest_staged(target: Path, workspace_id: str, settings: Settings, emit, source_uri) -> dict:
     conn = connect(settings.home)
     try:
         embedder = make_embedding_provider(settings)
@@ -116,6 +149,7 @@ def ingest_upload(
             target,
             workspace_id=workspace_id,
             observer=lambda stage, event: emit(stage, event),
+            source_uri=source_uri,
         )
     finally:
         conn.close()
@@ -198,8 +232,7 @@ def action(payload: dict, settings: Settings | None = None) -> dict:
         )
         if match is None:
             return {"error": "Document not found in this workspace."}
-        source = _file_uri_to_path(match.source_uri)
-        reports = IngestionPipeline(
+        pipeline = IngestionPipeline(
             index,
             embedder=embedder,
             ocr=make_ocr_provider(settings),
@@ -208,7 +241,28 @@ def action(payload: dict, settings: Settings | None = None) -> dict:
             chunk_overlap_tokens=settings.document_chunk_overlap_tokens,
             max_file_bytes=settings.document_max_file_bytes,
             max_text_chars=settings.document_max_text_chars,
-        ).ingest_path(source, workspace_id=workspace)
+        )
+        if urlparse(match.source_uri).scheme == S3_SCHEME:
+            # The original lives in object storage: fetch it to a throwaway
+            # file to parse, but keep the s3:// URI so this updates the SAME
+            # document instead of creating a file:// twin.
+            try:
+                store = make_blob_store(settings)
+                if store is None:
+                    return {"error": "This document is stored in MinIO but TINI_DOCUMENT_STORAGE is not 'minio'."}
+                data = store.get(match.source_uri)
+            except (BlobStoreError, ValueError) as exc:
+                return {"error": str(exc)}
+            name = PurePosixPath(unquote(urlparse(match.source_uri).path)).name
+            with tempfile.TemporaryDirectory() as staging:
+                target = _stage(data, Path(staging), PurePosixPath(name))
+                reports = pipeline.ingest_path(
+                    target, workspace_id=workspace, source_uri=match.source_uri
+                )
+        else:
+            reports = pipeline.ingest_path(
+                _file_uri_to_path(match.source_uri), workspace_id=workspace
+            )
         return {"reports": [asdict(report) for report in reports]}
     finally:
         conn.close()

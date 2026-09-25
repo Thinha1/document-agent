@@ -30,6 +30,10 @@ def isolated(tmp_path, monkeypatch):
     # tini/documents/rerank.py) without a working key yet, which would make
     # every Tini() build here raise in make_document_index.
     monkeypatch.delenv("TINI_RERANK_PROVIDER", raising=False)
+    # Same for the document index: a .env pointing at a real Qdrant made this
+    # suite depend on that server being up (network in a deterministic test).
+    monkeypatch.setenv("TINI_DOCUMENT_INDEX", "sqlite")
+    monkeypatch.setenv("TINI_EMBEDDING_PROVIDER", "none")
     monkeypatch.setattr(browser_agent, "_agent", None)
     monkeypatch.setattr(browser_agent, "_dashboard_session", None)
     return tmp_path

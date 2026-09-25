@@ -98,6 +98,35 @@ still reads SQLite's tables directly and returns an explicit "not available on
 this backend" message under Qdrant — everything else (search, list, ingest,
 delete, reindex) works the same on both backends.
 
+## Where the original files live (MinIO)
+
+The index holds chunks only; the uploaded ORIGINAL used to be a file under
+`TINI_HOME/documents/<workspace>/`, recorded as a `file://` source_uri — gone
+with the container's volume and invisible to other machines. With
+`TINI_DOCUMENT_STORAGE=minio` (`tini/documents/blobstore.py`) the dashboard
+upload stores the original in an S3-compatible bucket instead, and the
+document's `source_uri` becomes `s3://<bucket>/<workspace>/<name>`. That URI
+scheme is the "where is the original" flag: the dashboard shows **MinIO** vs
+**local file** per document, and Re-index fetches from the bucket and updates
+the same document (no `file://` twin).
+
+```bash
+# .env: TINI_DOCUMENT_STORAGE=minio, TINI_MINIO_ACCESS_KEY, TINI_MINIO_SECRET_KEY
+docker compose --profile minio up -d      # console: http://localhost:9001
+```
+
+No default credentials: choose them in `.env` (the compose profile passes the
+same two values to MinIO as its root user). The bucket is created on first
+upload; `pip install 'tini-agent[minio]'` for bare metal (the image has it).
+
+- Reads are limited to the configured bucket — a `source_uri` naming another
+  bucket or an unsafe key is refused, since that field comes back out of the
+  index.
+- **Remove** deletes the index entry only; the original stays in the bucket.
+- Only dashboard uploads use this. `tini ingest <path>` still indexes local
+  files with `file://` URIs.
+- Documents already ingested keep their `file://` URI; re-upload to move one.
+
 ## Multilingual corpora: pick a multilingual embedding model
 
 `nomic-embed-text` (the example above) is English-centric. Measured on the

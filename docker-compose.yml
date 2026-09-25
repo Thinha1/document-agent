@@ -69,6 +69,27 @@ services:
     #                 count: all
     #                 capabilities: [gpu]
 
+  # Optional object storage for the ORIGINAL uploaded files (off by default —
+  # a compose profile, so a plain `docker compose up` is unchanged):
+  #   docker compose --profile minio up -d
+  # then in .env: TINI_DOCUMENT_STORAGE=minio, TINI_MINIO_ACCESS_KEY,
+  # TINI_MINIO_SECRET_KEY (and the same two as MINIO_ROOT_USER/PASSWORD below).
+  # No default credentials on purpose: set them in .env or the service refuses to
+  # start (MinIO rejects an empty root user). Console: http://localhost:9001. The S3 API stays inside the compose
+  # network — host port 9000 is the dashboard's.
+  minio:
+    image: quay.io/minio/minio:latest # the Docker Hub minio/minio repo is no longer published
+    profiles: ["minio"]
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${TINI_MINIO_ACCESS_KEY:-}
+      MINIO_ROOT_PASSWORD: ${TINI_MINIO_SECRET_KEY:-}
+    ports:
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+
   tini:
     build: .
     restart: unless-stopped
@@ -84,6 +105,7 @@ services:
       # else unchanged.
       TINI_QDRANT_URL: http://qdrant:6333
       TINI_EMBEDDING_BASE_URL: http://ollama:11434/v1
+      TINI_MINIO_ENDPOINT: minio:9000 # only read when TINI_DOCUMENT_STORAGE=minio
     volumes:
       - tini_home:/app/.tini # memory db, traces, MCP config — see CLAUDE.md
       # Question sets for the dashboard's Retrieval eval are read at run time,
@@ -99,4 +121,5 @@ services:
 volumes:
   qdrant_data:
   ollama_data:
+  minio_data:
   tini_home:

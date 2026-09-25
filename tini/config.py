@@ -144,6 +144,30 @@ class Settings:
     ocr_concurrency: int = field(
         default_factory=lambda: int(os.getenv("TINI_OCR_CONCURRENCY", "4"))
     )
+    # Where dashboard-uploaded ORIGINAL files are kept (tini/documents/
+    # blobstore.py): 'local' (default, under TINI_HOME) or 'minio' (any
+    # S3-compatible server the operator points at). The index itself is
+    # unaffected — this only decides where the source file lives, and is
+    # recorded on the document as its s3:// source_uri.
+    document_storage: str = field(
+        default_factory=lambda: os.getenv("TINI_DOCUMENT_STORAGE", "local").strip().lower()
+    )
+    minio_endpoint: str = field(
+        default_factory=lambda: os.getenv("TINI_MINIO_ENDPOINT", "localhost:9000").strip()
+    )
+    minio_access_key: str = field(
+        default_factory=lambda: os.getenv("TINI_MINIO_ACCESS_KEY", "").strip()
+    )
+    minio_secret_key: str = field(
+        default_factory=lambda: os.getenv("TINI_MINIO_SECRET_KEY", "").strip()
+    )
+    minio_bucket: str = field(
+        default_factory=lambda: os.getenv("TINI_MINIO_BUCKET", "tini-documents").strip()
+    )
+    minio_secure: bool = field(
+        default_factory=lambda: os.getenv("TINI_MINIO_SECURE", "").strip().lower()
+        in {"1", "true", "yes"}
+    )
     # Reranking (tini/documents/rerank.py): retrieve more candidates than
     # needed, then let a second model reorder them against the question.
     # Off by default. OFF means candidate chunks never leave this machine;

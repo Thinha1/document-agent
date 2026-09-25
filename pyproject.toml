@@ -85,6 +85,12 @@ supabase = [
 qdrant = [
     "qdrant-client>=1.9",
 ]
+# Optional object storage for dashboard-uploaded ORIGINAL files
+# (tini/documents/blobstore.py, TINI_DOCUMENT_STORAGE=minio). Any S3-compatible
+# server works; the `minio` client is pure Python and much lighter than boto3.
+minio = [
+    "minio>=7.2",
+]
 # Optional OCR fallback for image-only/scanned PDF pages (tini/documents/ocr.py).
 # CPU-only local OCR (PaddleOCR) was tried first and abandoned: across three
 # attempts it either crashed or hung on this project's oneDNN CPU backend (see
