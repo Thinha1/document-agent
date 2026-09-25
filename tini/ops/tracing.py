@@ -109,7 +109,8 @@ class Tracer:
         usage = event.get("usage", {})
         record = {"ts": _now(), "provider": self.settings.provider,
                   "model": self.settings.model or "", "kind": "loop",
-                  "in": usage.get("in", 0), "out": usage.get("out", 0)}
+                  "in": usage.get("in", 0), "out": usage.get("out", 0),
+                  "cache": usage.get("cache", 0)}
         with (self.settings.home / "usage.jsonl").open("a", encoding="utf-8") as f:
             f.write(json.dumps(record) + "\n")
 

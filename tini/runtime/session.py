@@ -47,19 +47,40 @@ class Session:
         self.session_id = session_id
         self.history: list[dict] = []
 
-    def build_system(self, user_message: str, notify=None) -> str:
+    def build_system(self) -> str:
+        """The STABLE start of every prompt: persona + who the model is.
+
+        Providers with automatic prefix caching (DeepSeek, OpenAI...) reuse the
+        longest identical beginning of a request and bill it far cheaper, so
+        anything that changes turn to turn must NOT live here. A clock that
+        ticks every minute, or memory retrieved per message, used to sit in this
+        string and made the whole prompt (history included) a cache miss every
+        turn: measured on DeepSeek, 0% of 1,652 prompt tokens hit the cache,
+        versus 85% once those parts moved to `build_context`, which rides on
+        the last user message instead."""
+        return "\n".join(
+            [
+                load_soul(self.settings),
+                # the agent should know its own brain — "what model are you?"
+                # is the first question every curious user asks
+                (
+                    f"Your model: you are running on '{self.settings.model}' via the "
+                    f"'{self.settings.provider}' provider, inside Tini, a local-first "
+                    f"open-source agent harness (github.com/ShenSeanChen/tini-agent)."
+                ),
+            ]
+        )
+
+    def build_context(self, user_message: str, notify=None) -> str:
+        """The VOLATILE part of a turn: the clock, retrieved memory, matching
+        skills. Appended after the history (see Tini._run_full_turn) and never
+        stored in it, so everything before it stays byte-identical."""
         from datetime import datetime
 
         # The agent runs on your laptop, so it should know your laptop's clock.
         # Local time WITH the timezone name — enough to resolve "in 30 minutes".
         now = datetime.now().astimezone()
-        parts = [load_soul(self.settings),
-                 f"\nRight now it is {now:%A, %Y-%m-%d %H:%M} ({now:%Z}, UTC{now:%z}).",
-                 # the agent should know its own brain — "what model are you?"
-                 # is the first question every curious user asks
-                 (f"Your model: you are running on '{self.settings.model}' via the "
-                 f"'{self.settings.provider}' provider, inside Tini, a local-first "
-                 f"open-source agent harness (github.com/ShenSeanChen/tini-agent).")]
+        parts = [f"Right now it is {now:%A, %Y-%m-%d %H:%M} ({now:%Z}, UTC{now:%z})."]
 
         if self.memory is not None:
             # Hero moment #1: a cheap judge decides IF we retrieve at all —

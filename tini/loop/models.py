@@ -413,6 +413,18 @@ def get_client(settings: Settings):
     return OpenAICompatClient(**kwargs)
 
 
+def _cache_hit_tokens(usage) -> int:
+    """Prompt tokens the provider served from its automatic prefix cache.
+    DeepSeek reports `prompt_cache_hit_tokens`; OpenAI reports
+    `prompt_tokens_details.cached_tokens`. 0 when a provider says nothing."""
+    if usage is None:
+        return 0
+    hit = getattr(usage, "prompt_cache_hit_tokens", None)
+    if hit is None:
+        hit = getattr(getattr(usage, "prompt_tokens_details", None), "cached_tokens", 0)
+    return int(hit or 0)
+
+
 class OpenAICompatClient:
     """Speaks the Anthropic Messages shape the loop expects, backed by an
     OpenAI-style chat.completions API. ~60 lines is the entire difference
@@ -549,6 +561,7 @@ class OpenAICompatClient:
             usage=SimpleNamespace(
                 input_tokens=getattr(usage, "prompt_tokens", 0),
                 output_tokens=getattr(usage, "completion_tokens", 0),
+                cache_hit_tokens=_cache_hit_tokens(usage),
             ),
             content=blocks,
         )
@@ -624,6 +637,7 @@ class _OpenAIStream:
             usage=SimpleNamespace(
                 input_tokens=getattr(usage, "prompt_tokens", 0),
                 output_tokens=getattr(usage, "completion_tokens", 0),
+                cache_hit_tokens=_cache_hit_tokens(usage),
             ),
             content=blocks,
         )
