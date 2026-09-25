@@ -2,11 +2,16 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import math
+import sqlite3
+import struct
+import threading
 import urllib.error
 import urllib.request
 from collections.abc import Sequence
+from pathlib import Path
 from typing import Protocol
 from urllib.parse import quote
 
@@ -122,7 +127,79 @@ class OpenAICompatibleEmbeddingProvider:
         return _validate_vectors(vectors, len(texts), self.dimensions)
 
 
+class CachingEmbedder:
+    """Wraps any provider so a chunk is embedded once per (provider, model,
+    dimensions, title, text).
+
+    Ingestion embeds BEFORE the index decides whether a file changed, so without
+    this an unchanged re-ingest re-embedded every chunk (338 chunks, 23 s on a
+    local GPU, real money on a hosted API) and a one-paragraph edit re-embedded
+    the whole document. Only document chunks are cached; queries pass through.
+    The cache is a local SQLite file of vectors keyed by a hash — the chunk text
+    itself is not stored in it."""
+
+    def __init__(self, inner: EmbeddingProvider, path: Path):
+        self.inner = inner
+        self.path = Path(path)
+        self.provider = inner.provider
+        self.model = inner.model
+        self.dimensions = inner.dimensions
+        self.hits = 0
+        self.misses = 0
+        self._lock = threading.Lock()
+
+    def _key(self, title: str, text: str) -> str:
+        raw = f"{self.provider}|{self.model}|{self.dimensions}|{title}|{text}"
+        return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+
+    def _connect(self) -> sqlite3.Connection:
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        conn = sqlite3.connect(self.path, timeout=30)
+        conn.execute("CREATE TABLE IF NOT EXISTS vectors (key TEXT PRIMARY KEY, vector BLOB NOT NULL)")
+        return conn
+
+    def embed_documents(self, texts: Sequence[str], *, title: str) -> list[tuple[float, ...]]:
+        keys = [self._key(title, text) for text in texts]
+        found: dict[str, tuple[float, ...]] = {}
+        with self._lock:
+            conn = self._connect()
+            try:
+                for start in range(0, len(keys), 500):
+                    batch = list(set(keys[start : start + 500]))
+                    marks = ",".join("?" * len(batch))
+                    for key, blob in conn.execute(
+                        f"SELECT key, vector FROM vectors WHERE key IN ({marks})", batch
+                    ):
+                        vector = struct.unpack(f"<{len(blob) // 4}f", blob)
+                        if len(vector) == self.dimensions:
+                            found[key] = vector
+                missing = [i for i, key in enumerate(keys) if key not in found]
+                if missing:
+                    fresh = self.inner.embed_documents([texts[i] for i in missing], title=title)
+                    rows = []
+                    for index, vector in zip(missing, fresh, strict=True):
+                        found[keys[index]] = tuple(vector)
+                        rows.append((keys[index], struct.pack(f"<{len(vector)}f", *vector)))
+                    with conn:
+                        conn.executemany("INSERT OR REPLACE INTO vectors VALUES (?, ?)", rows)
+                self.hits += len(keys) - len(missing)
+                self.misses += len(missing)
+            finally:
+                conn.close()
+        return [found[key] for key in keys]
+
+    def embed_query(self, text: str) -> tuple[float, ...]:
+        return self.inner.embed_query(text)
+
+
 def make_embedding_provider(settings: Settings) -> EmbeddingProvider | None:
+    provider = _make_embedding_provider(settings)
+    if provider is not None and settings.embedding_cache:
+        return CachingEmbedder(provider, settings.home / "embed_cache.sqlite")
+    return provider
+
+
+def _make_embedding_provider(settings: Settings) -> EmbeddingProvider | None:
     provider = settings.embedding_provider.strip().lower()
     if provider in {"", "none"}:
         return None

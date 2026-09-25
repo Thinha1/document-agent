@@ -336,6 +336,31 @@ document text in plain files under `TINI_HOME`, like the index does; deleting
 a document does not delete its cached pages, and `rm -r ocr_cache` is safe
 (the only cost is paying again).
 
+## What re-ingesting costs after a manual edit
+
+Ingestion embeds a document's chunks *before* the index decides whether the
+file changed, so re-ingesting used to re-embed everything: measured on the
+338-chunk Japanese Integrated Report (local GPU), an **unchanged** re-ingest
+embedded all 338 chunks (23 s) and then reported `skipped`, and a
+**one-paragraph edit** embedded all 338 again (23 s). With a hosted embedding
+API that is money, not just time. Vectors are now cached in
+`TINI_HOME/embed_cache.sqlite` by a hash of (provider, model, dimensions,
+title, chunk text) — `TINI_EMBEDDING_CACHE=0` turns it off:
+
+| re-ingest of the same report | chunks embedded | time |
+|---|---|---|
+| first ingest | 338 | ~40 s |
+| unchanged file | 0 | 0.2 s |
+| one paragraph edited by hand | 1 | 1.0 s |
+
+Chunks are cut on paragraph/heading boundaries, so an edit only changes the
+chunk(s) around it. OCR has its own per-page cache (see the OCR section), so a
+scanned file costs API money only for pages whose image changed. A different
+embedding model, a renamed document (the title is part of the key) or a new
+chunk size still re-embeds — those really are different vectors. Queries are
+never cached. The cache stores vectors, not chunk text; deleting a document
+does not delete its cached vectors, and removing the file is always safe.
+
 ## Chunking strategy
 
 Chunks are not cut at a fixed character count. The chunker follows headings,

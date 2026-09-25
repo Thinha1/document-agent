@@ -135,6 +135,14 @@ class Settings:
     ocr_model: str = field(default_factory=lambda: os.getenv("TINI_OCR_MODEL", "").strip())
     ocr_api_key: str = field(default_factory=_ocr_api_key)
     ocr_base_url: str | None = field(default_factory=_ocr_base_url)
+    # Chunk vectors are cached on disk by (provider, model, title, text), so
+    # re-ingesting an unchanged or lightly edited document only embeds the
+    # chunks whose text is new (tini/documents/embeddings.py). On by default;
+    # TINI_EMBEDDING_CACHE=0 turns it off.
+    embedding_cache: bool = field(
+        default_factory=lambda: os.getenv("TINI_EMBEDDING_CACHE", "1").strip().lower()
+        not in {"0", "false", "no", "off"}
+    )
     # A scanned page's OCR call is a multi-second network round trip; pages
     # within one document are independent, so running several at once is a
     # straightforward win. Rendering itself (pypdfium2) stays single-threaded
