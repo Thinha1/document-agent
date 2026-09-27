@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import mimetypes
+import re
 from dataclasses import dataclass, field
 from html.parser import HTMLParser
 from io import BytesIO
@@ -226,17 +227,23 @@ def _load_pdf(
             )
         else:
             before = _usage_of(ocr)
-            ocr_text, failed_pages = _ocr_pdf_pages(raw, ocr)
+            ocr_text, failed_pages, tables_found, failed_tables = _ocr_pdf_pages(raw, ocr)
             after = _usage_of(ocr)
             if before is not None and after is not None:
                 # What THIS document cost, in tokens (never a price — see
                 # tini/ops/ocr_cost.py). Recorded even when the run yields no
-                # text: a failed scan still spent the calls.
+                # text: a failed scan still spent the calls. table_calls/
+                # cached_tables are 0 unless TINI_OCR_TABLE_FLOW=1 found a
+                # marker on some page; prompt/completion tokens already fold
+                # any table-only calls in (VisionModelOcrProvider.extract_tables
+                # counts into the same running totals).
                 metadata["ocr_usage"] = {
                     "provider": getattr(ocr, "provider_name", ""),
                     "model": getattr(ocr, "model", ""),
                     "pages": after["calls"] - before["calls"],
                     "cached_pages": after.get("cache_hits", 0) - before.get("cache_hits", 0),
+                    "table_calls": after.get("table_calls", 0) - before.get("table_calls", 0),
+                    "cached_tables": after.get("table_cache_hits", 0) - before.get("table_cache_hits", 0),
                     "prompt_tokens": after["prompt_tokens"] - before["prompt_tokens"],
                     "completion_tokens": after["completion_tokens"] - before["completion_tokens"],
                 }
@@ -245,6 +252,13 @@ def _load_pdf(
                 metadata["ocr_applied"] = True
                 if failed_pages:
                     metadata["ocr_failed_pages"] = failed_pages
+                if tables_found:
+                    metadata["ocr_tables_found"] = tables_found
+                if failed_tables:
+                    # A marker survived as literal "[[TABLE:n]]" text in `text`
+                    # above rather than being silently dropped — visible, not
+                    # silent, same rule as ocr_failed_pages.
+                    metadata["ocr_failed_tables"] = failed_tables
     return text, metadata
 
 
@@ -253,7 +267,7 @@ def _usage_of(ocr: OcrProvider) -> dict[str, int] | None:
     return snapshot() if callable(snapshot) else None
 
 
-def _ocr_pdf_pages(raw: bytes, ocr: OcrProvider) -> tuple[str, int]:
+def _ocr_pdf_pages(raw: bytes, ocr: OcrProvider) -> tuple[str, int, int, int]:
     """Render each page to a bitmap — exactly what a viewer would show — and
     run `ocr` over it, stitching results back together in page order.
 
@@ -277,15 +291,25 @@ def _ocr_pdf_pages(raw: bytes, ocr: OcrProvider) -> tuple[str, int]:
     results in submission order regardless of completion order, so page
     order survives the reordering that concurrency introduces).
 
-    Returns (text, failed_page_count): one page's OCR call failing does not
-    sink the whole document, but the count stays visible in the caller's
-    metadata rather than vanishing silently."""
+    When `ocr.table_flow` is on (TINI_OCR_TABLE_FLOW=1), the transcription
+    call above leaves a `[[TABLE:n]]` marker where a table was instead of
+    transcribing it (tini/documents/ocr.py's _TEXT_ONLY_PROMPT). A page with
+    at least one marker gets ONE further call — `ocr.extract_tables` on the
+    same bitmap — inside the same worker slot as its transcription, so
+    `ocr.concurrency` still bounds total requests in flight rather than
+    doubling it. Each marker is replaced by a `<!--tini:table...-->` block
+    chunking.py recognizes and chunks by row (see its module docstring); a
+    marker extract_tables can't resolve (the call failed, or returned fewer
+    tables than markers) is left as literal text rather than silently
+    dropped, and counted in `failed_tables`.
+
+    Returns (text, failed_pages, tables_found, failed_tables)."""
     from concurrent.futures import ThreadPoolExecutor
     from io import BytesIO as _BytesIO
 
     import pypdfium2 as pdfium
 
-    from tini.documents.ocr import OcrError
+    from tini.documents.ocr import TABLE_MARKER_RE, OcrError
 
     pdf = pdfium.PdfDocument(raw)
     try:
@@ -303,22 +327,85 @@ def _ocr_pdf_pages(raw: bytes, ocr: OcrProvider) -> tuple[str, int]:
     finally:
         pdf.close()
 
-    def _transcribe(image_bytes: bytes) -> str | None:
+    table_flow = bool(getattr(ocr, "table_flow", False)) and hasattr(ocr, "extract_tables")
+
+    def _process(image_bytes: bytes) -> tuple[str | None, int, int]:
+        """One page, one worker slot: transcribe, then (if it left table
+        markers) extract those tables from the same image. Returns
+        (page text or None on a failed transcription, tables found, tables
+        that failed to resolve on this page)."""
         try:
-            return ocr.ocr_image(image_bytes, "image/png")
+            text = ocr.ocr_image(image_bytes, "image/png")
         except OcrError:
-            return None
+            return None, 0, 0
+        if not table_flow:
+            return text, 0, 0
+        markers = list(TABLE_MARKER_RE.finditer(text))
+        if not markers:
+            return text, 0, 0
+        try:
+            tables = ocr.extract_tables(image_bytes, "image/png")
+        except OcrError:
+            return text, 0, len(markers)
+        blocks = [_render_table_block(number, table) for number, table in enumerate(tables, start=1)]
+        found = 0
+        failed = 0
+
+        def _resolve(match: re.Match[str]) -> str:
+            nonlocal found, failed
+            index = int(match.group(1)) - 1
+            block = blocks[index] if 0 <= index < len(blocks) else ""
+            if block:
+                found += 1
+                return block
+            failed += 1
+            return match.group(0)  # left as literal "[[TABLE:n]]" — visible, not silent
+
+        text = TABLE_MARKER_RE.sub(_resolve, text)
+        return text, found, failed
 
     concurrency = max(1, min(int(getattr(ocr, "concurrency", 1)), len(images) or 1))
     if concurrency <= 1:
-        results = [_transcribe(image) for image in images]
+        results = [_process(image) for image in images]
     else:
         with ThreadPoolExecutor(max_workers=concurrency) as pool:
-            results = list(pool.map(_transcribe, images))
+            results = list(pool.map(_process, images))
 
-    failed = sum(1 for result in results if result is None)
-    parts = [text for text in results if text]
-    return "\n\n".join(parts), failed
+    failed_pages = sum(1 for text, _, _ in results if text is None)
+    tables_found = sum(found for _, found, _ in results)
+    failed_tables = sum(failed for _, _, failed in results)
+    parts = [text for text, _, _ in results if text]
+    return "\n\n".join(parts), failed_pages, tables_found, failed_tables
+
+
+def _render_table_block(table_id: int, table: dict) -> str:
+    """One extract_tables() table -> the `<!--tini:table-->` block
+    chunking.py's `_TABLE_BLOCK_RE` looks for (kept in sync with it: the
+    caption/header/separator lines here are exactly the "preamble" that
+    module repeats onto every row-group it splits a long table into).
+    "" means the table couldn't be rendered (no columns) — the caller counts
+    that marker as failed and leaves the original placeholder text in place."""
+    columns = [str(c).strip() for c in (table.get("columns") or []) if str(c).strip()]
+    if not columns:
+        return ""
+    caption = str(table.get("caption") or "").strip()
+    rows = [row for row in (table.get("rows") or []) if isinstance(row, list)]
+    notes = str(table.get("notes") or "").strip()
+
+    def _row(cells: list) -> str:
+        values = [str(cells[i]) if i < len(cells) else "" for i in range(len(columns))]
+        return "| " + " | ".join(value.replace("|", "/").replace("\n", " ") for value in values) + " |"
+
+    lines = [f"<!--tini:table id={table_id}-->"]
+    if caption:
+        lines.append(f"**{caption.replace(chr(10), ' ')}**")
+    lines.append(_row(columns))
+    lines.append("| " + " | ".join("---" for _ in columns) + " |")
+    lines.extend(_row(row) for row in rows)
+    if notes:
+        lines.append(f"_{notes.replace(chr(10), ' ')}_")
+    lines.append("<!--/tini:table-->")
+    return "\n".join(lines)
 
 
 def _load_docx(raw: bytes, path: Path) -> tuple[str, dict[str, Any]]:

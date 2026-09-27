@@ -139,6 +139,7 @@ def test_an_identical_page_is_transcribed_once_and_then_served_from_the_cache(tm
     assert client.calls == 1
     assert ocr.usage_snapshot() == {
         "calls": 1, "prompt_tokens": 1080, "completion_tokens": 400, "cache_hits": 1,
+        "table_calls": 0, "table_cache_hits": 0,
     }
 
 

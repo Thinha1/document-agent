@@ -152,6 +152,16 @@ class Settings:
     ocr_concurrency: int = field(
         default_factory=lambda: int(os.getenv("TINI_OCR_CONCURRENCY", "4"))
     )
+    # Off by default: not yet measured against the single-prompt OCR flow (see
+    # docs/document-ingestion.md). When on, a scanned page's transcription skips
+    # tables (leaving a `[[TABLE:n]]` marker) and a second, table-only call
+    # extracts them as structured rows instead of a Markdown blob the chunker
+    # cannot tell apart from prose — see tini/documents/ocr.py and chunking.py.
+    # The second call only runs on pages a marker was actually found on.
+    ocr_table_flow: bool = field(
+        default_factory=lambda: os.getenv("TINI_OCR_TABLE_FLOW", "0").strip().lower()
+        in {"1", "true", "yes", "on"}
+    )
     # Where dashboard-uploaded ORIGINAL files are kept (tini/documents/
     # blobstore.py): 'local' (default, under TINI_HOME) or 'minio' (any
     # S3-compatible server the operator points at). The index itself is

@@ -470,6 +470,58 @@ document text in plain files under `TINI_HOME`, like the index does; deleting
 a document does not delete its cached pages, and `rm -r ocr_cache` is safe
 (the only cost is paying again).
 
+### Table-aware OCR: two flows instead of one (`TINI_OCR_TABLE_FLOW`, off by default)
+
+The default OCR call above does two jobs in one prompt: transcribe the page's
+prose, and render any table on it as Markdown. That Markdown is just more prose
+to `tini/documents/chunking.py` — no boundary tells the chunker "this is a
+table" — so a table wider than `TINI_DOCUMENT_CHUNK_MAX_TOKENS` (512 by default)
+gets cut wherever the paragraph/sentence splitter happens to fall, which for a
+table of numbers is usually nowhere sensible. Verified by running the real
+chunker on a 70-row table shaped like the corpus's own securities-report sales
+tables (`chunk_text(..., max_tokens=512)`): it came back as 4 chunks, 2 of
+which had **no header row at all**, one of them starting mid-cell
+(`| Region` / `-33 | 2,227,963 | 105.6 |`, split between the two). A chunk
+missing its header embeds numbers with no label for what they are.
+
+```dotenv
+TINI_OCR_TABLE_FLOW=1
+```
+
+When on, the transcription call's prompt changes: it skips tables entirely,
+leaving a `[[TABLE:n]]` marker in their place instead of Markdown. A page
+whose transcription contains at least one marker gets **one further call** —
+`extract_tables()`, same page image — asking only for the tables on it, as
+JSON (`{"tables": [{"caption", "columns", "rows", "notes"}]}`) rather than
+Markdown. `tini/documents/loaders.py` replaces each marker with a
+`<!--tini:table id=n-->...<!--/tini:table-->` block built from that JSON, and
+`chunking.py` chunks that block **by row** instead of by paragraph/sentence:
+rows are packed under `max_tokens` and the caption/header/separator are
+repeated at the top of every resulting chunk, the same role sentence-overlap
+plays for prose — a chunk landing mid-table is still self-contained. A row
+wider than `max_tokens` on its own is kept whole rather than cut (an oversized
+chunk, visibly marked via `estimated_tokens`, not a corrupted row). A page with
+no marker never triggers the second call, so a document without tables costs
+what it always did; a page whose second call fails leaves its marker as
+literal `[[TABLE:n]]` text and counts it in `ocr_failed_tables` — visible, not
+silently dropped, the same rule `ocr_failed_pages` already follows.
+
+Turning it on changes the transcription prompt, so it uses its own slice of
+`ocr_cache/` (keyed by flow + prompt version, not just the model) — switching
+`TINI_OCR_TABLE_FLOW` never serves one flow's cached text under the other's
+key, but a document OCR'd before turning this on keeps its old Markdown tables
+until it's re-ingested.
+
+**Not yet measured against the single-call flow.** The chunking failure above
+is real, run against this repo's own chunker; whether splitting the OCR call
+in two actually improves retrieval on a table-heavy document (or whether a
+single prompt handles a real merged-header table worse, the open question in
+the design write-up this shipped from) has not been checked with a live model.
+Off by default until it has been. To measure it: re-ingest a table-heavy
+document with the flag on, then re-run `document_baseline.py` on a
+`table-heavy-pdf`-tagged question set and compare against a run with the flag
+off, the same way `TINI_DOCUMENT_HYBRID` was evaluated above.
+
 ## What re-ingesting costs after a manual edit
 
 Ingestion embeds a document's chunks *before* the index decides whether the
@@ -552,6 +604,12 @@ TINI_DOCUMENT_CHUNK_MAX_TOKENS=512
 TINI_DOCUMENT_CHUNK_MIN_TOKENS=120
 TINI_DOCUMENT_CHUNK_OVERLAP_TOKENS=48
 ```
+
+A table is the one exception to "headings, paragraphs, sentences": with
+`TINI_OCR_TABLE_FLOW=1` (see above), a scanned table arrives already marked off
+from the surrounding prose and is chunked by row instead, header repeated on
+every piece. Without that flag — everything today — a table is just Markdown
+inside the prose flow above, with the token-offset cut this exists to avoid.
 
 ## Embedding configuration
 
