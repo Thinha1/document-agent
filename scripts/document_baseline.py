@@ -74,6 +74,11 @@ def main() -> None:
     parser.add_argument("--k", type=int, default=3)
     parser.add_argument("--compare", type=Path, help="an earlier snapshot to diff against")
     parser.add_argument(
+        "--sets",
+        help="comma-separated question set names to run (default: every built-in set except "
+        "synthetic_* ones, which belong to their own workspace)",
+    )
+    parser.add_argument(
         "--rerank",
         choices=["auto", "on", "off"],
         default="auto",
@@ -84,9 +89,16 @@ def main() -> None:
     settings = load_settings()
     workspace = args.workspace or settings.document_workspace
     rerank = {"auto": None, "on": True, "off": False}[args.rerank]
-    sets = [
+    builtin = [
         s["name"] for s in document_eval.list_question_sets(settings) if s["source"] == "built-in"
     ]
+    if args.sets:
+        sets = [n if n.endswith(".jsonl") else f"{n}.jsonl" for n in args.sets.split(",")]
+        unknown = [n for n in sets if n not in builtin]
+        if unknown:
+            raise SystemExit(f"unknown question set(s): {', '.join(unknown)}")
+    else:
+        sets = [n for n in builtin if not n.startswith("synthetic_")]
     if not sets:
         raise SystemExit("no built-in question sets found under evals/documents/")
 
