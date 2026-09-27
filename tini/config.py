@@ -265,6 +265,32 @@ class Settings:
         default_factory=lambda: os.getenv("TINI_QDRANT_COLLECTION", "").strip()
         or "tini_documents"
     )
+    # Hybrid retrieval on the Qdrant backend: fuse dense vector search with a
+    # keyword (BM25-style sparse vector) ranking. Off by default: measured on
+    # the DENSO set it did not beat dense-only (docs/document-ingestion.md).
+    document_hybrid: bool = field(
+        default_factory=lambda: os.getenv("TINI_DOCUMENT_HYBRID", "0").strip().lower()
+        in ("1", "true", "yes", "on")
+    )
+    # How the two rankings are fused: "rrf" (rank based; the keyword side's vote
+    # is scaled by TINI_DOCUMENT_LEXICAL_WEIGHT) or "dbsf" (score based).
+    document_fusion: str = field(
+        default_factory=lambda: os.getenv("TINI_DOCUMENT_FUSION", "rrf").strip().lower()
+    )
+    # The languages the documents are written in, e.g. "ja,en,vi". When set, a
+    # question is also searched in its translation into each of them (one
+    # small-model call per new question). Empty = off. See
+    # tini/documents/multilingual.py.
+    query_languages: tuple[str, ...] = field(
+        default_factory=lambda: tuple(
+            code.strip().lower()
+            for code in os.getenv("TINI_QUERY_LANGUAGES", "").split(",")
+            if code.strip()
+        )
+    )
+    document_lexical_weight: float = field(
+        default_factory=lambda: float(os.getenv("TINI_DOCUMENT_LEXICAL_WEIGHT", "").strip() or "1.0")
+    )
 
     # --- Orchestration
     # Route every message through the triage graph workflow first (a small model

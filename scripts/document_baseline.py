@@ -44,9 +44,20 @@ def _row(name: str, result: dict) -> str:
 
     return (
         f"| {name} | {result['hits']}/{result['total']} ({result['recall']:.1%}) "
+        f"| {_answer_coverage(result)} "
         f"| {groups('by_lang')} | {groups('by_format')} "
         f"| {result['median_latency_ms']} / {result['p95_latency_ms']} ms |"
     )
+
+
+def _answer_coverage(result: dict) -> str:
+    """Cases whose expected answer text is present in the returned chunks. Stricter
+    than the title hit: right document, wrong part of it, does not count."""
+    scored = [c for c in result["cases"] if c.get("keyword_total")]
+    if not scored:
+        return "-"
+    found = sum(1 for c in scored if len(c["keyword_hits"]) == c["keyword_total"])
+    return f"{found}/{len(scored)} ({found / len(scored):.0%})"
 
 
 def _flips(before: dict, after: dict) -> tuple[list[str], list[str]]:
@@ -123,15 +134,22 @@ def main() -> None:
     print(
         f"embedding `{emb['model']}` ({emb['dimensions']}d) · index `{config['index']['backend']}"
         f"/{config['index']['collection']}` · chunk max {config['chunking']['max_tokens']} tokens · "
-        f"k={config['search_k']} · rerank "
+        f"k={config['search_k']} · "
+        f"hybrid {'on' if (config['index'].get('hybrid') or {}).get('enabled') else 'off'} · "
+        f"translate {','.join(config['translate']['languages']) or 'off'} · rerank "
         f"{config['rerank']['provider'] + ' ×' + str(config['rerank']['candidates']) if config['rerank']['enabled'] else 'off'}"
         f" · {len(config['corpus'])} docs, "
         f"{sum(d['chunks'] for d in config['corpus'])} chunks\n"
     )
-    print("| question set | recall@k | by language | by format | latency median / p95 |")
-    print("|---|---|---|---|---|")
+    print("| question set | recall@k | answer in chunks | by language | by format | latency median / p95 |")
+    print("|---|---|---|---|---|---|")
     for name, result in runs.items():
         print(_row(name, result))
+    # A provider outage must not pass as "the feature changed nothing".
+    for name, result in runs.items():
+        for kind, key in (("rerank", "rerank_errors"), ("translation", "translate_errors")):
+            if result.get(key):
+                print(f"\nWARNING {name}: {result[key]} searches fell back ({kind} failed)")
 
     if args.compare:
         previous = json.loads(args.compare.read_text(encoding="utf-8"))

@@ -177,6 +177,122 @@ calls; a full re-ingest of this corpus dropped from 11 min to well under a
 minute end to end (chunking/indexing overhead included, so the wall-clock
 speedup is somewhat less than the raw per-chunk number).
 
+## Hybrid search: keyword + vector (Qdrant, off by default)
+
+Dense embeddings match meaning; a keyword ranking matches the exact names,
+figures and clause numbers they can miss. The Qdrant backend can fuse both:
+each chunk also carries a sparse BM25-style vector (`tini/documents/lexical.py`),
+and the two rankings are merged server-side (reciprocal-rank fusion). It is
+**off by default** because on this corpus it did not beat dense-only — see the
+numbers below.
+
+```dotenv
+TINI_DOCUMENT_HYBRID=1              # default 0
+TINI_QDRANT_COLLECTION=<a collection that has keyword vectors, see below>
+# TINI_DOCUMENT_FUSION=rrf|dbsf     # default rrf
+# TINI_DOCUMENT_LEXICAL_WEIGHT=1.0  # rrf only: the keyword side's vote
+```
+
+**The tokenizer is the reason this is not just SQLite FTS5.** FTS5's default
+tokenizer splits on whitespace and Japanese has none, so a whole sentence is one
+token and `指名委員会` matched nothing (tried; `trigram` fixes it but is blind to
+terms under 3 characters such as `議長`). Here a run of CJK characters becomes
+overlapping character bigrams (`取締役会` -> 取締 締役 役会) and everything else
+is split into words, with no dictionary and no dependency. The SQLite backend's
+FTS5 leg still has the whitespace problem.
+
+**Existing collections must be migrated.** Qdrant cannot add a vector to a
+collection that already exists (checked against v1.19.1: `update_collection`
+answers "Not existing vector name"), so a collection built earlier stays
+dense-only and works exactly as before. To get keyword vectors:
+
+```bash
+python scripts/qdrant_add_hybrid.py tini_documents_bge3 tini_documents_bge3_hybrid
+```
+
+This copies each point's dense vector and payload into a new collection and
+builds the keyword vector from the text already stored there: no embedding, no
+API call, no original file needed (8 of the 9 DENSO files can no longer be read
+by the container). The source collection is left untouched as a backup. New
+collections are created with keyword vectors from the start.
+
+**Measured 2026-09-25** on the same 8 documents / 830 chunks, k=3, rerank off
+(snapshots `dense-only-2026-09-25.json`, `hybrid-bm25-2026-09-25.json`;
+dense-only on the migrated copy reproduced the earlier 36/38 and 40/47 exactly):
+
+| | dense only | hybrid (rrf, weight 1.0) | hybrid (rrf, 0.5) | hybrid (rrf, 0.1) | hybrid (dbsf) |
+|---|---|---|---|---|---|
+| denso_qa (38) | 36 | 36 | 36 | 36 | 37 |
+| multilingual (47) | 40 | 36 | 38 | 40 | 34 |
+| median latency | ~88 ms | ~92 ms | | | |
+
+No setting beat dense-only overall. Lowering the keyword weight just walks the
+result back to dense-only (0.1 is identical to it), and score-based fusion
+gained one English question while losing six multilingual ones. The regressed
+questions are the cross-language ones: an English or Vietnamese question whose
+answer is in a Japanese document (`en-x-founded`, `vi-x-founded`,
+`en-x-employees`). The keyword side has no shared word to catch there and votes
+for English chunks that merely share "when", "was", "the". Splitting all 85
+questions by whether question and answer share a language: same-language,
+dense 55/60 vs hybrid 54/60; cross-language, dense 21/25 vs hybrid 18/25. So the
+expectation that keywords would help the same-language questions was **not**
+borne out either: dense already gets 92% of those, and the few it misses are
+not the ones a keyword match rescues (hybrid fixed 2 and broke 3). The language
+split uses a rough rule (does the expected keyword contain Japanese?), and a
+1-2 question swing between two runs of the same configuration was seen, so read
+these as "no evidence of a gain", not as a measured loss of a few points.
+
+This corpus is small (8 documents) and its questions are mostly ones dense
+already answers; hybrid may earn its place on a larger corpus with many
+similar documents, exact identifiers, or same-language queries. Re-run
+`scripts/document_baseline.py` with `TINI_DOCUMENT_HYBRID=0` and `=1` on the
+larger set before turning it on.
+
+## Cross-language search: translate the question (off by default)
+
+Hybrid search's regressions above are all the same shape: a question in one
+language whose answer sits in a document written in another. A dense
+multilingual embedding is supposed to close that gap on its own; the obvious
+fix if it doesn't is to remove the gap before searching — ask the small model
+to translate the question into each language the corpus is written in, search
+with the original and every translation, and fuse the rankings
+(`tini/documents/multilingual.py`, reciprocal-rank fusion, same idea as the
+hybrid fusion above). A failed or slow translation falls back to the original
+question alone and is counted, never silently dropped — a call that hung for
+6 minutes against one endpoint is why there's both a timeout and a breaker
+that pauses translation for a while after repeated failures.
+
+```dotenv
+TINI_QUERY_LANGUAGES=ja,en   # empty (default) = off; costs one small-model call per new question
+```
+
+**Measured 2026-09-25** with DeepSeek as the translator, `ja,en`, rerank off,
+on the same corpus as the hybrid numbers above (snapshot
+`translate-ja-en-2026-09-25.json`):
+
+| | dense-only | + translate ja,en |
+|---|---|---|
+| denso_qa (38) | 36 | 34 |
+| multilingual (47) | 40 | 39 |
+| median latency, multilingual | ~88 ms | ~3.5 s |
+| p95 latency, multilingual | ~110 ms | ~16.4 s |
+
+Translation fixed one question (`ja-x-hr-scope`) and broke four
+(`board-officer-separation`, `governance-2025-diversity`, `ja-zero-emission`,
+`ir-stock-code`) — a net loss, not the fix the cross-language regressions
+above were hoping for, at roughly 40-180x the latency (one extra model call
+per question, sequential with the search itself) and 3 translation failures
+out of 38 on the English set alone. **No evidence this corpus needs it**; off
+by default. It was tried once, on the same 8-document corpus every other
+number on this page comes from — a corpus this small mostly asks questions
+dense embeddings already answer, so this is a weak test of the idea, not a
+refutation of it. `examples/denso_synthetic/` (generated with
+`scripts/synth_corpus.py` for exactly this gap — the real corpus has no
+Vietnamese document, and `denso.com` blocks automated downloads) has documents
+in only one language each and asks every fact in all three; it's a fairer
+place to retry translation before drawing a real conclusion, and hasn't been
+run against it yet.
+
 ## Reranking (optional, hosted provider only so far)
 
 Vector search returns the chunks nearest the question. In the
@@ -230,6 +346,24 @@ retrieval. End to end, one question costs roughly 1.5 s retrieval+rerank +
 5.5 s generation ≈ 7 s. No LLM-mode run without reranking exists yet to
 isolate how much of that 77% the reranking step itself is responsible for
 versus DeepSeek's own answer quality.
+
+**Re-measured 2026-09-25** on the current corpus (8 documents, 830 chunks,
+k=3, 20 candidates, 0 rerank errors; snapshots
+`evals/baselines/rerank-off-2026-09-25.json` and `rerank-jev-2026-09-25.json`):
+
+| | off | on (Jev) |
+|---|---|---|
+| denso_qa (38 questions) | 36/38 (94.7%) | 34/38 (89.5%) — **worse** |
+| multilingual (47 questions) | 40/47 (85.1%) | 43/47 (91.5%) |
+| median / p95 latency, multilingual | 31.2 / 46.5 ms | 1252 / 1653 ms |
+
+The multilingual result reproduces 2026-09-24 exactly (40 -> 43; ja 27/28,
+vi 10/13, en 6/6). The new number is on the English set: Jev **lost** two
+questions (`board-officer-separation`, `gov2025-nomination`) and fixed none.
+Across both sets that is 4 questions fixed and 3 broken (76/85 -> 77/85), so
+the gain is small and not uniform. Each question set is one
+run against a hosted model, so a 1-2 question swing is inside what I would not
+call signal without repeating it.
 
 - **Jev is not a purpose-built reranker.** It is TypeSafe's hosted "System
   One" decision model (typed answers with calibrated probabilities). Here it

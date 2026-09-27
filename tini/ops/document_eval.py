@@ -35,6 +35,7 @@ from pathlib import Path
 from tini.config import Settings, load_settings
 from tini.db import connect
 from tini.documents.embeddings import make_embedding_provider
+from tini.documents.multilingual import MultilingualIndex
 from tini.documents.rerank import RerankingIndex
 from tini.documents.store import make_document_index
 
@@ -78,6 +79,33 @@ def rerank_info(settings: Settings) -> dict:
     }
 
 
+def _unwrapped(index):
+    """The backend under any rerank/translation wrappers."""
+    while hasattr(index, "inner"):
+        index = index.inner
+    return index
+
+
+def _find(index, kind):
+    """The wrapper of the given class in the stack, if any."""
+    while index is not None:
+        if isinstance(index, kind):
+            return index
+        index = getattr(index, "inner", None)
+    return None
+
+
+def _hybrid_config(index) -> dict | None:
+    inner = _unwrapped(index)
+    if not hasattr(inner, "has_lexical"):
+        return None
+    return {
+        "enabled": bool(inner.hybrid and inner.has_lexical),
+        "fusion": inner.fusion,
+        "lexical_weight": inner.lexical_weight,
+    }
+
+
 def _pipeline_config(settings: Settings, index, workspace: str, k: int) -> dict:
     """What the pipeline WAS when these numbers were measured. A recall figure
     with no record of the embedding model, chunk sizes or index behind it
@@ -94,6 +122,9 @@ def _pipeline_config(settings: Settings, index, workspace: str, k: int) -> dict:
             "collection": settings.qdrant_collection
             if settings.document_index == "qdrant"
             else None,
+            # Whether the keyword ranking is actually being fused in: needs the
+            # setting AND a collection that carries keyword vectors.
+            "hybrid": _hybrid_config(index),
         },
         "chunking": {
             "max_tokens": settings.document_chunk_max_tokens,
@@ -107,6 +138,7 @@ def _pipeline_config(settings: Settings, index, workspace: str, k: int) -> dict:
             "model": settings.rerank_model or None,
             "candidates": settings.rerank_candidates,
         },
+        "translate": {"languages": list(settings.query_languages)},
         "search_k": k,
         "workspace": workspace,
         "corpus": [
@@ -429,6 +461,13 @@ def run_eval(
     }
     if isinstance(index, RerankingIndex) and index.last_error:
         result["rerank_last_error"] = index.last_error
+    multilingual = _find(index, MultilingualIndex)
+    if multilingual is not None:
+        result["translated"] = multilingual.translated
+        result["translate_errors"] = multilingual.errors
+        result["translate_skipped"] = multilingual.skipped
+        if multilingual.last_error:
+            result["translate_last_error"] = multilingual.last_error
     if use_llm:
         result["model"] = settings.model
         result["answer_keyword_rate"] = (

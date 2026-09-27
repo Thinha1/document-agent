@@ -39,6 +39,12 @@ def make_document_index(
         index = SqliteDocumentIndex(conn, embedder)
     else:
         raise ValueError(f"Unsupported document index backend: {backend}")
+    if settings.query_languages:
+        from tini.documents.multilingual import SHARED_CACHE, MultilingualIndex, make_translator
+
+        index = MultilingualIndex(
+            index, make_translator(settings), settings.query_languages, cache=SHARED_CACHE
+        )
     from tini.documents.rerank import RerankingIndex, make_reranker
 
     reranker = make_reranker(settings)
