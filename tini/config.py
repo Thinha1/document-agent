@@ -86,9 +86,10 @@ def _ocr_base_url() -> str | None:
 
 def _rerank_api_key() -> str:
     """Dedicated key first, then the provider's own conventional variable.
-    There is deliberately no base-URL setting: a reranker receives document
-    text, so its destination is fixed in tini/documents/rerank.py rather than
-    configurable."""
+    A hosted reranker's destination is deliberately NOT configurable: it
+    receives document text, so it is fixed in tini/documents/rerank.py. The one
+    URL setting (TINI_RERANK_URL) is for a self-hosted reranker and is limited
+    to local addresses there."""
     configured = os.getenv("TINI_RERANK_API_KEY", "").strip()
     if configured:
         return configured
@@ -195,6 +196,14 @@ class Settings:
     )
     rerank_model: str = field(default_factory=lambda: os.getenv("TINI_RERANK_MODEL", "").strip())
     rerank_api_key: str = field(default_factory=_rerank_api_key)
+    # Where a SELF-HOSTED reranker (provider "tei") listens. Only a local
+    # address is accepted — loopback or the compose service name — and
+    # make_reranker refuses anything else: a reranker receives document text, so
+    # this must never become a way to send it to another machine. The hosted
+    # provider (jev) has no such setting; its endpoint is fixed in rerank.py.
+    rerank_url: str = field(
+        default_factory=lambda: os.getenv("TINI_RERANK_URL", "").strip() or "http://127.0.0.1:8081"
+    )
     rerank_candidates: int = field(
         default_factory=lambda: int(os.getenv("TINI_RERANK_CANDIDATES", "").strip() or "20")
     )
