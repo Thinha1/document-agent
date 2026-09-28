@@ -305,7 +305,15 @@ could make the model answer in the wrong language. The line sits in the volatile
 context, not the system prompt, so the cached prefix is unchanged. **Not
 measured**: no question set here scores the language of the answer.
 
-## Reranking (optional, hosted provider only so far)
+## Reranking (default: the self-hosted bge-reranker; Jev is the hosted option)
+
+**Default is `TINI_RERANK_PROVIDER=tei`** (see [the local reranker](#self-hosted-reranking-bge-reranker-v2-m3-tini_rerank_providertei)):
+because the reranker is a docker service, a machine that has not started it
+falls back to vector order on every search rather than failing, and the failure
+is counted (a Retrieval eval run says how many searches were not reranked). Set
+`TINI_RERANK_PROVIDER=none` to skip reranking, or `jev` for the hosted one
+described next. The Jev measurements below predate the local provider and still
+stand for Jev.
 
 Vector search returns the chunks nearest the question. In the
 [baseline](eval-baseline.md) the right document is found ~95% of the time but
@@ -411,7 +419,7 @@ docker compose --profile reranker up -d reranker   # first start downloads ~2.2 
 ```
 
 ```dotenv
-TINI_RERANK_PROVIDER=tei
+TINI_RERANK_PROVIDER=tei                  # the default; none | jev to change
 # TINI_RERANK_URL=http://127.0.0.1:8081   # the default
 ```
 
@@ -470,6 +478,35 @@ dense. It is not a fix for the Vietnamese gap.
 Read with the usual limits: one run per row, small corpora (8 and 9 documents),
 a 1-2 question swing between identical runs has been seen, and the synthetic
 documents are translated excerpts, cleaner than real PDFs.
+
+### Reading a Vietnamese question in English (`TINI_RERANK_TRANSLATE=vi`, off by default)
+
+Why Vietnamese was the weak language: retrieval was not the problem, the
+**reranker** was. On 49 Vietnamese questions, taking the same candidate pool and
+scoring it with the question translated to English instead of as asked (only the
+reranker's copy; search still uses the question as asked) moved documents found
+from 43 to 47 and answers found from 40 to 43 at k=6, and 41 to 44 / 39 to 42 at
+k=3. Fusing an English search into the pool (tried first) changed nothing; the gain
+is in how the cross-encoder scores a Vietnamese question against an English chunk.
+
+Measured end to end through the real factory (translation by `deepseek-v4-flash`,
+hybrid + rerank 50, all 193 questions of the real and synthetic sets, k=6):
+
+| | documents | answers found | Vietnamese answers | Japanese / English answers |
+|---|---|---|---|---|
+| off | 183/193 | 173/193 | 40/49 | 59/64, 74/80 |
+| `vi` translated for the reranker | 187/193 | 176/193 | 43/49 | 59/64, 74/80 (identical) |
+
+Japanese did not benefit (translating Japanese questions was neutral to slightly
+worse), so only the languages you list are translated, and only `vi` was measured.
+The switch costs **one small-model call per new question** (1.3-5 s here, cached
+afterwards) on top of the ~1.3 s a 50-candidate rerank already takes, and it sends
+the **question, never a document**, to that model. It fails open: a slow or failing
+model (the translator has a 20 s timeout and a circuit breaker) leaves the question
+as asked and is counted (`rerank_translate_errors` in an eval run). Use it with a
+fast `TINI_SMALL_MODEL`; it is off by default because the maintainer's default small
+model takes minutes and would only ever time out. 49 questions, machine-translated
+Japanese and Vietnamese documents: a direction, not a promise.
 
 ## OCR fallback for scanned/image-only pages
 
@@ -605,6 +642,64 @@ document with the flag on, then re-run `document_baseline.py` on a
 `table-heavy-pdf`-tagged question set and compare against a run with the flag
 off, the same way `TINI_DOCUMENT_HYBRID` was evaluated above.
 
+## Table retrieval: a small technique-by-technique set
+
+DENSO's engineering documents are not public (`denso.com` returns 403 to
+automated clients and this repo does not work around that), and the one public
+technical manual found (the Spark Plug manual, see `examples/denso_tech_docs/`)
+has charts and no tables. So `scripts/synth_tech.py` generates fictional
+engineering tables, with no model, in `examples/denso_tech_synthetic/`: torque
+chart, thermistor table, connector pin-out, fault-code list, sampling plan,
+supplier quality table, injector and ignition-coil data sheets, in en/ja/vi, half
+as Markdown tables and half as the aligned plain text a PDF extractor returns.
+
+The question set (`evals/documents/synthetic_denso_tech.jsonl`, workspace
+`denso-tech`) is **ten facts, each aimed at one way a table breaks retrieval**,
+asked in three languages (30 questions); its `format` field is the technique, so
+the dashboard's per-format chips are a technique breakdown: `grouped-header`,
+`late-row`, `chunk-boundary`, `multi-row`, `semantic-key`, `code-key`,
+`plain-lookup`. Each technique is one fact asked three ways, so read a "3/3" as
+one success. It says *which* table problem a change fixes or causes; it is not a
+benchmark.
+
+**What it showed before the fix (k=6, workspace with the 9 real DENSO documents
+and the manual as distractors):** dense-only found the answer for all 30; hybrid
+without rerank 29; hybrid plus rerank over 50 candidates **27**. All three misses
+were one fact (`grouped-header`: a lubricated-torque cell in the last chunk of the
+torque table). The document was ranked first every time; the chunk holding the row
+was not, because by then the row is bare numbers (`M36 | 100.3 | 78.1 | ...`) with
+the header that says what each column means left in the first chunk. A
+cross-encoder reads the question and one chunk together, so it cannot tell such a
+chunk from any other table of numbers, which is why reranking, the step that helps
+prose, hurt here. The plain chunker also cut one pin-out row in half.
+
+### Header on every chunk (`TINI_TABLE_CHUNKING`, on by default)
+
+A table written as Markdown pipes or as aligned plain columns is now chunked by
+ROW (`chunking.py`, `_split_plain_tables`): the nearest heading, the caption lines
+under it, the header lines (a two-level header included) and the footnote go on
+**every** chunk, and a row is never cut. It reuses the row packer the OCR table
+flow already had.
+
+What counts as a table is deliberately strict, so prose, lists and code never
+qualify: at least four data rows; at least 70 % of them holding a numeric cell;
+for aligned text, the same number of columns (two or more spaces apart) on 80 % of
+rows and a first line that reads as a header; a two-cell group header sitting right
+above the columns belongs to the table. A table whose header row is numeric (years)
+is still recognised when it is a Markdown table.
+
+**Measured on the same 30 questions after re-ingesting:** hybrid plus rerank went
+from 27/30 to **30/30** at k=3 and k=6 (`grouped-header` 6/9 → 9/9); dense-only
+stayed 30/30, and hybrid without rerank went 29/30 → 30/30 at k=6. The chunk
+counts of the nine real DENSO documents and the Spark Plug manual did not change
+at all (338, 18, 27, 395, 2, 39, 2, 3, 9 and 104), because text extracted from a
+PDF puts single spaces between columns and never qualifies, so the retrieval
+numbers on the real question sets are unaffected. That is also the limit: **a
+table inside a PDF is not helped** (its rows arrive single-space separated); only
+Markdown/text tables and OCR'd tables are. Thirty questions is one fact per
+technique, so this shows the mechanism works, not how much it is worth; a document
+already in the index keeps its old chunks until it is re-indexed.
+
 ## What re-ingesting costs after a manual edit
 
 Ingestion embeds a document's chunks *before* the index decides whether the
@@ -686,6 +781,14 @@ catalog on every search rather than copying status into the Qdrant payload, so
 an edit cannot leave the two out of step; with nothing hidden it costs one small
 SQLite query. When something is hidden it looks at up to 3× the requested
 results (then once at 50) so hidden chunks do not shorten the page.
+
+In a Retrieval eval, a question whose expected document is hidden is **expired**:
+it is left out of recall and answer-in-chunks (it could only miss, which read as
+a broken retriever — the DENSO 2021 governance policy, marked superseded by the
+2025 report, was dragging the real set down by 5 questions) and is checked the
+other way round instead: the hidden document must not come back (`expired.leaked`
+in the result, 0 is correct). The question files are not edited, so the same set
+scores those questions normally wherever the document is still current.
 
 Not built, on purpose: a `language` filter. With an oracle that knew each
 document's language, the reranker gained +4 and +6 answers on the two corpora,

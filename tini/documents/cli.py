@@ -38,6 +38,7 @@ def ingest_main(argv: list[str]) -> int:
             chunk_max_tokens=args.chunk_max_tokens,
             chunk_min_tokens=args.chunk_min_tokens,
             chunk_overlap_tokens=args.chunk_overlap_tokens,
+            table_chunking=settings.document_table_chunking,
             max_file_bytes=settings.document_max_file_bytes,
             max_text_chars=settings.document_max_text_chars,
             usage_log=make_usage_logger(settings.home),

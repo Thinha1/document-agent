@@ -28,6 +28,7 @@ class IngestionPipeline:
         chunk_max_tokens: int = 512,
         chunk_min_tokens: int = 120,
         chunk_overlap_tokens: int = 48,
+        table_chunking: bool = False,
         max_file_bytes: int = 25 * 1024 * 1024,
         max_text_chars: int = 5_000_000,
         usage_log: Callable[[dict[str, Any]], None] | None = None,
@@ -51,6 +52,7 @@ class IngestionPipeline:
         self.chunk_max_tokens = chunk_max_tokens
         self.chunk_min_tokens = chunk_min_tokens
         self.chunk_overlap_tokens = chunk_overlap_tokens
+        self.table_chunking = table_chunking
         self.max_file_bytes = max_file_bytes
         self.max_text_chars = max_text_chars
         self.usage_log = usage_log
@@ -92,6 +94,7 @@ class IngestionPipeline:
                     self.chunk_max_tokens,
                     self.chunk_min_tokens,
                     self.chunk_overlap_tokens,
+                    plain_tables=self.table_chunking,
                 )
                 if not chunks:
                     raise ValueError("document produced no chunks")

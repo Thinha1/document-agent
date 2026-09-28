@@ -18,6 +18,7 @@ module always has — see `_split_around_tables`.
 from __future__ import annotations
 
 import re
+from collections import Counter
 from dataclasses import dataclass, replace
 
 from tini.documents.models import DocumentChunk
@@ -63,6 +64,7 @@ def chunk_text(
     max_tokens: int = 512,
     min_tokens: int = 120,
     overlap_tokens: int = 48,
+    plain_tables: bool = False,
 ) -> list[DocumentChunk]:
     """Split at headings, paragraphs, and sentences instead of character offsets
     — except a `<!--tini:table-->` block, which splits by row instead (see the
@@ -72,6 +74,11 @@ def chunk_text(
     mid-sentence; a table chunk instead repeats its own caption/header, which
     serves the same purpose (self-contained without the previous chunk) without
     literally overlapping row data.
+
+    ``plain_tables`` extends the same row-wise treatment to a table written as
+    Markdown pipes or as aligned plain columns (what a text extractor returns):
+    header on every chunk, no row cut in half. Off unless asked for — see
+    `_plain_table_from_run` for exactly what counts as a table.
     """
     if max_tokens <= 0:
         raise ValueError("max_tokens must be positive")
@@ -86,11 +93,20 @@ def chunk_text(
             table_id, body, start, end = payload
             chunks.extend(_chunk_table_block(table_id, body, start, end, max_tokens))
         elif payload.strip():
-            sub = _chunk_prose(payload, max_tokens, min_tokens, overlap_tokens)
-            chunks.extend(
-                replace(chunk, char_start=chunk.char_start + offset, char_end=chunk.char_end + offset)
-                for chunk in sub
-            )
+            pieces = _split_plain_tables(payload) if plain_tables else [("prose", payload, 0)]
+            for piece_kind, piece, inner in pieces:
+                if piece_kind == "table":
+                    chunks.extend(_chunk_plain_table(piece, offset + inner, max_tokens))
+                elif piece.strip():
+                    sub = _chunk_prose(piece, max_tokens, min_tokens, overlap_tokens)
+                    chunks.extend(
+                        replace(
+                            chunk,
+                            char_start=chunk.char_start + offset + inner,
+                            char_end=chunk.char_end + offset + inner,
+                        )
+                        for chunk in sub
+                    )
     return [replace(chunk, ordinal=i) for i, chunk in enumerate(chunks)]
 
 
@@ -232,6 +248,152 @@ def _overlap_tail(units: list[_Unit], budget: int) -> list[_Unit]:
     return list(reversed(tail))
 
 
+# --- tables written as plain text (Markdown pipes, or aligned columns) -----------
+# `<!--tini:table-->` blocks exist only when the OCR table flow wrote them. A
+# Markdown table, or the aligned columns a PDF text extractor returns, arrives as
+# ordinary prose, and the prose chunker cuts it by size: rows split in half, and
+# every chunk after the first has lost the header that says what its numbers mean
+# (a cross-encoder then sees `M36  100.3  78.1 ...` and cannot tell it from any
+# other table of numbers). `_plain_table_from_run` recognises such a table strictly
+# enough that ordinary prose, lists and code never qualify.
+_CELL_SPLIT_RE = re.compile(r"\s{2,}")
+_NUMERIC_CELL_RE = re.compile(r"^[-+±]?\d[\d.,]*(?:\s?[–\-~/]\s?[-+]?\d[\d.,]*)?\s?%?$")
+_PIPE_SEPARATOR_RE = re.compile(r"^\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)*\|?$")
+_MD_HEADING_RE = re.compile(r"^#{1,6}\s+\S")
+_MIN_TABLE_ROWS = 4  # data rows; below this a "table" is just a short list
+_MAX_HEADER_LINES = 4  # a two-level header plus separator, with a little slack
+_MAX_CAPTION_CHARS = 240  # a caption or footnote is a line, not a paragraph
+
+
+def _cells(line: str) -> list[str]:
+    stripped = line.strip()
+    if stripped.startswith("|"):
+        return [cell.strip() for cell in stripped.strip("|").split("|")]
+    return _CELL_SPLIT_RE.split(stripped)
+
+
+def _is_numeric(cell: str) -> bool:
+    return bool(_NUMERIC_CELL_RE.match(cell.strip()))
+
+
+def _is_tabular(line: str) -> bool:
+    stripped = line.strip()
+    if stripped.startswith("|"):
+        return stripped.count("|") >= 3
+    cells = _cells(line)
+    return len(cells) >= 3 and all(cells)
+
+
+def _plain_table_from_run(run: list[str]) -> tuple[list[str], list[str]] | None:
+    """(header lines, data lines) if this run of tabular lines is a table."""
+    is_pipe = all(line.strip().startswith("|") for line in run)
+    if is_pipe:
+        header_n = 2 if len(run) > 1 and _PIPE_SEPARATOR_RE.match(run[1].strip()) else 1
+    elif any(_is_numeric(cell) for cell in _cells(run[0])):
+        return None  # aligned text: the first line must read like a header
+    else:
+        header_n = 1
+    while header_n < min(_MAX_HEADER_LINES, len(run)) and not any(
+        _is_numeric(cell) for cell in _cells(run[header_n])
+    ):
+        header_n += 1
+    header, data = run[:header_n], run[header_n:]
+    if len(data) < _MIN_TABLE_ROWS:
+        return None
+    if sum(any(_is_numeric(cell) for cell in _cells(line)) for line in data) < 0.7 * len(data):
+        return None  # a list of words, not a table of values
+    if not is_pipe:
+        modal = Counter(len(_cells(line)) for line in data).most_common(1)[0][1]
+        if modal < 0.8 * len(data):
+            return None  # columns do not line up
+    return header, data
+
+
+def _plain_caption(lines: list[str], table_start: int) -> list[str]:
+    """The nearest Markdown heading above the table and the short prose lines
+    between it and the table (what the table is about), at most a few of them."""
+    for k in range(table_start - 1, max(-1, table_start - 11), -1):
+        if _MD_HEADING_RE.match(lines[k]):
+            between = [
+                line.strip()
+                for line in lines[k + 1 : table_start]
+                if line.strip() and len(line) <= _MAX_CAPTION_CHARS
+            ]
+            return [lines[k].strip(), *between[-3:]]
+    return []
+
+
+def _split_plain_tables(text: str):
+    """[("prose", segment, offset), ("table", (caption, header, rows, notes, length), offset)]
+    in document order; a text with no such table is one ("prose", text, 0)."""
+    lines = text.split("\n")
+    starts, position = [], 0
+    for line in lines:
+        starts.append(position)
+        position += len(line) + 1
+    pieces: list[tuple[str, object, int]] = []
+    cursor = 0  # first character not yet emitted
+    cursor_line = 0  # first line not yet emitted
+    i = 0
+    while i < len(lines):
+        if not _is_tabular(lines[i]):
+            i += 1
+            continue
+        j = i
+        while j < len(lines) and _is_tabular(lines[j]):
+            j += 1
+        # a group header such as "Temp.    Resistance (kΩ)" has only two cells, so it is not
+        # "tabular" on its own; it belongs to the table when it sits right above it
+        first = i
+        while (
+            first > cursor_line
+            and lines[first - 1].strip()
+            and not _is_tabular(lines[first - 1])
+            and len(_cells(lines[first - 1])) >= 2
+            and not any(_is_numeric(cell) for cell in _cells(lines[first - 1]))
+            and i - first < 2
+        ):
+            first -= 1
+        table = _plain_table_from_run([line.rstrip() for line in lines[first:j]])
+        if table is not None and starts[first] >= cursor:
+            caption = _plain_caption(lines, first)
+            end_line = j - 1
+            notes = ""
+            k = j
+            while k < len(lines) and not lines[k].strip() and k - j < 1:
+                k += 1  # at most one blank line between a table and its footnote
+            if k < len(lines) and lines[k].strip() and len(lines[k]) <= _MAX_CAPTION_CHARS and not _is_tabular(lines[k]):
+                notes, end_line = lines[k].strip(), k
+            end = starts[end_line] + len(lines[end_line])
+            if starts[first] > cursor:
+                pieces.append(("prose", text[cursor : starts[first]], cursor))
+            header, rows = table
+            pieces.append(("table", (caption, header, rows, notes, end - starts[first]), starts[first]))
+            cursor = end
+            cursor_line = end_line + 1
+        i = max(j, cursor_line)
+    if not pieces:
+        return [("prose", text, 0)]
+    if cursor < len(text):
+        pieces.append(("prose", text[cursor:], cursor))
+    return pieces
+
+
+def _chunk_plain_table(piece, start: int, max_tokens: int) -> list[DocumentChunk]:
+    """Row-wise chunks of a plain-text table: the nearest heading and the header
+    lines open every chunk, and a row is never cut."""
+    caption, header, rows, notes, length = piece
+    return _pack_rows(
+        [*caption, *header],
+        rows,
+        notes,
+        start,
+        start + length,
+        max_tokens,
+        {"kind": "table", "table_layout": "plain"},
+    )
+
+
 def _split_table_lines(body: str) -> tuple[list[str], list[str], str]:
     """A `<!--tini:table-->` body is always, in order: an optional `**caption**`
     line, the header row, the `---` separator row, then data rows, then an
@@ -275,8 +437,23 @@ def _chunk_table_block(
     it is not a literal substring of the document the way a prose chunk is.
     """
     preamble, rows, notes = _split_table_lines(body)
-    preamble_text = "\n".join(preamble)
-    preamble_tokens = estimate_tokens(preamble_text)
+    return _pack_rows(
+        preamble, rows, notes, start, end, max_tokens, {"kind": "table", "table_id": table_id}
+    )
+
+
+def _pack_rows(
+    preamble: list[str],
+    rows: list[str],
+    notes: str,
+    start: int,
+    end: int,
+    max_tokens: int,
+    base_metadata: dict,
+) -> list[DocumentChunk]:
+    """Pack rows greedily under `max_tokens`, the preamble (caption + header)
+    counted against every group because it is repeated at the top of each."""
+    preamble_tokens = estimate_tokens("\n".join(preamble))
 
     groups: list[list[str]] = []
     current: list[str] = []
@@ -307,8 +484,7 @@ def _chunk_table_block(
                 char_start=start,
                 char_end=end,
                 metadata={
-                    "kind": "table",
-                    "table_id": table_id,
+                    **base_metadata,
                     "row_group": index,
                     "row_groups_total": len(groups),
                     "estimated_tokens": estimate_tokens(text),
