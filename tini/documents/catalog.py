@@ -42,6 +42,10 @@ STATUSES = {
     "needs_check": "cần xác nhận",
     "excluded": "loại bỏ",
 }
+# Kept in the index but never returned by search: an old version must not
+# answer as if it were current, and a README is not evidence. "needs_check"
+# stays searchable — unconfirmed is not the same as wrong.
+HIDDEN_STATUSES = ("superseded", "excluded")
 REVIEW_BELOW = 0.8
 EDITABLE = ("doc_type", "subtype", "issuer", "period", "status", "summary")
 _LIMITS = {"subtype": 80, "issuer": 80, "period": 40, "summary": 1000}
@@ -262,6 +266,17 @@ def list_entries(conn: sqlite3.Connection, workspace: str) -> dict[str, dict[str
     conn.row_factory = sqlite3.Row
     rows = conn.execute("SELECT * FROM document_catalog WHERE workspace_id=?", (workspace,)).fetchall()
     return {row["source_uri"]: _row(row) for row in rows}
+
+
+def hidden_uris(conn: sqlite3.Connection, workspace: str) -> set[str]:
+    """Sources a person (or the README rule) marked superseded or excluded."""
+    _ensure(conn)
+    marks = ",".join("?" for _ in HIDDEN_STATUSES)
+    rows = conn.execute(
+        f"SELECT source_uri FROM document_catalog WHERE workspace_id=? AND status IN ({marks})",
+        (workspace, *HIDDEN_STATUSES),
+    ).fetchall()
+    return {row[0] for row in rows}
 
 
 class CatalogError(ValueError):

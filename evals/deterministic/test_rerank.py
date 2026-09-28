@@ -299,9 +299,10 @@ def test_the_factory_wraps_only_when_reranking_is_configured(tmp_path):
         None,
     )
 
-    assert isinstance(plain, SqliteDocumentIndex)
+    # VisibleIndex (catalog status filter) is always the innermost wrapper.
+    assert isinstance(plain.inner, SqliteDocumentIndex)
     assert isinstance(wrapped, RerankingIndex) and wrapped.candidates == 12
-    assert isinstance(wrapped.inner, SqliteDocumentIndex)
+    assert isinstance(wrapped.inner.inner, SqliteDocumentIndex)
 
 
 # --- eval integration --------------------------------------------------------

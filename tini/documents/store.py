@@ -39,6 +39,10 @@ def make_document_index(
         index = SqliteDocumentIndex(conn, embedder)
     else:
         raise ValueError(f"Unsupported document index backend: {backend}")
+    from tini.documents.visibility import VisibleIndex
+
+    # Innermost, so translation and reranking only ever see visible chunks.
+    index = VisibleIndex(index, conn)
     if settings.query_languages:
         from tini.documents.multilingual import SHARED_CACHE, MultilingualIndex, make_translator
 

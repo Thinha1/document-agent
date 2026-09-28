@@ -27,6 +27,30 @@ Rules:
 """
 
 
+_DETECTED = {"ja": "Japanese", "vi": "Vietnamese"}
+
+
+def reply_language_note(user_message: str) -> str:
+    """Tell the model which language to answer in, since the sources often differ.
+
+    Documents here are English, Japanese and Vietnamese, and a question in one is
+    routinely answered from a passage in another; without this line a model tends
+    to follow the language of the evidence. Only Japanese and Vietnamese are named:
+    `detect_language` reads anything else as English, and naming a language it only
+    guessed could make the model answer in the wrong one. This rides on the
+    volatile context, not the system prompt, so the cached prefix is untouched."""
+    from tini.documents.multilingual import detect_language
+
+    found = _DETECTED.get(detect_language(user_message))
+    lead = f"The user's message is in {found}. " if found else ""
+    return (
+        f"{lead}Reply in the language of the user's latest message, even when the retrieved "
+        "sources are in another language. Keep product names, codes, figures and quoted "
+        "source terms as written, adding a short translation in parentheses where a source "
+        "term matters."
+    )
+
+
 def load_soul(settings: Settings) -> str:
     """SOUL.md is the editable persona file, created on first run. Changing it
     changes who your Tini is — that's procedural memory at its simplest."""
@@ -81,6 +105,7 @@ class Session:
         # Local time WITH the timezone name — enough to resolve "in 30 minutes".
         now = datetime.now().astimezone()
         parts = [f"Right now it is {now:%A, %Y-%m-%d %H:%M} ({now:%Z}, UTC{now:%z})."]
+        parts.append(reply_language_note(user_message))
 
         if self.memory is not None:
             # Hero moment #1: a cheap judge decides IF we retrieve at all —

@@ -293,6 +293,18 @@ in only one language each and asks every fact in all three; it's a fairer
 place to retry translation before drawing a real conclusion, and hasn't been
 run against it yet.
 
+**The answer's language is a separate problem from retrieval.** A Vietnamese
+question is often answered from a Japanese or English passage, and a model tends
+to follow the language of its evidence. Each turn's context
+(`reply_language_note` in `tini/runtime/session.py`) therefore says to reply in
+the language of the user's message, keeping product names, codes and figures as
+written and adding a short translation where a source term matters. Japanese and
+Vietnamese are named when detected; anything else gets the generic line only,
+because `detect_language` reads all other text as English and naming a guess
+could make the model answer in the wrong language. The line sits in the volatile
+context, not the system prompt, so the cached prefix is unchanged. **Not
+measured**: no question set here scores the language of the answer.
+
 ## Reranking (optional, hosted provider only so far)
 
 Vector search returns the chunks nearest the question. In the
@@ -383,10 +395,81 @@ call signal without repeating it.
   measured from this network median latency was 1378 ms (p95 1652 ms) —
   well above that claim, whether from geography (the service is hosted in
   US West), the 20-candidate batch per call, or something else unmeasured.
-- **Self-hosted alternative (researched, not built).** `bge-reranker-v2-m3`
-  (Apache-2.0, same family as bge-m3) behind Hugging Face text-embeddings-
-  inference's CPU image exposes `POST /rerank`. Ollama has no rerank endpoint.
-  No CPU latency was verified for it.
+- **Self-hosted alternative: built, measured below** (`tei`). Ollama has no
+  rerank endpoint, so it is served by Hugging Face text-embeddings-inference.
+
+### Self-hosted reranking: bge-reranker-v2-m3 (`TINI_RERANK_PROVIDER=tei`)
+
+`BAAI/bge-reranker-v2-m3` (Apache-2.0, multilingual, built on the same backbone
+as the bge-m3 embedder) is a cross-encoder: it reads the question and one
+candidate together, which a vector search cannot do, so it can tell a chunk that
+is *near* the question from one that *answers* it. It runs in the compose
+`reranker` profile behind text-embeddings-inference's `POST /rerank`:
+
+```bash
+docker compose --profile reranker up -d reranker   # first start downloads ~2.2 GB
+```
+
+```dotenv
+TINI_RERANK_PROVIDER=tei
+# TINI_RERANK_URL=http://127.0.0.1:8081   # the default
+```
+
+The default compose image is the CPU one (works anywhere, slow for a
+cross-encoder); an NVIDIA card wants the GPU image through the git-ignored
+`docker-compose.override.yml`, same as `ollama` (`86-1.8` for RTX 30-series —
+see the comment in `docker-compose.yml`). On this machine's RTX 3050 the model
+uses ~1.25 GB of VRAM, so it sits next to the embedder in 6 GB.
+
+**The address is restricted, not fixed.** Unlike Jev, whose endpoint is a
+constant, this provider has a URL setting because the server has to be found —
+so the "reranker receives document text" rule is enforced by validation instead:
+`local_rerank_url` accepts only `127.0.0.1`, `localhost`, `::1` or the compose
+service name `reranker`, compared as a parsed host (so `localhost.evil.example`
+and `http://localhost@evil.example` are refused), no credentials, no path. Any
+other value stops startup with an error. The compose port is published on
+loopback only.
+
+**Measured 2026-09-28**, k=3, dense retrieval (hybrid and translation off), RTX
+3050, one run per row. Snapshots: `bge-reranker-c20/c50-2026-09-28.json`,
+`xl2-dense/xl2-bge-c20/c50-2026-09-28.json`. "Answer" = the expected answer text
+is inside the returned chunks, which is stricter than "the right document
+appears" and is where reranking shows up:
+
+| 85 real questions | document hit | **answer in chunks** | median latency |
+|---|---|---|---|
+| dense only | 76 | 60 | ~90 ms |
+| Jev (24/09) | 77 | 69 | ~1300 ms |
+| bge-reranker, 20 candidates | 76 | 69 | ~510-620 ms |
+| bge-reranker, 50 candidates | 77 | **72** | ~1100-1300 ms |
+
+| 108 synthetic questions (`examples/denso_synthetic/`) | document hit | **answer in chunks** | median latency |
+|---|---|---|---|
+| dense only | 97 | 74 | ~85 ms |
+| bge-reranker, 20 candidates | 97 | 90 | ~625 ms |
+| bge-reranker, 50 candidates | 97 | **91** | ~1360 ms |
+
+What it does well: it picks the right *part* of the right document. Document hit
+barely moves (that was never the problem), but the answer lands in the returned
+chunks 16-17 more times out of 108 on the synthetic set (same-language 25 -> 33
+of 36, cross-language 49 -> 57-58 of 72), and on the English real set 30 -> 35
+(20 candidates) and 37 of 38 (50). It also does it ~2x faster than Jev at 20
+candidates and for free. Going from 20 to 50 candidates buys 1-3 more answers
+for about twice the latency, so the default stays 20.
+
+Where it is worse, said plainly: on the multilingual real set Jev still wins
+(39 vs 34-35 answers). Two Vietnamese questions (`vi-mission`, `vi-hr-scope`)
+that dense got right are now wrong: given a Vietnamese question the reranker
+preferred topically close *Japanese* chunks over the English chunk stating the
+answer. (A third, `ja-x-mission`, is a scoring artifact: all three returned
+chunks contain the answer, from other DENSO documents, but the question set
+expects one specific document.) The synthetic set shows the same weak spot,
+Vietnamese question -> English document stays at 8/12 answers, unchanged from
+dense. It is not a fix for the Vietnamese gap.
+
+Read with the usual limits: one run per row, small corpora (8 and 9 documents),
+a 1-2 question swing between identical runs has been seen, and the synthetic
+documents are translated excerpts, cleaner than real PDFs.
 
 ## OCR fallback for scanned/image-only pages
 
@@ -591,6 +674,24 @@ automatic field would have changed it flags the entry for review. Unchanged
 content (same hash) is not re-classified at all. Removing a document removes its
 catalog entry. Re-parsing the same unchanged PDF is the one remaining repeated
 cost, and it is time, not money.
+
+**Status is enforced at search time.** A document marked *superseded* or
+*excluded* stays in the index but `search` never returns it
+(`tini/documents/visibility.py`, the innermost wrapper, so translation and
+reranking only see visible chunks). *Needs checking* stays searchable. Before
+this, the status was only a label: an old edition answered like the current one,
+and a README marked "excluded" was still retrievable. Flipping the status back
+brings the document back at once, with nothing re-embedded. The filter reads the
+catalog on every search rather than copying status into the Qdrant payload, so
+an edit cannot leave the two out of step; with nothing hidden it costs one small
+SQLite query. When something is hidden it looks at up to 3× the requested
+results (then once at 50) so hidden chunks do not shorten the page.
+
+Not built, on purpose: a `language` filter. With an oracle that knew each
+document's language, the reranker gained +4 and +6 answers on the two corpora,
+but every realistic use (filter by the question's language, or a
+language-stratified pool) gained nothing, because the questions that matter here
+are the ones whose answer is in another language.
 
 ## Chunking strategy
 
