@@ -51,7 +51,7 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import replace
 from typing import Protocol
 
@@ -284,10 +284,21 @@ class RerankingIndex:
     dashboard can say the numbers include unranked results, instead of a
     provider outage quietly looking like "reranking changed nothing"."""
 
-    def __init__(self, inner, reranker: Reranker, candidates: int = 20):
+    def __init__(
+        self,
+        inner,
+        reranker: Reranker,
+        candidates: int = 20,
+        rewrite_query: Callable[[str], str] | None = None,
+    ):
         self.inner = inner
         self.reranker = reranker
         self.candidates = max(1, min(int(candidates), 50))
+        # Turns the question into the one the reranker reads (search keeps the
+        # original). Used to score Vietnamese questions in English; any failure
+        # falls back to the question as asked.
+        self.rewrite_query = rewrite_query
+        self.rewritten = 0
         self.errors = 0
         self.last_error = ""
 
@@ -319,7 +330,7 @@ class RerankingIndex:
         if len(pool) <= 1:
             return pool[:limit]
         try:
-            scores = self.reranker.rerank(query, [hit.text for hit in pool])
+            scores = self.reranker.rerank(self._rerank_query(query), [hit.text for hit in pool])
             if len(scores) != len(pool):
                 raise RerankError(f"expected {len(pool)} scores, got {len(scores)}")
         except RerankError as exc:
@@ -328,6 +339,18 @@ class RerankingIndex:
             return pool[:limit]
         ranked = sorted(range(len(pool)), key=lambda n: (-scores[n], n))
         return [replace(pool[n], score=scores[n]) for n in ranked[:limit]]
+
+    def _rerank_query(self, query: str) -> str:
+        if self.rewrite_query is None:
+            return query
+        try:
+            rewritten = self.rewrite_query(query)
+        except Exception:  # a translation problem must never fail a search
+            return query
+        if rewritten and rewritten != query:
+            self.rewritten += 1
+            return rewritten
+        return query
 
     def __getattr__(self, name: str):
         # embedder, collection, conn... — whatever the wrapped index exposes.

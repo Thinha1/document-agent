@@ -408,19 +408,22 @@ INTEGRATIONS: tuple[Integration, ...] = (
     Integration(
         "jev",
         "Documents & Retrieval",
-        "Jev reranking",
-        "Reorders retrieved document chunks with TypeSafe's Jev decision model "
-        "before they reach the loop or a Retrieval eval run.",
+        "Reranking",
+        "Reorders retrieved document chunks against the question before they reach "
+        "the loop or a Retrieval eval run. Defaults to a reranker running on this "
+        "machine; TypeSafe's hosted Jev model is the alternative.",
         (
             EnvField(
                 "TINI_RERANK_PROVIDER",
                 "Provider",
                 FieldKind.CHOICE,
-                default="none",
-                options=("none", "jev"),
-                help="'none' keeps every retrieved chunk on this machine. 'jev' sends the "
-                "question and each candidate chunk's TEXT to api.typesafe.ai on every "
-                "search — see tini/documents/rerank.py before turning this on for "
+                default="tei",
+                options=("tei", "none", "jev"),
+                help="'tei' (default) runs BAAI/bge-reranker-v2-m3 on this machine: start it "
+                "with `docker compose --profile reranker up -d reranker`; if it is not "
+                "running, search falls back to vector order. 'none' skips reranking. 'jev' "
+                "sends the question and each candidate chunk's TEXT to api.typesafe.ai on "
+                "every search — see tini/documents/rerank.py before turning this on for "
                 "anything sensitive.",
             ),
             EnvField(
@@ -428,7 +431,7 @@ INTEGRATIONS: tuple[Integration, ...] = (
                 "API key",
                 required=True,
                 secret=True,
-                help="From typesafe.ai (early access). Falls back to TYPESAFE_API_KEY if "
+                help="Jev only — the local reranker needs no key. From typesafe.ai (early access). Falls back to TYPESAFE_API_KEY if "
                 "already set some other way, but this field always wins when filled in.",
             ),
             EnvField("TINI_RERANK_MODEL", "Model", default="jev-latest"),
@@ -444,7 +447,9 @@ INTEGRATIONS: tuple[Integration, ...] = (
         None,
         "https://typesafe.ai/blog/introducing-system-one-models-and-jev",
         ReloadMode.LIVE,
-        lambda env: env.get("TINI_RERANK_PROVIDER", "none") not in ("", "none"),
+        # Only the hosted provider is "connected" (and needs its key); the local
+        # one is a docker service, not an account.
+        lambda env: env.get("TINI_RERANK_PROVIDER", "tei") == "jev",
         None,
     ),
 )

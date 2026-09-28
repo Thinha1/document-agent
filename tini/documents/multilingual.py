@@ -195,6 +195,12 @@ class MultilingualIndex:
         ]
         return _fuse(rankings, limit)
 
+    def translate(self, query: str) -> dict[str, str]:
+        """{language: translation} for the configured languages other than the
+        question's own; {} when translation is skipped or fails (fail-open, and
+        counted in `errors`/`skipped`)."""
+        return self._translations(query)
+
     def _translations(self, query: str) -> dict[str, str]:
         own = detect_language(query)
         targets = [code for code in self.languages if code != own]
@@ -228,6 +234,23 @@ class MultilingualIndex:
             if len(self._cache) > CACHE_SIZE:
                 self._cache.popitem(last=False)
         return found
+
+
+class EnglishRewriter:
+    """Turns a question in one of `source_languages` into English, for the reranker
+    to read (see `RerankingIndex`). Reuses `MultilingualIndex`'s translation
+    machinery — timeout, circuit breaker, shared cache, fail-open counters — through
+    a helper that never searches. A question in another language, or a failed
+    translation, comes back unchanged."""
+
+    def __init__(self, translator: Translator, source_languages: Sequence[str], *, cache=None, **options):
+        self.source_languages = frozenset(source_languages)
+        self.helper = MultilingualIndex(None, translator, ["en"], cache=cache, **options)
+
+    def __call__(self, query: str) -> str:
+        if detect_language(query) not in self.source_languages:
+            return query
+        return self.helper.translate(query).get("en") or query
 
 
 def _call_with_timeout(fn, timeout: float, *args):

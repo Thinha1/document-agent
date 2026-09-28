@@ -362,6 +362,7 @@ def test_rerank_true_reorders_and_is_recorded_in_the_run(eval_env, monkeypatch):
         "provider": "jev",
         "model": None,
         "candidates": 20,
+        "translate_to_english": [],
     }
 
 
@@ -408,7 +409,7 @@ def test_rerank_outage_shows_up_in_the_run_instead_of_looking_like_no_effect(eva
 def test_the_dashboard_hint_never_contains_the_key(eval_env):
     info = document_eval.rerank_info(eval_env)
 
-    assert info == {"configured": True, "provider": "jev", "candidates": 20}
+    assert info == {"configured": True, "provider": "jev", "local": False, "candidates": 20}
     assert SECRET not in json.dumps(info)
 
 

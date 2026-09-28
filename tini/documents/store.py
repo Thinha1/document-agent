@@ -53,7 +53,14 @@ def make_document_index(
 
     reranker = make_reranker(settings)
     if reranker is not None:
-        index = RerankingIndex(index, reranker, settings.rerank_candidates)
+        rewrite = None
+        if settings.rerank_translate:
+            from tini.documents.multilingual import SHARED_CACHE, EnglishRewriter, make_translator
+
+            rewrite = EnglishRewriter(
+                make_translator(settings), settings.rerank_translate, cache=SHARED_CACHE
+            )
+        index = RerankingIndex(index, reranker, settings.rerank_candidates, rewrite)
     return index
 
 

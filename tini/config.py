@@ -163,6 +163,16 @@ class Settings:
         default_factory=lambda: os.getenv("TINI_OCR_TABLE_FLOW", "0").strip().lower()
         in {"1", "true", "yes", "on"}
     )
+    # A table written as Markdown pipes or aligned plain columns is chunked by ROW
+    # with its header repeated on every chunk, instead of being cut by size like
+    # prose (tini/documents/chunking.py). On by default: measured to fix a table
+    # the prose chunker broke and to leave the nine real DENSO documents' chunks
+    # unchanged. Existing documents keep their old chunks until re-indexed; set
+    # TINI_TABLE_CHUNKING=0 to chunk everything as prose.
+    document_table_chunking: bool = field(
+        default_factory=lambda: os.getenv("TINI_TABLE_CHUNKING", "1").strip().lower()
+        in {"1", "true", "yes", "on"}
+    )
     # Where dashboard-uploaded ORIGINAL files are kept (tini/documents/
     # blobstore.py): 'local' (default, under TINI_HOME) or 'minio' (any
     # S3-compatible server the operator points at). The index itself is
@@ -189,10 +199,13 @@ class Settings:
     )
     # Reranking (tini/documents/rerank.py): retrieve more candidates than
     # needed, then let a second model reorder them against the question.
-    # Off by default. OFF means candidate chunks never leave this machine;
-    # turning on a hosted provider (jev) sends them to that provider.
+    # Default: "tei", the self-hosted bge-reranker-v2-m3 on this machine
+    # (docker compose --profile reranker up -d reranker). Candidate chunks go
+    # only to a local address, and if that server is not running a search falls
+    # back to vector order and counts the failure. "none" turns reranking off;
+    # a hosted provider (jev) sends the chunks to that provider.
     rerank_provider: str = field(
-        default_factory=lambda: os.getenv("TINI_RERANK_PROVIDER", "none").strip().lower()
+        default_factory=lambda: os.getenv("TINI_RERANK_PROVIDER", "tei").strip().lower()
     )
     rerank_model: str = field(default_factory=lambda: os.getenv("TINI_RERANK_MODEL", "").strip())
     rerank_api_key: str = field(default_factory=_rerank_api_key)
@@ -304,6 +317,20 @@ class Settings:
         default_factory=lambda: tuple(
             code.strip().lower()
             for code in os.getenv("TINI_QUERY_LANGUAGES", "").split(",")
+            if code.strip()
+        )
+    )
+    # Question languages whose questions are translated to English for the RERANKER
+    # only (search still uses the question as asked), e.g. "vi". The reranker reads
+    # the question and a chunk together and scores a Vietnamese question against an
+    # English chunk worse than the same question in English; measured on 49
+    # Vietnamese questions. Costs one small-model call per new question and sends
+    # the QUESTION (never a document) to that model. Empty = off. See
+    # tini/documents/rerank.py.
+    rerank_translate: tuple[str, ...] = field(
+        default_factory=lambda: tuple(
+            code.strip().lower()
+            for code in os.getenv("TINI_RERANK_TRANSLATE", "").split(",")
             if code.strip()
         )
     )
