@@ -23,11 +23,13 @@ class Handle:
 def test_reconcile_restart_remove_and_shutdown(monkeypatch, tmp_path):
     monkeypatch.setenv("TINI_HOME", str(tmp_path))
     calls, handles = [], []
+
     def start():
         calls.append(1)
         handle = Handle()
         handles.append(handle)
         return handle
+
     supervisor = GatewaySupervisor({"telegram": start}, {"telegram": ("TELEGRAM_BOT_TOKEN",)})
     monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "one")
     assert supervisor.reconcile()["telegram"].state is IntegrationState.CONNECTED
@@ -44,12 +46,14 @@ def test_reconcile_restart_remove_and_shutdown(monkeypatch, tmp_path):
 def test_failed_restart_restores_old_gateway(monkeypatch, tmp_path):
     monkeypatch.setenv("TINI_HOME", str(tmp_path))
     starts = []
+
     def start():
         token = os.environ["TELEGRAM_BOT_TOKEN"]
         starts.append(token)
         if token == "bad":
             return None
         return Handle()
+
     supervisor = GatewaySupervisor({"telegram": start}, {"telegram": ("TELEGRAM_BOT_TOKEN",)})
     monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "good")
     supervisor.reconcile()

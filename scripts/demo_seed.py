@@ -33,11 +33,21 @@ FACTS = [
     # The parentheses around each multi-line string are load-bearing, not style:
     # inside a collection, a MISSING COMMA silently glues two entries into one
     # instead of erroring. ruff's ISC004 flags exactly that shape.
-    ("user", ("The user runs the YouTube channel 'Sean's AI Stories' and films implementation "
-              "walkthroughs. His X account is @ShenSeanChen. All of his Chinese social media "
-              "accounts are called 肖恩君Sean.")),
-    ("raj", ("Raj is a close friend who plays really great tennis and always teaches me great "
-             "British slangs!")),
+    (
+        "user",
+        (
+            "The user runs the YouTube channel 'Sean's AI Stories' and films implementation "
+            "walkthroughs. His X account is @ShenSeanChen. All of his Chinese social media "
+            "accounts are called 肖恩君Sean."
+        ),
+    ),
+    (
+        "raj",
+        (
+            "Raj is a close friend who plays really great tennis and always teaches me great "
+            "British slangs!"
+        ),
+    ),
     ("sergey", "Sergey is the close friend who loves swimming and often cooks delicious food!"),
 ]
 EPISODE = ("2026-07-11", "Confirmed the standing Saturday 5 PM swim with Sergey.")
@@ -71,7 +81,7 @@ def main(reset_spend: bool = False) -> None:
     # would leave any live gateway (a running `make telegram`, the dashboard,
     # an open CLI) holding a broken, read-only connection to the old inode.
     for table in ("chat_log", "facts", "episodes"):
-        conn.execute(f"DELETE FROM {table}")   # triggers keep the FTS index in sync
+        conn.execute(f"DELETE FROM {table}")  # triggers keep the FTS index in sync
     conn.commit()
 
     facts, episodes = SqliteFactStore(conn), SqliteEpisodeStore(conn)
@@ -96,19 +106,30 @@ def main(reset_spend: bool = False) -> None:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Reset .tini to a clean demo state.")
-    parser.add_argument("--yes", "-y", action="store_true",
-                        help="required confirmation: yes, wipe .tini (it is backed up first)")
-    parser.add_argument("--reset-spend", action="store_true",
-                        help="also wipe usage.jsonl (the money/token spend ledger)")
+    parser.add_argument(
+        "--yes",
+        "-y",
+        action="store_true",
+        help="required confirmation: yes, wipe .tini (it is backed up first)",
+    )
+    parser.add_argument(
+        "--reset-spend",
+        action="store_true",
+        help="also wipe usage.jsonl (the money/token spend ledger)",
+    )
     args = parser.parse_args()
     if not args.yes:
         # Safety gate: this destroys live memory/traces. Refuse unless the
         # human explicitly confirms with --yes. See CLAUDE.md ("Never wipe runtime
         # data without asking first"). It backs up, but restoring is a hassle.
-        print("REFUSING to run: demo_seed clears .tini (memory, chat, traces"
-              + (", AND spend" if args.reset_spend else "") + ").")
+        print(
+            "REFUSING to run: demo_seed clears .tini (memory, chat, traces"
+            + (", AND spend" if args.reset_spend else "")
+            + ")."
+        )
         print("This is destructive. If you truly mean it, re-run with --yes:")
-        print("    python scripts/demo_seed.py --yes"
-              + (" --reset-spend" if args.reset_spend else ""))
+        print(
+            "    python scripts/demo_seed.py --yes" + (" --reset-spend" if args.reset_spend else "")
+        )
         raise SystemExit(2)
     main(reset_spend=args.reset_spend)

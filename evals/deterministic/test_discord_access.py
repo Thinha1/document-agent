@@ -31,9 +31,15 @@ BUSY_CHANNEL = "777"
 
 def policy(**over):
     """Default posture = nothing configured at all."""
-    base = {"is_dm": False, "author_id": STRANGER, "channel_id": BUSY_CHANNEL,
-            "mentioned": True, "allowed_users": set(), "allowed_channels": set(),
-            "require_mention": True}
+    base = {
+        "is_dm": False,
+        "author_id": STRANGER,
+        "channel_id": BUSY_CHANNEL,
+        "mentioned": True,
+        "allowed_users": set(),
+        "allowed_channels": set(),
+        "require_mention": True,
+    }
     return should_answer(**{**base, **over})
 
 
@@ -68,8 +74,15 @@ def test_an_allowlisted_channel_answers_only_on_a_mention():
 
 
 def test_require_mention_can_be_switched_off_but_only_explicitly():
-    assert policy(allowed_channels={OPEN_CHANNEL}, channel_id=OPEN_CHANNEL,
-                  mentioned=False, require_mention=False) is True
+    assert (
+        policy(
+            allowed_channels={OPEN_CHANNEL},
+            channel_id=OPEN_CHANNEL,
+            mentioned=False,
+            require_mention=False,
+        )
+        is True
+    )
 
 
 def test_allowlisting_one_channel_does_not_open_the_others():
@@ -85,8 +98,13 @@ def test_a_user_allowlist_gates_dms_too():
 
 def test_both_allowlists_must_pass_in_a_channel():
     """User allowlist AND channel allowlist AND mention. Any one failing is a no."""
-    ok = {"allowed_users": {ME}, "allowed_channels": {OPEN_CHANNEL},
-          "author_id": ME, "channel_id": OPEN_CHANNEL, "mentioned": True}
+    ok = {
+        "allowed_users": {ME},
+        "allowed_channels": {OPEN_CHANNEL},
+        "author_id": ME,
+        "channel_id": OPEN_CHANNEL,
+        "mentioned": True,
+    }
     assert policy(**ok) is True
     assert policy(**{**ok, "author_id": STRANGER}) is False
     assert policy(**{**ok, "channel_id": BUSY_CHANNEL}) is False

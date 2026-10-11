@@ -29,11 +29,15 @@ from tini.memory.consolidation import SUMMARIZER_PROMPT, consolidate_if_due
 from tini.memory.episodic.store import SqliteEpisodeStore
 from tini.memory.semantic.store import SqliteFactStore
 
-DISTILLED = json.dumps({
-    "facts": [{"subject": "Alex", "content": "Alex prefers morning meetings."},
-              {"subject": "acme demo", "content": "The Acme demo is on Friday."}],
-    "episode": "Planned the Acme demo with Alex.",
-})
+DISTILLED = json.dumps(
+    {
+        "facts": [
+            {"subject": "Alex", "content": "Alex prefers morning meetings."},
+            {"subject": "acme demo", "content": "The Acme demo is on Friday."},
+        ],
+        "episode": "Planned the Acme demo with Alex.",
+    }
+)
 
 
 @pytest.fixture
@@ -53,7 +57,9 @@ def add_exchanges(conn, n: int) -> None:
     """n exchanges = 2n rows. The threshold counts EXCHANGES, not messages."""
     for i in range(n):
         conn.execute("INSERT INTO chat_log (role, content) VALUES ('user', ?)", (f"msg {i}",))
-        conn.execute("INSERT INTO chat_log (role, content) VALUES ('assistant', ?)", (f"reply {i}",))
+        conn.execute(
+            "INSERT INTO chat_log (role, content) VALUES ('assistant', ?)", (f"reply {i}",)
+        )
     conn.commit()
 
 
@@ -86,8 +92,9 @@ class CountingClient(ScriptedClient):
 
 def run(memory, script, every_n=3):
     memory.client = CountingClient(script)
-    return consolidate_if_due(memory.conn, memory.client, "small-model",
-                              every_n, memory.facts, memory.episodes)
+    return consolidate_if_due(
+        memory.conn, memory.client, "small-model", every_n, memory.facts, memory.episodes
+    )
 
 
 def unconsolidated(conn) -> int:
@@ -135,7 +142,9 @@ def test_facts_and_the_episode_both_land(memory):
     assert run(memory, [response([text_block(DISTILLED)])]) == 2
 
     rows = memory.conn.execute("SELECT subject, content, source FROM facts ORDER BY id").fetchall()
-    assert [r["subject"] for r in rows] == ["alex", "acme demo"], "subjects are normalised lowercase"
+    assert [r["subject"] for r in rows] == ["alex", "acme demo"], (
+        "subjects are normalised lowercase"
+    )
     assert [r["source"] for r in rows] == ["consolidation", "consolidation"], (
         "provenance matters — the dashboard shows which facts the agent inferred "
         "versus which the user stated"
@@ -148,10 +157,16 @@ def test_half_written_facts_are_dropped_not_stored(memory):
     """A fact with no subject or no content is noise. Storing it would put a
     blank row in the user's memory tab that they can see and cannot explain."""
     add_exchanges(memory.conn, 3)
-    partial = json.dumps({"facts": [{"subject": "Alex"},
-                                    {"content": "no subject here"},
-                                    {"subject": "Raj", "content": "Raj plays tennis."}],
-                          "episode": "Talked about friends."})
+    partial = json.dumps(
+        {
+            "facts": [
+                {"subject": "Alex"},
+                {"content": "no subject here"},
+                {"subject": "Raj", "content": "Raj plays tennis."},
+            ],
+            "episode": "Talked about friends.",
+        }
+    )
     run(memory, [response([text_block(partial)])])
     stored = [r["subject"] for r in memory.conn.execute("SELECT subject FROM facts").fetchall()]
     assert stored == ["raj"]
@@ -191,14 +206,19 @@ def test_only_the_rows_it_read_are_marked(memory):
 
     class LateWriter(ScriptedClient):
         def _create(self, **kw):
-            add_exchanges(memory.conn, 1)      # a message lands mid-summary
+            add_exchanges(memory.conn, 1)  # a message lands mid-summary
             return super()._create(**kw)
 
-    consolidate_if_due(memory.conn, LateWriter([response([text_block(DISTILLED)])]),
-                       "small-model", 3, memory.facts, memory.episodes)
+    consolidate_if_due(
+        memory.conn,
+        LateWriter([response([text_block(DISTILLED)])]),
+        "small-model",
+        3,
+        memory.facts,
+        memory.episodes,
+    )
 
-    still_open = memory.conn.execute(
-        "SELECT id FROM chat_log WHERE consolidated = 0").fetchall()
+    still_open = memory.conn.execute("SELECT id FROM chat_log WHERE consolidated = 0").fetchall()
     assert len(still_open) == 2, "the late exchange must still be waiting its turn"
     assert {r["id"] for r in still_open}.isdisjoint({r["id"] for r in seen})
 
@@ -219,8 +239,10 @@ def test_a_summarizer_error_leaves_the_log_untouched(memory):
         def _create(self, **_kw):
             raise RuntimeError("rate limited")
 
-    assert consolidate_if_due(memory.conn, Boom(), "small-model", 3,
-                              memory.facts, memory.episodes) == 0
+    assert (
+        consolidate_if_due(memory.conn, Boom(), "small-model", 3, memory.facts, memory.episodes)
+        == 0
+    )
     assert unconsolidated(memory.conn) == 6, "every row must still be waiting"
     assert memory.conn.execute("SELECT COUNT(*) FROM facts").fetchone()[0] == 0
 

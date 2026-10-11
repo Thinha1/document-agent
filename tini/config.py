@@ -86,9 +86,10 @@ def _ocr_base_url() -> str | None:
 
 def _rerank_api_key() -> str:
     """Dedicated key first, then the provider's own conventional variable.
-    There is deliberately no base-URL setting: a reranker receives document
-    text, so its destination is fixed in tini/documents/rerank.py rather than
-    configurable."""
+    A hosted reranker's destination is deliberately NOT configurable: it
+    receives document text, so it is fixed in tini/documents/rerank.py. The one
+    URL setting (TINI_RERANK_URL) is for a self-hosted reranker and is limited
+    to local addresses there."""
     configured = os.getenv("TINI_RERANK_API_KEY", "").strip()
     if configured:
         return configured
@@ -135,6 +136,14 @@ class Settings:
     ocr_model: str = field(default_factory=lambda: os.getenv("TINI_OCR_MODEL", "").strip())
     ocr_api_key: str = field(default_factory=_ocr_api_key)
     ocr_base_url: str | None = field(default_factory=_ocr_base_url)
+    # Chunk vectors are cached on disk by (provider, model, title, text), so
+    # re-ingesting an unchanged or lightly edited document only embeds the
+    # chunks whose text is new (tini/documents/embeddings.py). On by default;
+    # TINI_EMBEDDING_CACHE=0 turns it off.
+    embedding_cache: bool = field(
+        default_factory=lambda: os.getenv("TINI_EMBEDDING_CACHE", "1").strip().lower()
+        not in {"0", "false", "no", "off"}
+    )
     # A scanned page's OCR call is a multi-second network round trip; pages
     # within one document are independent, so running several at once is a
     # straightforward win. Rendering itself (pypdfium2) stays single-threaded
@@ -144,15 +153,70 @@ class Settings:
     ocr_concurrency: int = field(
         default_factory=lambda: int(os.getenv("TINI_OCR_CONCURRENCY", "4"))
     )
+    # Off by default: not yet measured against the single-prompt OCR flow (see
+    # docs/document-ingestion.md). When on, a scanned page's transcription skips
+    # tables (leaving a `[[TABLE:n]]` marker) and a second, table-only call
+    # extracts them as structured rows instead of a Markdown blob the chunker
+    # cannot tell apart from prose — see tini/documents/ocr.py and chunking.py.
+    # The second call only runs on pages a marker was actually found on.
+    ocr_table_flow: bool = field(
+        default_factory=lambda: os.getenv("TINI_OCR_TABLE_FLOW", "0").strip().lower()
+        in {"1", "true", "yes", "on"}
+    )
+    # A table written as Markdown pipes or aligned plain columns is chunked by ROW
+    # with its header repeated on every chunk, instead of being cut by size like
+    # prose (tini/documents/chunking.py). On by default: measured to fix a table
+    # the prose chunker broke and to leave the nine real DENSO documents' chunks
+    # unchanged. Existing documents keep their old chunks until re-indexed; set
+    # TINI_TABLE_CHUNKING=0 to chunk everything as prose.
+    document_table_chunking: bool = field(
+        default_factory=lambda: os.getenv("TINI_TABLE_CHUNKING", "1").strip().lower()
+        in {"1", "true", "yes", "on"}
+    )
+    # Where dashboard-uploaded ORIGINAL files are kept (tini/documents/
+    # blobstore.py): 'local' (default, under TINI_HOME) or 'minio' (any
+    # S3-compatible server the operator points at). The index itself is
+    # unaffected — this only decides where the source file lives, and is
+    # recorded on the document as its s3:// source_uri.
+    document_storage: str = field(
+        default_factory=lambda: os.getenv("TINI_DOCUMENT_STORAGE", "local").strip().lower()
+    )
+    minio_endpoint: str = field(
+        default_factory=lambda: os.getenv("TINI_MINIO_ENDPOINT", "localhost:9000").strip()
+    )
+    minio_access_key: str = field(
+        default_factory=lambda: os.getenv("TINI_MINIO_ACCESS_KEY", "").strip()
+    )
+    minio_secret_key: str = field(
+        default_factory=lambda: os.getenv("TINI_MINIO_SECRET_KEY", "").strip()
+    )
+    minio_bucket: str = field(
+        default_factory=lambda: os.getenv("TINI_MINIO_BUCKET", "tini-documents").strip()
+    )
+    minio_secure: bool = field(
+        default_factory=lambda: os.getenv("TINI_MINIO_SECURE", "").strip().lower()
+        in {"1", "true", "yes"}
+    )
     # Reranking (tini/documents/rerank.py): retrieve more candidates than
     # needed, then let a second model reorder them against the question.
-    # Off by default. OFF means candidate chunks never leave this machine;
-    # turning on a hosted provider (jev) sends them to that provider.
+    # Default: "tei", the self-hosted bge-reranker-v2-m3 on this machine
+    # (docker compose --profile reranker up -d reranker). Candidate chunks go
+    # only to a local address, and if that server is not running a search falls
+    # back to vector order and counts the failure. "none" turns reranking off;
+    # a hosted provider (jev) sends the chunks to that provider.
     rerank_provider: str = field(
-        default_factory=lambda: os.getenv("TINI_RERANK_PROVIDER", "none").strip().lower()
+        default_factory=lambda: os.getenv("TINI_RERANK_PROVIDER", "tei").strip().lower()
     )
     rerank_model: str = field(default_factory=lambda: os.getenv("TINI_RERANK_MODEL", "").strip())
     rerank_api_key: str = field(default_factory=_rerank_api_key)
+    # Where a SELF-HOSTED reranker (provider "tei") listens. Only a local
+    # address is accepted — loopback or the compose service name — and
+    # make_reranker refuses anything else: a reranker receives document text, so
+    # this must never become a way to send it to another machine. The hosted
+    # provider (jev) has no such setting; its endpoint is fixed in rerank.py.
+    rerank_url: str = field(
+        default_factory=lambda: os.getenv("TINI_RERANK_URL", "").strip() or "http://127.0.0.1:8081"
+    )
     rerank_candidates: int = field(
         default_factory=lambda: int(os.getenv("TINI_RERANK_CANDIDATES", "").strip() or "20")
     )
@@ -232,6 +296,46 @@ class Settings:
     qdrant_collection: str = field(
         default_factory=lambda: os.getenv("TINI_QDRANT_COLLECTION", "").strip()
         or "tini_documents"
+    )
+    # Hybrid retrieval on the Qdrant backend: fuse dense vector search with a
+    # keyword (BM25-style sparse vector) ranking. Off by default: measured on
+    # the DENSO set it did not beat dense-only (docs/document-ingestion.md).
+    document_hybrid: bool = field(
+        default_factory=lambda: os.getenv("TINI_DOCUMENT_HYBRID", "0").strip().lower()
+        in ("1", "true", "yes", "on")
+    )
+    # How the two rankings are fused: "rrf" (rank based; the keyword side's vote
+    # is scaled by TINI_DOCUMENT_LEXICAL_WEIGHT) or "dbsf" (score based).
+    document_fusion: str = field(
+        default_factory=lambda: os.getenv("TINI_DOCUMENT_FUSION", "rrf").strip().lower()
+    )
+    # The languages the documents are written in, e.g. "ja,en,vi". When set, a
+    # question is also searched in its translation into each of them (one
+    # small-model call per new question). Empty = off. See
+    # tini/documents/multilingual.py.
+    query_languages: tuple[str, ...] = field(
+        default_factory=lambda: tuple(
+            code.strip().lower()
+            for code in os.getenv("TINI_QUERY_LANGUAGES", "").split(",")
+            if code.strip()
+        )
+    )
+    # Question languages whose questions are translated to English for the RERANKER
+    # only (search still uses the question as asked), e.g. "vi". The reranker reads
+    # the question and a chunk together and scores a Vietnamese question against an
+    # English chunk worse than the same question in English; measured on 49
+    # Vietnamese questions. Costs one small-model call per new question and sends
+    # the QUESTION (never a document) to that model. Empty = off. See
+    # tini/documents/rerank.py.
+    rerank_translate: tuple[str, ...] = field(
+        default_factory=lambda: tuple(
+            code.strip().lower()
+            for code in os.getenv("TINI_RERANK_TRANSLATE", "").split(",")
+            if code.strip()
+        )
+    )
+    document_lexical_weight: float = field(
+        default_factory=lambda: float(os.getenv("TINI_DOCUMENT_LEXICAL_WEIGHT", "").strip() or "1.0")
     )
 
     # --- Orchestration

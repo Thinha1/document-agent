@@ -1,0 +1,555 @@
+報告セグメント計 6,349,728 110.9
+その他 108,792 135.5
+合計 6,458,520 111.2
+(注) 金額は販売価格によっており、セグメント間の内部振替前の数値によっています。
+
+ⅱ) Orders received
+連結会社はトヨタ自動車株式会社を始めとして、各納入先より四半期ごとに生産計画の提示を受け、連結会社
+の生産能力を勘案して生産計画を立てる等、すべて見込生産を行っています。
+
+ⅲ) Sales results
+当連結会計年度の販売実績をセグメントごとに示すと、次のとおりです。
+Segment name
+Current consolidated fiscal year
+(From April 1, 2022
+To March 31, 2023)
+(Millions of yen)
+Change from previous corresponding period (%)
+Japan 2,509,604 105.6
+North America 1,486,718 130.0
+Europe 624,329 123.3
+Asia 1,680,872 118.8
+Reportable segment total 6,301,523 115.8
+Other 99,797 132.4
+Total 6,401,320 116.1
+(Note) 1. Transactions between segments have been offset and eliminated.
+2. Sales results by major customer and the ratio of such sales results to total sales results are as follows.
+Customer
+Previous consolidated fiscal year
+(From April 1, 2021
+To March 31, 2022)
+Current consolidated fiscal year
+(From April 1, 2022
+To March 31, 2023)
+Amount (Millions of yen) Ratio (%) Amount (Millions of yen) Ratio (%)
+Toyota Motor Corporation 1,483,154 26.9 1,525,936 23.8
+
+EDINET Filing Document
+DENSO Corporation (E01892)
+Securities Report
+31/170
+
+(2) Cash flows
+① Cash flows
+With respect to cash flows, cash and cash equivalents (hereinafter, “funds”) increased by 602.7 billion yen from operating activities, decreased by 363.7 billion yen from investing activities, and decreased by 400.1 billion yen from financing activities. As a result, funds at the end of the current consolidated fiscal year decreased by 134.0 billion yen compared with the previous consolidated fiscal year, to 733.9 billion yen.
+Funds provided by operating activities were 602.7 billion yen, compared with 395.6 billion yen in the previous fiscal year, an increase of 207.1 billion yen. This increase was due to a 72.1 billion yen increase in income before income taxes compared with the previous fiscal year, as well as a decrease of 193.6 billion yen in the increase in inventories, and other factors.
+Funds used in investing activities were 363.7 billion yen, compared with 301.6 billion yen in the previous fiscal year, an increase of 62.1 billion yen. This increase was due to a 24.2 billion yen increase in expenditures for the acquisition of tangible fixed assets, and other factors.
+Funds used in financing activities were 400.1 billion yen, compared with 159.5 billion yen in the previous fiscal year, an increase of 240.6 billion yen. This increase was due to a 139.5 billion yen decrease in the net change in short-term borrowings, as well as a 60.0 billion yen increase in expenditures for the redemption of corporate bonds, and other factors.
+Acquisitions of tangible fixed assets in the current consolidated fiscal year increased 7.2% from 336.4 billion yen in the previous consolidated fiscal year, to 360.6 billion yen. This increase was due to promoting investment while balancing strengthened allocation to priority areas and disciplined business operations.
+
+② Capital resources and liquidity
+With respect to capital resources and liquidity, the basic policy of the consolidated companies is to fund working capital and capital expenditure mainly from internal funds and to procure funds through borrowings or issuance of corporate bonds as necessary.
+In the current consolidated fiscal year, working capital and capital expenditure of the consolidated companies were funded by internal funds and by funds from borrowings and bond issuance.
+Capital expenditures of the consolidated companies are planned to focus on production expansion, next-generation model changes, new product switchovers, and research and development investment for new product development, and will be financed in accordance with the basic policy above.
+The consolidated companies believe that they will be able to procure the working capital and capital expenditure funds necessary to maintain the growth of the consolidated companies in the future, due to their sound financial condition, ability to generate cash flows from operating activities, and other factors.
+
+5 [Important management contracts, etc.]
+There are no applicable matters.
+EDINET Filing Document
+DENSO Corporation (E01892)
+Securities Report
+32/170
+
+6 [Research and development activities]
+Under the DENSO Group 2030 Long-term Policy, with the slogan “We want to deliver a future of smiles to the Earth, society, and all people,” the Group declares that it will contribute to creating a society filled with smiles by maximizing the value provided through “Environment” and “Safety and Security,” as well as by providing new value that earns “empathy” from society.
+In the “Environment” field, the Group is conducting technology development in three areas—“mobility products,” “energy use,” and “manufacturing”—with the aim of achieving carbon neutrality. The Company has developed proprietary SiC power semiconductors with a trench MOS structure that achieve both high breakdown voltage and low on-resistance, significantly reducing power loss due to heat generation. Recently, the Company mass-produced an inverter using these SiC semiconductors (a product that drives and controls electric vehicle motors), and it was adopted in the “RZ,” LEXUS’s first dedicated battery electric vehicle (BEV) model released in March 2023. For mass production, the Company also developed material quality improvement technology to enable stable production at automotive quality. The Company is also expanding electrification technology beyond automobiles, and in May 2022 it was decided that an electric aircraft motor jointly developed with Honeywell International Inc. of the United States would be adopted for the aircraft of Lilium N.V. of Germany, which is developing an electric vertical take-off and landing aircraft. The Company also developed products for residential storage battery systems, and in the “Ouchi Kyuden System” (home power supply system) of Toyota Motor Corporation (hereinafter, “Toyota Motor”), for which orders started in June 2022, the following were adopted: a power supply adapter that links with the vehicle, a computer installed in the storage battery system, a dedicated smartphone application, and a storage battery system server that collects information on the storage battery system. As an example of hydrogen energy use, from March 2023, DENSO Fukushima Corporation, with the support of the New Energy and Industrial Technology Development Organization (NEDO), a national research and development agency, began joint demonstration with Toyota Motor Corporation of the production and use of green hydrogen within a plant. The aim is to promote carbon neutrality and build a local production for local consumption model for hydrogen.
+In the “Safety and Security” field, the Company widened the detection angle of image sensors used in driver assistance in order to recognize pedestrians and bicycles crossing the vehicle’s path earlier. It is said that sudden entries from the roadside account for approximately 70% of traffic accidents involving children aged 12 or younger (Public Interest Incorporated Foundation, Institute for Traffic Accident Research and Data Analysis, “Traffic Statistics, 2019 Edition”). While a wider angle enables detection of more objects, it also increases detections that do not lead to actual danger. By using artificial intelligence (AI) motion estimation and other methods to identify danger, the Company achieved both the benefits of a wider angle and practical usability. It was newly adopted in some grades of the SUBARU “Outback” (North American specifications) announced in April 2022 and in the company’s “Crosstrek” (Japanese specifications) unveiled in September. As another example, in October 2022
+From [month], we have begun a demonstration experiment in Toyota City, Aichi Prefecture, aimed at supporting safe driving by elderly people (Toyota City's traffic fatality zero
+public-private partnership project “Jiko Zero Daisakusen,” which aims for zero traffic fatalities. Jointly with the Toyota Mobility Foundation, Tokio Marine & Nichido Fire Insurance
+Co., Ltd., and the Graduate School of Frontier Sciences, The University of Tokyo). AI is used to analyze video and other data inside and outside the vehicle collected from drive recorders,
+and using an AI driving diagnosis system that provides advice for safe driving, we will verify a method to effectively
+reduce the accident risk of elderly people.
+
+As an example of initiatives to create new value that gains public empathy, while utilizing mobility-related
+assets such as technologies and products cultivated by the DENSO Group, and aiming to develop new services that help solve regional issues and improve convenience in daily life,
+we launched the “DENSO OPEN INNOVATION PROJECT” in May 2022 and began broadly recruiting partner
+companies. One recruitment theme is regional revitalization utilizing a regional information dissemination system. The system “Life Vision” delivers municipal and regional
+information to local residents via smartphones, tablets, etc., and is based on the concepts of “anyone,” “easy,”
+and “reliable,” and has been introduced in 65 municipalities to date. Beyond information distribution, as a platform function for solving diverse regional issues such as disaster prevention, welfare, education, communication,
+mobility, etc., we aim to expand service functions that support daily life.
+The other recruitment theme is use of identity verification combined with QR codes. DENSO
+WAVE INC. holds the technology “Face Recognition SQRC,” which converts facial feature points into QR codes, and we aim to create new solutions and
+markets. By storing facial information in QR codes, in situations where prevention of impersonation is required,
+offline, low-cost, safe and secure identity verification can be performed. Going forward, as a mobility company, manufacturer, and QR code
+inventor, to further demonstrate our expertise, we will analyze society as five flows: “people flow,” “logistics flow,” “energy flow,” “resource flow,” and “data flow,”
+and create what is lacking through technology development and social collaboration.
+
+Group-wide research and development expenses for the current consolidated fiscal year were 521,615 million yen (including capitalized amounts), of which the Japan segment
+accounted for 461,264 million yen, the North America segment 29,602 million yen, the Europe segment 13,432 million yen, the Asia segment 16,267 million yen, and
+other 1,050 million yen. The Japan segment accounted for approximately 88% and plays a central role in research and development activities.
+
+EDINET Filing Document
+DENSO Corporation (E01892)
+Securities Report
+33/170
+3. 【Status of Facilities】
+
+1. 【Overview of Capital Expenditures, etc.】
+The consolidated companies focused on capital investment for production expansion, next-generation model changes, new product switchovers, and new product development, and
+in the current consolidated fiscal year, we made capital expenditures totaling 366,809 million yen: 217,105 million yen in Japan, 52,470 million yen in North America, 22,803 million yen in Europe, 70,190 million yen in Asia, and
+4,241 million yen in other areas. There were no significant disposals, sales or other changes of important facilities in the current consolidated fiscal year.
+
+2. 【Status of Principal Facilities】
+The principal facilities of the consolidated companies are as follows.
+
+(1) Filing Company
+As of March 31, 2023
+Name of business site
+(Location)
+Segment
+name Description of facilities
+Book value (millions of yen)
+Number of employees
+(persons) Buildings and
+structures
+Machinery
+and vehicles
+Land
+(area in thousand m2) Other Total
+Head Office
+(Kariya City, Aichi Prefecture) Japan General administrative facilities and prototype
+facilities 50,034 30,955 5,672
+(303) 20,717 107,378 12,465
+Anjo Plant
+(Anjo City, Aichi Prefecture) 〃
+Electrification
+system and other
+production facilities
+28,229 58,471 9,856
+(576) 6,349 102,905 5,027
+Nishio Plant
+(Nishio City, Aichi Prefecture) 〃
+Thermal system /
+powertrain
+system production facilities
+12,542 58,401 4,702
+(1,284) 6,430 82,075 6,421
+Takabata Plant
+(Anjo City, Aichi Prefecture) 〃
+Mobility electronics
+and other production
+facilities
+6,086 34,273 3,750
+(375) 3,525 47,634 3,120
+Daian Plant
+(Inabe City, Mie Prefecture) 〃
+Powertrain
+systems and advanced
+device production facilities
+12,726 53,082 17,826
+(876) 4,540 88,174 4,430
+Kota Plant
+(Kota Town, Nukata District, Aichi Prefecture) 〃
+Mobility electronics
+and other production
+facilities
+8,834 53,132 8,007
+(302) 6,148 76,121 3,397
+Toyohashi Plant
+(Toyohashi City, Aichi Prefecture) 〃
+Thermal system /
+non-automotive equipment
+production facilities
+2,328 9,625 4,489
+(174) 1,112 17,554 997
+Agui Plant
+(Agui Town, Chita District, Aichi Prefecture) 〃 Non-automotive equipment production
+facilities 2,510 1,050 7,540
+(280) 422 11,522 800
+Zenmyo Plant
+(Nishio City, Aichi Prefecture) 〃 Powertrain system
+production facilities 8,183 30,071 8,618
+(320) 1,431 48,303 1,282
+Kosai Plant
+(Kosai City, Shizuoka Prefecture) 〃
+Electrification
+system
+production facilities
+9,261 26,927 4,073
+(320) 2,915 43,176 3,491
+Toyohashi East Plant
+(Toyohashi City, Aichi Prefecture) 〃 〃 2,236 3,641 5,868
+(179) 214 11,959 740
+Hirose Plant
+(Toyota City, Aichi Prefecture) 〃
+Electrification
+system / mobility
+electronics
+production facilities
+9,901 34,449 5,769
+(247) 2,459 52,578 1,107
+Advanced Technology Research Laboratories
+(Nisshin City, Aichi Prefecture) 〃 R&D facilities 8,608 6,859 3,947
+(81) 1,032 20,446 222
+Abashiri Test Center
+(Abashiri City, Hokkaido) 〃 〃 2,736 0 7,391
+(5,481) 0 10,127 0
+Tokyo Branch Office and others
+(Chuo-ku, Tokyo, etc.) 〃 Sales facilities, etc. 18,128 21,714 28,383
+(1,956) 1,436 69,661 1,259
+Total 182,342 422,650 125,891
+(12,754) 58,730 789,613 44,758
+
+(Note) All of the facilities at the Abashiri Test Center are leased from the Filing Company to DENSO Abashiri Test Center Co., Ltd. (a consolidated subsidiary).
+
+EDINET Filing Document
+DENSO Corporation (E01892)
+Securities Report
+34/170
+
+(2) Domestic Subsidiaries
+As of March 31, 2023
+Company name
+(Location)
+Segment
+name Description of facilities
+Book value (millions of yen)
+Number of employees
+(persons) Buildings and
+structures
+Machinery
+and vehicles
+Land
+(area in thousand m2) Other Total
+DENSO Iwate Co., Ltd.
+(Kanegasaki Town, Isawa District, Iwate Prefecture) Japan
+Mobility electronics
+and advanced
+device production facilities
+11,573 29,983 1,352
+(290) 1,859 44,767 1,125
+Denso Ten Co., Ltd.
+(Hyogo-ku, Kobe City, Hyogo Prefecture) 〃
+Mobility electron-
+ics, electrifi-
+cation systems,
+etc. production
+equipment
+6,723 14,527 3,989
+(148) 3,213 28,452 4,127
+Denso Electron-
+ics Co., Ltd.
+(Anjo City, Aichi Prefecture)
+〃
+Mobility electron-
+ics, electrifi-
+cation system
+production equip-
+ment
+4,779 11,273 1,450
+(77) 1,343 18,845 2,102
+Denso Hokkaido Co., Ltd.
+(Chitose City, Hokkaido) 〃 Advanced device production
+equipment 6,794 8,066 1,894
+(163) 796 17,550 856
+Denso Sankyo Co., Ltd.
+(Sayama City, Saitama Prefecture) 〃 Thermal system
+production equipment 6,918 1,544 8,785
+(73) 180 17,427 318
+Denso Fukushima Co., Ltd.
+(Tamura City, Fukushima Prefecture) 〃 Thermal system,
+etc. production equipment 8,098 4,817 2,598
+(236) 680 16,193 462
+Other 53 companies 〃 - 46,738 54,638 25,265 11,995 138,636 25,556
+Total 91,623 124,848 45,333 20,066 281,870 34,546
+
+(3) Overseas Subsidiaries
+As of March 31, 2023
+Company name
+(Location)
+Segment
+name Description of equipment
+Book value (millions of yen)
+Number of employees
+(persons) Buildings and
+structures
+Machinery, equipment
+and vehicles
+Land
+(area in thousand m²) Other Total
+Denso Manufacturing Tennessee, Inc.
+(Tennessee, U.S.A.)
+North America
+Mobility electron-
+ics, electrifi-
+cation systems,
+etc. production
+equipment
+15,160 47,127 897
+(769) 2,849 66,033 4,363
+Denso Mexico, S.A. de C.V.
+(Nuevo Leon,
+Mexico)
+〃
+Powertrain sys-
+tems and mobility
+electronics, etc.
+production equipment
+9,419 20,259 3,025
+(560) 4,056 36,759 6,774
+Denso Manufac-
+turing Athens,
+Tennessee, Inc.
+(Tennessee, U.S.A.)
+〃
+Powertrain sys-
+tems and thermal
+system production
+equipment
+5,132 16,910 47
+(557) 412 22,501 1,411
+Denso Manufac-
+turing Michigan, Inc.
+(Michigan, U.S.A.)
+〃 Thermal system
+production equipment 5,200 11,342 219
+(389) 774 17,535 2,210
+Denso Internation-
+al America, Inc.
+(Michigan, U.S.A.)
+〃 Sales equipment and R&D
+facility equipment 6,851 2,186 374
+(462) 1,682 11,093 1,531
+Other 15 companies 〃 - 10,657 16,488 2,506 2,266 31,917 6,433
+Denso Manufac-
+turing Czech s.r.o.
+(Liberec, Czech Republic)
+Europe Thermal system
+production equipment 9,128 13,022 705
+(284) 2,573 25,428 2,133
+Denso Thermal Sys-
+tems S.p.A.
+(Turin, Italy)
+〃 〃 4,579 13,411 640
+(170) 3,316 21,946 2,163
+Denso Manufac-
+turing Hungary
+Kft.
+(Hungary, Székes-
+fehérvár City)
+〃
+Powertrain sys-
+tem and electrifi-
+cation system
+production equip-
+ment
+6,470 12,472 329
+(215) 2,085 21,356 3,354
+Denso Barcelona S.A.
+(Barcelona, Spain) 〃
+Mobility electron-
+ics, electrifi-
+cation system
+production equip-
+ment
+3,181 4,449 209
+(80) 813 8,652 833
+Other 23 companies 〃 - 16,886 17,980 4,987 3,286 43,139 5,659
+EDINET filing document
+Denso Corporation (E01892)
+Annual Securities Report
+35/170
+
+Company name
+(Location)
+Segment
+name
+Description of equipment
+Book value (millions of yen)
+Number of employees
+(persons)
+Buildings and
+structures
+Machinery, equipment
+and vehicles
+Land
+(area in thousand m²)
+Other Total
+Tianjin Denso Electronics Co., Ltd.
+(Tianjin, People's Republic of China)
+Asia
+Mobility electron-
+ics, electrifi-
+cation systems,
+etc. production
+equipment
+8,095 27,964
+0
+(150)
+2,944 39,003 2,558
+Denso (Guangzhou Nansha) Co., Ltd.
+(Guangzhou, People's Republic of China)
+〃
+Powertrain sys-
+tems and electrifi-
+cation systems, etc.
+production equipment
+7,287 20,738
+0
+(100)
+3,138 31,163 2,051
+Guangzhou Denso Co., Ltd.
+(Guangzhou, People's Republic of China)
+〃
+Thermal system
+production equipment
+3,792 18,541
+0
+(162)
+6,855 29,188 1,816
+Tianjin Denso Electric Machinery Co., Ltd.
+(Tianjin, People's Republic of China)
+〃
+Electrification
+systems and mobil-
+ity electron-
+ics, etc. production
+equipment
+4,659 14,926
+0
+(103)
+4,461 24,046 1,329
+Denso Korea Co., Ltd.
+(Changwon, Republic of Korea)
+〃
+Powertrain sys-
+tems and electrifi-
+cation systems, etc.
+production equipment
+5,781 4,813
+9,818
+(163)
+2,228 22,640 1,416
+Denso Thailand Co., Ltd.
+(Samut Prakan Province, Thailand)
+〃
+Thermal sys-
+tems and electrifi-
+cation systems, etc.
+production equipment
+5,774 8,674
+2,431
+(313)
+3,892 20,771 2,966
+Other 71 companies 〃 - 42,887 104,591 7,986 22,978 178,442 33,432
+Denso do Brasil
+Ltda.
+(Curitiba, Brazil)
+Other
+Thermal sys-
+tems and electrifi-
+cation systems, etc.
+production equipment
+2,050 3,246
+201
+(192)
+1,253 6,750 1,299
+Other 6 companies 〃 - 1,760 5,703 244 954 8,661 1,537
+Total 174,748 384,842 34,618 72,815 667,023 85,268
+
+(Notes) 1. Of the book values, "Other" consists of tools, fixtures and equipment, etc., and does not include construction in progress of 216,734 million yen.
+2. There are no major idle facilities.
+3. In addition to the above, major rented and leased equipment is as follows.
+
+Filing company
+Office name
+(Location) Segment name Description of equipment Lease period (years) Lease payments
+Head Office
+(Kariya City, Aichi Prefecture) Japan Host computer
+(leased) 7 Annual lease payments
+724 million yen
+
+EDINET filing document
+DENSO Corporation (E01892)
+Securities Report
+36/170
+
+3. [Plan for New Construction, Retirement, etc. of Facilities]
+The capital expenditure plan (new construction and expansion) for the one-year period after the current consolidated fiscal year is 365,000 million yen, and the breakdown by segment is as
+follows.
+Segment name Planned amount (millions of yen) Main content and purpose of facilities, etc. Financing method
+Japan 228,000 Production expansion, next-generation model changes and new product switchover
+response Own funds, borrowings, issuance of corporate bonds
+North America 40,000 〃 〃
+Europe 24,000 〃 〃
+Asia 69,000 〃 〃
+Subtotal 361,000 — —
+Other 4,000 Production expansion, next-generation model changes and new product switchover
+response Own funds, borrowings, issuance of corporate bonds
+Total 365,000 — —
+
+(Note) 1. There are no plans for significant retirement or sale of facilities, apart from retirement or sale for ordinary replacement of facilities.
+2. For the outline of each segment's plans, in addition to responding to production expansion, emphasis is placed on investment necessary for next-generation model changes of products
+that achieve smaller size, lighter weight, and enhanced functions.
+EDINET filing documents
+DENSO Corporation (E01892)
+Securities Report
+37/170
+4. [Status of the Filing Company]
+
+1. [Status of Shares, etc.]
+(1) [Total Number of Shares, etc.]
+① [Total Number of Shares]
+Type Total number of authorized shares (shares)
+Common stock 1,500,000,000
+Total 1,500,000,000
+② [Issued Shares]
+Type
+As of fiscal year-end
+Number of issued shares
+(shares)
+(March 31, 2023)
+As of filing date
+Number of issued shares
+(shares)
+(June 20, 2023)
+Name of listed financial instruments exchange or registered financial
+instruments business association Description
+Common stock 787,944,951 787,944,951
+Tokyo Stock Exchange
+Prime Market
+
+Nagoya Stock Exchange
+Premier Market
+Number of shares per unit
+100 shares
+Total 787,944,951 787,944,951 — —
+
+(2) [Status of Stock Acquisition Rights, etc.]
+① [Details of Stock Option Plan]
+Not applicable.
+
+② [Details of Rights Plan]
+Not applicable.
+
+③ [Status of Other Stock Acquisition Rights, etc.]
+Not applicable.
+
+(3) [Status of Exercise, etc. of Bonds with Stock Acquisition Rights with Exercise Price Adjustment Clause, etc.]
+Not applicable.
+
+(4) [Changes in Total Number of Issued Shares, Capital Stock, etc.]
+Date
+Issued shares
+Increase/decrease in total number
+(shares)
+Issued shares
+Balance of total number
+(shares)
+Capital stock
+Increase/decrease amount
+(millions of yen)
+Capital stock
+Balance
+(millions of yen)
+Capital reserve

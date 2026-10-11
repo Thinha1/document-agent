@@ -24,14 +24,14 @@ def _seed(app, session_id, age_minutes, source="dashboard"):
 def test_recent_dashboard_thread_is_resumed(tmp_path, monkeypatch):
     monkeypatch.setenv("TINI_SESSION_IDLE_MINUTES", "60")
     app = make_tini(tmp_path / "home", client=ScriptedClient([]))
-    _seed(app, "dashboard-20260101-120000", age_minutes=5)     # fresh
+    _seed(app, "dashboard-20260101-120000", age_minutes=5)  # fresh
     assert resume_or_new_session(app.conn) == "dashboard-20260101-120000"
 
 
 def test_idle_thread_is_not_resumed(tmp_path, monkeypatch):
     monkeypatch.setenv("TINI_SESSION_IDLE_MINUTES", "60")
     app = make_tini(tmp_path / "home", client=ScriptedClient([]))
-    _seed(app, "dashboard-20260101-120000", age_minutes=120)   # 2h idle > 60m
+    _seed(app, "dashboard-20260101-120000", age_minutes=120)  # 2h idle > 60m
     got = resume_or_new_session(app.conn)
     assert got != "dashboard-20260101-120000"
     assert got.startswith("dashboard-")
@@ -41,7 +41,7 @@ def test_most_recent_of_several_threads_wins(tmp_path, monkeypatch):
     monkeypatch.setenv("TINI_SESSION_IDLE_MINUTES", "60")
     app = make_tini(tmp_path / "home", client=ScriptedClient([]))
     _seed(app, "dashboard-20260101-090000", age_minutes=40)
-    _seed(app, "dashboard-20260101-100000", age_minutes=10)    # newer
+    _seed(app, "dashboard-20260101-100000", age_minutes=10)  # newer
     assert resume_or_new_session(app.conn) == "dashboard-20260101-100000"
 
 

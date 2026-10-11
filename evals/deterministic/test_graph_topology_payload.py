@@ -12,8 +12,9 @@ from tini.graph.workflows.triage import build_triage_graph, triage_topology
 
 
 def real_graph():
-    return build_triage_graph(classify_fn=lambda m: ("full", ""),
-                              quick_fn=lambda s: "", full_fn=lambda s: None)
+    return build_triage_graph(
+        classify_fn=lambda m: ("full", ""), quick_fn=lambda s: "", full_fn=lambda s: None
+    )
 
 
 def test_topology_payload_matches_the_real_graph():
@@ -39,4 +40,4 @@ def test_topology_has_the_shape_the_readme_promises():
 def test_node_kinds_are_labelled_for_the_chart():
     kinds = {n["name"]: n["kind"] for n in triage_topology()["nodes"]}
     assert kinds["classify"] == "llm"
-    assert kinds["full_agent"] == "agent"      # THE loop, as a node — the story
+    assert kinds["full_agent"] == "agent"  # THE loop, as a node — the story

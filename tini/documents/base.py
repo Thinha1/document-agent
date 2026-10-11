@@ -43,3 +43,11 @@ class DocumentIndex(Protocol):
     def delete_document(self, document_id: str, workspace_id: str = DEFAULT_WORKSPACE) -> bool:
         """Delete a document and all of its chunks within one workspace."""
         ...
+
+    def opening_text(
+        self, document_id: str, workspace_id: str = DEFAULT_WORKSPACE, chars: int = 3000
+    ) -> str:
+        """The first ``chars`` characters of a document as indexed (its first
+        few chunks, in order). Lets the catalog classify a document from what
+        the index already holds, without re-reading the original file."""
+        ...

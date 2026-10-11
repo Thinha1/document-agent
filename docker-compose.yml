@@ -69,6 +69,57 @@ services:
     #                 count: all
     #                 capabilities: [gpu]
 
+  # Optional self-hosted reranker (off by default — a compose profile, so a plain
+  # `docker compose up` is unchanged and nothing is downloaded):
+  #   docker compose --profile reranker up -d reranker
+  # then in .env: TINI_RERANK_PROVIDER=tei. It serves BAAI/bge-reranker-v2-m3
+  # (multilingual cross-encoder, ~2.2 GB downloaded once into reranker_data) behind
+  # Hugging Face text-embeddings-inference's /rerank. Candidate chunks are sent
+  # here on every search, so it is published on loopback only, and tini refuses
+  # any TINI_RERANK_URL that is not local (tini/documents/rerank.py).
+  # This is the CPU image, which works everywhere but is slow for a cross-encoder;
+  # for an NVIDIA GPU use the same git-ignored docker-compose.override.yml as
+  # `ollama` above, swapping the image for the tag matching your card's compute
+  # capability (86 = RTX 30-series) and adding the same `deploy.resources` block:
+  #   services:
+  #     reranker:
+  #       image: ghcr.io/huggingface/text-embeddings-inference:86-1.8
+  reranker:
+    image: ghcr.io/huggingface/text-embeddings-inference:cpu-1.8
+    profiles: ["reranker"]
+    restart: unless-stopped
+    command: ["--model-id", "BAAI/bge-reranker-v2-m3"]
+    ports:
+      - "127.0.0.1:8081:80" # loopback only: never reachable from the LAN
+    volumes:
+      - reranker_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://127.0.0.1/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30 # the first start downloads the model
+
+  # Optional object storage for the ORIGINAL uploaded files (off by default —
+  # a compose profile, so a plain `docker compose up` is unchanged):
+  #   docker compose --profile minio up -d
+  # then in .env: TINI_DOCUMENT_STORAGE=minio, TINI_MINIO_ACCESS_KEY,
+  # TINI_MINIO_SECRET_KEY (and the same two as MINIO_ROOT_USER/PASSWORD below).
+  # No default credentials on purpose: set them in .env or the service refuses to
+  # start (MinIO rejects an empty root user). Console: http://localhost:9001. The S3 API stays inside the compose
+  # network — host port 9000 is the dashboard's.
+  minio:
+    image: quay.io/minio/minio:latest # the Docker Hub minio/minio repo is no longer published
+    profiles: ["minio"]
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${TINI_MINIO_ACCESS_KEY:-}
+      MINIO_ROOT_PASSWORD: ${TINI_MINIO_SECRET_KEY:-}
+    ports:
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+
   tini:
     build: .
     restart: unless-stopped
@@ -84,6 +135,8 @@ services:
       # else unchanged.
       TINI_QDRANT_URL: http://qdrant:6333
       TINI_EMBEDDING_BASE_URL: http://ollama:11434/v1
+      TINI_RERANK_URL: http://reranker:80 # only read when TINI_RERANK_PROVIDER=tei
+      TINI_MINIO_ENDPOINT: minio:9000 # only read when TINI_DOCUMENT_STORAGE=minio
     volumes:
       - tini_home:/app/.tini # memory db, traces, MCP config — see CLAUDE.md
       # Question sets for the dashboard's Retrieval eval are read at run time,
@@ -99,4 +152,6 @@ services:
 volumes:
   qdrant_data:
   ollama_data:
+  reranker_data:
+  minio_data:
   tini_home:

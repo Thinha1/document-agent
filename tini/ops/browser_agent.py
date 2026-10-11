@@ -106,8 +106,9 @@ def maybe_rotate_session(agent) -> None:
     idle_min = int(os.getenv("TINI_SESSION_IDLE_MINUTES", "60"))
     if idle_min <= 0:
         return
-    row = agent.conn.execute("SELECT MAX(created_at) FROM chat_log WHERE session_id=?",
-                             (agent.session.session_id,)).fetchone()
+    row = agent.conn.execute(
+        "SELECT MAX(created_at) FROM chat_log WHERE session_id=?", (agent.session.session_id,)
+    ).fetchone()
     if not row or not row[0]:
         return
     try:  # sqlite datetime('now') is UTC "YYYY-MM-DD HH:MM:SS"
@@ -154,7 +155,7 @@ def rebuild() -> str | None:
             )
             _dashboard_session = fresh.session.session_id
             _agent = fresh
-        except (Exception, SystemExit) as exc:   # get_client raises SystemExit
+        except (Exception, SystemExit) as exc:  # get_client raises SystemExit
             _agent = old
             return str(exc)
     if old is not None:

@@ -8,7 +8,8 @@ let activeView = null, activeSub = null;
 // moved: after the Connections registry took keys, providers and integrations
 // out of that page, what remained was two switches that change how a turn runs,
 // which is a behaviour, not a setting.
-const TITLES = {chat:"Chat & watch", ops:"LLM Ops",
+const TITLES = {chat:"Chat & watch", gateway:"Conversations", loop:"Runs",
+                ops:"Observability",
                 graph:"Graph workflows — structure around the loop",
                 // Keyed by view AND sub for the Arena, now that the sidebar
                 // names the two races separately. A single title covering both
@@ -17,12 +18,16 @@ const TITLES = {chat:"Chat & watch", ops:"LLM Ops",
                 compare:"Arena — race models and memory through the same loop",
                 "compare/models":"Model race — ten brains, one harness",
                 "compare/memory":"Memory race — one brain, five places to put facts",
-                settings:"Behaviour — how a turn runs",
+                evaluations:"Evaluations — evidence before release",
+                settings:"Settings",
+                "settings/providers":"Settings — model providers",
+                "settings/integrations":"Settings — integrations",
+                "settings/behaviour":"Settings — agent behaviour",
                 database:"Database — everything Tini stores (state.db)",
                 documents:"Knowledge Base — ingest, inspect, retrieve"};
 function render(){
   if (!D) return;
-  const [v, subRaw] = (location.hash||"#overview").slice(1).split("/");
+  const [v, subRaw] = (location.hash||"#documents").slice(1).split("/");
   const sub = subRaw || null;
   const view = VIEWS[v] ? v : "overview";
   const subChanged = sub !== activeSub || view !== activeView;
@@ -32,12 +37,14 @@ function render(){
   const effSub = sub || (view === "compare" ? "models" : null);
   document.querySelectorAll("nav a").forEach(a=>a.classList.toggle("on",
     a.dataset.v === view && (!a.dataset.sub || a.dataset.sub === effSub)));
+  const advanced = document.getElementById("nav-advanced");
+  if (advanced && advanced.querySelector("a.on")) advanced.open = true;
   document.getElementById("title").textContent =
     TITLES[`${view}/${effSub}`] || TITLES[view] || view[0].toUpperCase()+view.slice(1);
   if (view === "overview" || view === "graph"){
     // don't rebuild mid-animation or the glowing SVG gets wiped
     if (activeView !== view || !animating){ document.getElementById("view").innerHTML = VIEWS[view](D); }
-  } else if ((view === "memory" || view === "settings" || view === "database" || view === "compare" || view === "models" || view === "connections" || view === "documents") && editing && !subChanged){
+  } else if ((view === "memory" || view === "settings" || view === "database" || view === "compare" || view === "models" || view === "connections" || view === "documents" || view === "evaluations") && editing && !subChanged){
     // don't wipe an in-progress edit on the 5s refresh — but DO switch sub-tabs
   } else {
     editing = false;

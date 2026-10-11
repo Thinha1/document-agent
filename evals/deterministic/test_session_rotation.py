@@ -24,18 +24,18 @@ def test_idle_session_rotates(tmp_path, monkeypatch):
     monkeypatch.setenv("TINI_SESSION_IDLE_MINUTES", "60")
     app = make_tini(tmp_path / "home", client=ScriptedClient([]))
     before = app.session.session_id
-    _seed(app, before, age_minutes=120)          # 2h idle > 60m threshold
+    _seed(app, before, age_minutes=120)  # 2h idle > 60m threshold
     maybe_rotate_session(app)
     assert app.session.session_id != before
     assert app.session.session_id.startswith("dashboard-")
-    assert app.session.history == []             # fresh working memory too
+    assert app.session.history == []  # fresh working memory too
 
 
 def test_active_session_stays(tmp_path, monkeypatch):
     monkeypatch.setenv("TINI_SESSION_IDLE_MINUTES", "60")
     app = make_tini(tmp_path / "home", client=ScriptedClient([]))
     before = app.session.session_id
-    _seed(app, before, age_minutes=5)            # active conversation
+    _seed(app, before, age_minutes=5)  # active conversation
     maybe_rotate_session(app)
     assert app.session.session_id == before
 
@@ -44,7 +44,7 @@ def test_empty_session_stays(tmp_path, monkeypatch):
     monkeypatch.setenv("TINI_SESSION_IDLE_MINUTES", "60")
     app = make_tini(tmp_path / "home", client=ScriptedClient([]))
     before = app.session.session_id
-    maybe_rotate_session(app)                   # no messages at all -> no-op
+    maybe_rotate_session(app)  # no messages at all -> no-op
     assert app.session.session_id == before
 
 
@@ -76,14 +76,18 @@ def test_provider_switch_resets_stale_model_overrides(tmp_path, monkeypatch):
         raise RuntimeError("stop-before-rebuild")
 
     import dotenv
+
     monkeypatch.setattr(dotenv, "set_key", fake_set_key)
     try:
-        settings_api.apply_settings({"provider": "gemini", "model": "kimi-k3",
-                                     "small_model": "kimi-k3", "keys": {}})
+        settings_api.apply_settings(
+            {"provider": "gemini", "model": "kimi-k3", "small_model": "kimi-k3", "keys": {}}
+        )
     except RuntimeError:
         pass
-    assert captured.get("TINI_MODEL", "unset") in ("", "unset") or \
-        captured.get("TINI_PROVIDER") == "gemini"
+    assert (
+        captured.get("TINI_MODEL", "unset") in ("", "unset")
+        or captured.get("TINI_PROVIDER") == "gemini"
+    )
     # the actual contract: stale kimi ids must have been blanked
     assert captured.get("TINI_MODEL") != "kimi-k3"
     assert captured.get("TINI_SMALL_MODEL") != "kimi-k3"

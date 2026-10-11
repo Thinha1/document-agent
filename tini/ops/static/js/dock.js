@@ -129,7 +129,7 @@ function toggleModelMenu(ev){
   const menu = document.createElement("div");
   menu.className = "sessmenu modelmenu"; menu.id = "modelmenu";
   menu.innerHTML = `<div class="mm-h">Your models</div>${items}`
-    + `<div class="mm-f"><a href="#models" onclick="closeModelMenu()">+ add models in Models &rsaquo;</a></div>`;
+    + `<div class="mm-f"><a href="#settings/providers" onclick="closeModelMenu()">+ manage model providers &rsaquo;</a></div>`;
   const r = ev.currentTarget.getBoundingClientRect();
   menu.style.top = (r.bottom + 6) + "px";
   menu.style.left = Math.max(8, r.right - 250) + "px";

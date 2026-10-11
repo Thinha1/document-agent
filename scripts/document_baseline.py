@@ -44,9 +44,20 @@ def _row(name: str, result: dict) -> str:
 
     return (
         f"| {name} | {result['hits']}/{result['total']} ({result['recall']:.1%}) "
+        f"| {_answer_coverage(result)} "
         f"| {groups('by_lang')} | {groups('by_format')} "
         f"| {result['median_latency_ms']} / {result['p95_latency_ms']} ms |"
     )
+
+
+def _answer_coverage(result: dict) -> str:
+    """Cases whose expected answer text is present in the returned chunks. Stricter
+    than the title hit: right document, wrong part of it, does not count."""
+    scored = [c for c in result["cases"] if c.get("keyword_total")]
+    if not scored:
+        return "-"
+    found = sum(1 for c in scored if len(c["keyword_hits"]) == c["keyword_total"])
+    return f"{found}/{len(scored)} ({found / len(scored):.0%})"
 
 
 def _flips(before: dict, after: dict) -> tuple[list[str], list[str]]:
@@ -63,6 +74,11 @@ def main() -> None:
     parser.add_argument("--k", type=int, default=3)
     parser.add_argument("--compare", type=Path, help="an earlier snapshot to diff against")
     parser.add_argument(
+        "--sets",
+        help="comma-separated question set names to run (default: every built-in set except "
+        "synthetic_* ones, which belong to their own workspace)",
+    )
+    parser.add_argument(
         "--rerank",
         choices=["auto", "on", "off"],
         default="auto",
@@ -73,9 +89,16 @@ def main() -> None:
     settings = load_settings()
     workspace = args.workspace or settings.document_workspace
     rerank = {"auto": None, "on": True, "off": False}[args.rerank]
-    sets = [
+    builtin = [
         s["name"] for s in document_eval.list_question_sets(settings) if s["source"] == "built-in"
     ]
+    if args.sets:
+        sets = [n if n.endswith(".jsonl") else f"{n}.jsonl" for n in args.sets.split(",")]
+        unknown = [n for n in sets if n not in builtin]
+        if unknown:
+            raise SystemExit(f"unknown question set(s): {', '.join(unknown)}")
+    else:
+        sets = [n for n in builtin if not n.startswith("synthetic_")]
     if not sets:
         raise SystemExit("no built-in question sets found under evals/documents/")
 
@@ -123,15 +146,22 @@ def main() -> None:
     print(
         f"embedding `{emb['model']}` ({emb['dimensions']}d) · index `{config['index']['backend']}"
         f"/{config['index']['collection']}` · chunk max {config['chunking']['max_tokens']} tokens · "
-        f"k={config['search_k']} · rerank "
+        f"k={config['search_k']} · "
+        f"hybrid {'on' if (config['index'].get('hybrid') or {}).get('enabled') else 'off'} · "
+        f"translate {','.join(config['translate']['languages']) or 'off'} · rerank "
         f"{config['rerank']['provider'] + ' ×' + str(config['rerank']['candidates']) if config['rerank']['enabled'] else 'off'}"
         f" · {len(config['corpus'])} docs, "
         f"{sum(d['chunks'] for d in config['corpus'])} chunks\n"
     )
-    print("| question set | recall@k | by language | by format | latency median / p95 |")
-    print("|---|---|---|---|---|")
+    print("| question set | recall@k | answer in chunks | by language | by format | latency median / p95 |")
+    print("|---|---|---|---|---|---|")
     for name, result in runs.items():
         print(_row(name, result))
+    # A provider outage must not pass as "the feature changed nothing".
+    for name, result in runs.items():
+        for kind, key in (("rerank", "rerank_errors"), ("translation", "translate_errors")):
+            if result.get(key):
+                print(f"\nWARNING {name}: {result[key]} searches fell back ({kind} failed)")
 
     if args.compare:
         previous = json.loads(args.compare.read_text(encoding="utf-8"))

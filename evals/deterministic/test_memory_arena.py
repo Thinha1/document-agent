@@ -28,6 +28,7 @@ from tini.ops.memory_arena import INVENTED, MISS, PASS, STALE
 
 # --- the four outcomes -------------------------------------------------------
 
+
 def test_the_expected_answer_present_is_a_pass():
     probe = {"expect_any": ["leather jacket"]}
     outcome, certain, _ = arena.score("He always wears a leather jacket.", probe)
@@ -80,6 +81,7 @@ def test_inventing_a_deadline_that_was_never_given_is_invented():
 
 # --- the two probe types that need more than a substring ---------------------
 
+
 def test_retrieving_for_arithmetic_fails_even_with_the_right_number():
     """Getting 68 right while quietly searching memory is still wrong
     behaviour, and only tini can be graded on it — the gate is observable."""
@@ -105,14 +107,19 @@ def test_naming_one_party_is_half_a_thought():
 
 # --- the scoreboard ----------------------------------------------------------
 
+
 def test_a_system_that_invents_ranks_below_one_that_misses():
     """Ranking is by worst behaviour, not by score. A confident liar must not
     out-rank an honest 'I don't know' on raw pass count."""
-    rows = arena.scoreboard([
-        {"contestant": "liar", "outcome": PASS}, {"contestant": "liar", "outcome": PASS},
-        {"contestant": "liar", "outcome": INVENTED},
-        {"contestant": "honest", "outcome": PASS}, {"contestant": "honest", "outcome": MISS},
-    ])
+    rows = arena.scoreboard(
+        [
+            {"contestant": "liar", "outcome": PASS},
+            {"contestant": "liar", "outcome": PASS},
+            {"contestant": "liar", "outcome": INVENTED},
+            {"contestant": "honest", "outcome": PASS},
+            {"contestant": "honest", "outcome": MISS},
+        ]
+    )
     assert [r["contestant"] for r in rows] == ["liar", "honest"]
 
 
@@ -175,6 +182,7 @@ def test_the_superseded_fact_was_actually_said_during_seeding():
 
 # --- where the probes come from ----------------------------------------------
 
+
 def test_the_shipped_fixture_is_only_an_example():
     """tini ships the mechanism, not the questions. The bundled probes exist to
     document the format and give this file something to grade; a real benchmark
@@ -186,9 +194,28 @@ def test_the_shipped_fixture_is_only_an_example():
 
 def test_probes_can_be_pointed_somewhere_else(monkeypatch, tmp_path):
     mine = tmp_path / "probes.json"
-    mine.write_text(json.dumps({"tracks": {"mine": {"label": "Mine", "seed": ["hi"], "probes": [
-        {"id": "x", "test": "recall", "question": "?", "expect_any": ["y"], "note": "n"}]}}}),
-        encoding="utf-8")
+    mine.write_text(
+        json.dumps(
+            {
+                "tracks": {
+                    "mine": {
+                        "label": "Mine",
+                        "seed": ["hi"],
+                        "probes": [
+                            {
+                                "id": "x",
+                                "test": "recall",
+                                "question": "?",
+                                "expect_any": ["y"],
+                                "note": "n",
+                            }
+                        ],
+                    }
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
     monkeypatch.setenv(arena.PROBES_ENV, str(mine))
 
     fixture = arena.load_fixture()
@@ -196,7 +223,9 @@ def test_probes_can_be_pointed_somewhere_else(monkeypatch, tmp_path):
     assert arena.fixture_path() == mine
     assert list(fixture["tracks"]) == ["mine"]
     assert fixture["is_example"] is False, "a caller's own probes must not claim to be the example"
-    assert fixture["source"] == str(mine), "the UI names the file it scored, so it cannot be a guess"
+    assert fixture["source"] == str(mine), (
+        "the UI names the file it scored, so it cannot be a guess"
+    )
 
 
 def test_token_counting_reads_the_keys_the_ledger_actually_writes(tmp_path):
@@ -210,7 +239,8 @@ def test_token_counting_reads_the_keys_the_ledger_actually_writes(tmp_path):
         '"model": "claude-fable-5", "kind": "loop", "in": 3164, "out": 94}\n'
         '{"ts": "2026-08-08T23:41:48.028+00:00", "provider": "anthropic", '
         '"model": "claude-fable-5", "kind": "loop", "in": 3241, "out": 92}\n',
-        encoding="utf-8")
+        encoding="utf-8",
+    )
 
     tokens, calls = arena._ledger(tmp_path)
     assert tokens == 3164 + 94 + 3241 + 92
@@ -227,7 +257,7 @@ def test_the_arena_and_the_ledger_writer_agree_on_field_names():
     from tini.ops import tracing
 
     writer = inspect.getsource(tracing)
-    assert 'usage.jsonl' in writer, "the ledger moved — find its new writer"
+    assert "usage.jsonl" in writer, "the ledger moved — find its new writer"
     assert '"in":' in writer and '"out":' in writer, (
         "the usage ledger no longer writes 'in'/'out' — _tokens() must follow it"
     )
@@ -243,15 +273,17 @@ def test_a_ledger_that_is_missing_is_zero_not_a_crash(tmp_path):
 # the whole seed -> probe -> score path with a fake Tini: no model, no keys, no
 # network, and no spend.
 
+
 class _FakeTini:
     """Records what it was told, answers what the script says, and writes the
     same usage.jsonl the real app does — so token accounting is exercised too."""
 
-    built: ClassVar[list] = []   # every instance a run created, so a test can inspect it
-    settles: ClassVar[bool] = True   # what facts.settle() reports back
+    built: ClassVar[list] = []  # every instance a run created, so a test can inspect it
+    settles: ClassVar[bool] = True  # what facts.settle() reports back
 
     def __init__(self, settings=None, **kw):
         from types import SimpleNamespace
+
         self.settings = settings
         self.seen: list[str] = []
         self.home = settings.home
@@ -266,16 +298,21 @@ class _FakeTini:
         # runner must ask after the last seed and before the first probe;
         # anywhere else and it is timing the network instead of the memory.
         self.settled_after: list[int] = []
-        facts = SimpleNamespace(settle=lambda timeout=120.0: (
-            self.settled_after.append(len(self.seen)) or _FakeTini.settles))
+        facts = SimpleNamespace(
+            settle=lambda timeout=120.0: (
+                self.settled_after.append(len(self.seen)) or _FakeTini.settles
+            )
+        )
         self.memory = SimpleNamespace(conn=object(), facts=facts, episodes=object())
         self.cleared_after: list[int] = []
         self.session = SimpleNamespace(
-            start_new=lambda sid: self.cleared_after.append(len(self.seen)))
+            start_new=lambda sid: self.cleared_after.append(len(self.seen))
+        )
         _FakeTini.built.append(self)
 
     def respond(self, message, source="cli", observer=None, **kw):
         from types import SimpleNamespace
+
         self.seen.append(message)
         # every turn costs something, so a per-probe delta is observable
         with (self.home / "usage.jsonl").open("a", encoding="utf-8") as f:
@@ -286,14 +323,31 @@ class _FakeTini:
 
 
 def _arena_fixture(tmp_path):
-    fx = {"tracks": {"t": {"label": "T",
-        "seed": ["fact one", "fact two"],
-        "probes": [
-            {"id": "p-recall", "test": "recall", "question": "q1?",
-             "expect_any": ["alpha"], "note": "n"},
-            {"id": "p-update", "test": "update", "question": "q2?",
-             "expect_any": ["new"], "stale_any": ["old"], "note": "n"},
-        ]}}}
+    fx = {
+        "tracks": {
+            "t": {
+                "label": "T",
+                "seed": ["fact one", "fact two"],
+                "probes": [
+                    {
+                        "id": "p-recall",
+                        "test": "recall",
+                        "question": "q1?",
+                        "expect_any": ["alpha"],
+                        "note": "n",
+                    },
+                    {
+                        "id": "p-update",
+                        "test": "update",
+                        "question": "q2?",
+                        "expect_any": ["new"],
+                        "stale_any": ["old"],
+                        "note": "n",
+                    },
+                ],
+            }
+        }
+    }
     return fx
 
 
@@ -314,9 +368,11 @@ def _offline(monkeypatch, declined=None):
     # which is a suite that passes only on a machine that has never raced.
     # A fresh directory per call restores isolation; the reuse behaviour gets
     # its own test below, where the home is pinned deliberately.
-    monkeypatch.setattr(arena, "arena_home",
-                        lambda backend, track, seed, model:
-                        Path(tempfile.mkdtemp(prefix=f"arena-test-{backend}-")))
+    monkeypatch.setattr(
+        arena,
+        "arena_home",
+        lambda backend, track, seed, model: Path(tempfile.mkdtemp(prefix=f"arena-test-{backend}-")),
+    )
 
 
 def _run(monkeypatch, tmp_path, script, gate=False, backends=("sqlite",)):
@@ -328,8 +384,9 @@ def _run(monkeypatch, tmp_path, script, gate=False, backends=("sqlite",)):
     monkeypatch.setattr(tini.app, "Tini", _FakeTini)
     _offline(monkeypatch)
     events = []
-    arena.run_arena(list(backends), "t", lambda k, e: events.append((k, e)),
-                    fixture=_arena_fixture(tmp_path))
+    arena.run_arena(
+        list(backends), "t", lambda k, e: events.append((k, e)), fixture=_arena_fixture(tmp_path)
+    )
     return events
 
 
@@ -360,6 +417,7 @@ def test_a_backend_that_blows_up_does_not_take_the_others_with_it(monkeypatch, t
     """A missing key or a service outage is a fact about that contestant, not a
     reason to lose everyone else's results."""
     import tini.app
+
     _FakeTini.script = {"q1?": "alpha", "q2?": "the new one"}
     _FakeTini.gate = False
     real_init = _FakeTini.__init__
@@ -373,8 +431,12 @@ def test_a_backend_that_blows_up_does_not_take_the_others_with_it(monkeypatch, t
     monkeypatch.setattr(tini.app, "Tini", _FakeTini)
     _offline(monkeypatch)
     events = []
-    arena.run_arena(["boom", "sqlite"], "t", lambda k, e: events.append((k, e)),
-                    fixture=_arena_fixture(tmp_path))
+    arena.run_arena(
+        ["boom", "sqlite"],
+        "t",
+        lambda k, e: events.append((k, e)),
+        fixture=_arena_fixture(tmp_path),
+    )
 
     assert [e["contestant"] for k, e in events if k == "failed"] == ["boom"]
     assert {e["contestant"] for k, e in events if k == "probe"} == {"sqlite"}
@@ -386,11 +448,20 @@ def test_the_gate_decision_reaches_the_scorer(monkeypatch, tmp_path):
     """Only tini can be graded on 'did you search memory for arithmetic', and
     that only works if the observer's gate event actually gets through."""
     fx = _arena_fixture(tmp_path)
-    fx["tracks"]["t"]["probes"] = [{"id": "p-gate", "test": "restraint", "question": "q1?",
-                                    "expect_any": ["68"], "expect_retrieval": False, "note": "n"}]
+    fx["tracks"]["t"]["probes"] = [
+        {
+            "id": "p-gate",
+            "test": "restraint",
+            "question": "q1?",
+            "expect_any": ["68"],
+            "expect_retrieval": False,
+            "note": "n",
+        }
+    ]
     import tini.app
+
     _FakeTini.script = {"q1?": "68"}
-    _FakeTini.gate = True          # it retrieved when it should not have
+    _FakeTini.gate = True  # it retrieved when it should not have
     monkeypatch.setattr(tini.app, "Tini", _FakeTini)
     _offline(monkeypatch)
     events = []
@@ -403,15 +474,18 @@ def test_the_gate_decision_reaches_the_scorer(monkeypatch, tmp_path):
 def test_the_live_store_is_never_switched(monkeypatch, tmp_path):
     """Each contestant runs in its own throwaway home. Moving a real user's
     memory sideways to answer a benchmark question is not an acceptable trade."""
-    events = _run(monkeypatch, tmp_path, {"q1?": "alpha", "q2?": "the new one"},
-                  backends=("sqlite", "mem0"))
+    events = _run(
+        monkeypatch, tmp_path, {"q1?": "alpha", "q2?": "the new one"}, backends=("sqlite", "mem0")
+    )
     homes = {e["contestant"] for k, e in events if k == "start"}
     assert homes == {"sqlite", "mem0"}
     from tini.config import load_settings
+
     assert load_settings().semantic_store == "sqlite", "the real config must be untouched"
 
 
 # --- the two fixes this file exists to hold in place -------------------------
+
 
 def test_the_conversation_is_cleared_before_any_probe_is_asked(monkeypatch, tmp_path):
     """history_turns is 12 (24 messages), and a track seeds far fewer than that,
@@ -432,8 +506,23 @@ def test_an_unreachable_judge_leaves_the_heuristic_verdict_alone(monkeypatch, tm
     """adjudicate_refusal returns None when the referee cannot be reached. That
     must not be read as either verdict — an unavailable judge cannot turn "I
     could not check" into "it passed" or "it lied"."""
-    fx = {"tracks": {"t": {"label": "T", "seed": ["s"], "probes": [
-        {"id": "p", "test": "restraint", "question": "q?", "expect_refusal": True, "note": "n"}]}}}
+    fx = {
+        "tracks": {
+            "t": {
+                "label": "T",
+                "seed": ["s"],
+                "probes": [
+                    {
+                        "id": "p",
+                        "test": "restraint",
+                        "question": "q?",
+                        "expect_refusal": True,
+                        "note": "n",
+                    }
+                ],
+            }
+        }
+    }
     import tini.app
 
     _FakeTini.script = {"q?": "Pikachu loves ketchup."}
@@ -451,8 +540,23 @@ def test_the_judge_overrules_a_phrase_the_list_never_had(monkeypatch, tmp_path):
     """The live miss: LangMem replied "Nothing shared about Pikachu's food
     preferences" — a correct refusal — and scored INVENTED, because _REFUSALS
     holds "nothing about" and not "nothing shared"."""
-    fx = {"tracks": {"t": {"label": "T", "seed": ["s"], "probes": [
-        {"id": "p", "test": "restraint", "question": "q?", "expect_refusal": True, "note": "n"}]}}}
+    fx = {
+        "tracks": {
+            "t": {
+                "label": "T",
+                "seed": ["s"],
+                "probes": [
+                    {
+                        "id": "p",
+                        "test": "restraint",
+                        "question": "q?",
+                        "expect_refusal": True,
+                        "note": "n",
+                    }
+                ],
+            }
+        }
+    }
     import tini.app
 
     _FakeTini.script = {"q?": "Nothing shared about Pikachu's food preferences."}
@@ -470,8 +574,9 @@ def test_the_control_contestant_is_never_seeded(monkeypatch, tmp_path):
     """The control is told nothing and asked everything. If it is ever handed
     the seed, it stops being a control and silently agrees with whatever the
     other columns say."""
-    events = _run(monkeypatch, tmp_path, {"q1?": "alpha", "q2?": "the new one"},
-                  backends=(arena.CONTROL,))
+    events = _run(
+        monkeypatch, tmp_path, {"q1?": "alpha", "q2?": "the new one"}, backends=(arena.CONTROL,)
+    )
     assert [e["line"] for k, e in events if k == "seeded"] == [], (
         "the control must receive no facts at all"
     )
@@ -484,8 +589,9 @@ def test_a_probe_the_control_passes_is_reported_as_leaked(monkeypatch, tmp_path)
     """A probe the model can answer with no memory measures training data, not
     the store. Three of the dinner track's seven did exactly that, and nothing
     on screen said so — which is the whole reason this contestant exists."""
-    events = _run(monkeypatch, tmp_path, {"q1?": "alpha", "q2?": "nothing useful"},
-                  backends=(arena.CONTROL,))
+    events = _run(
+        monkeypatch, tmp_path, {"q1?": "alpha", "q2?": "nothing useful"}, backends=(arena.CONTROL,)
+    )
     done = next(e for k, e in events if k == "done")
     assert done["leaked"] == ["p-recall"], (
         "p-recall was answered without any memory, so it must be named a leak; "
@@ -500,14 +606,38 @@ def test_probes_designed_to_need_no_memory_are_not_called_leaks(monkeypatch, tmp
     which is passed BY declining, and a contestant with nothing stored declines
     every time). Flagging those would fire in every run forever and mean
     nothing — the badge has to stay rare enough to be worth reading."""
-    fx = {"tracks": {"t": {"label": "T", "seed": ["s"], "probes": [
-        {"id": "p-arith", "test": "restraint", "question": "q1?",
-         "expect_any": ["68"], "expect_retrieval": False, "note": "n"},
-        {"id": "p-decline", "test": "restraint", "question": "q2?",
-         "expect_refusal": True, "note": "n"},
-        {"id": "p-real", "test": "recall", "question": "q3?",
-         "expect_any": ["alpha"], "note": "n"},
-    ]}}}
+    fx = {
+        "tracks": {
+            "t": {
+                "label": "T",
+                "seed": ["s"],
+                "probes": [
+                    {
+                        "id": "p-arith",
+                        "test": "restraint",
+                        "question": "q1?",
+                        "expect_any": ["68"],
+                        "expect_retrieval": False,
+                        "note": "n",
+                    },
+                    {
+                        "id": "p-decline",
+                        "test": "restraint",
+                        "question": "q2?",
+                        "expect_refusal": True,
+                        "note": "n",
+                    },
+                    {
+                        "id": "p-real",
+                        "test": "recall",
+                        "question": "q3?",
+                        "expect_any": ["alpha"],
+                        "note": "n",
+                    },
+                ],
+            }
+        }
+    }
     import tini.app
 
     _FakeTini.script = {"q1?": "68", "q2?": "I don't have that saved.", "q3?": "alpha"}
@@ -542,7 +672,7 @@ def test_store_is_asked_to_settle_between_seeding_and_probing(tmp_path, monkeypa
     """
     import tini.app
 
-    fx = _arena_fixture(tmp_path)          # 2 seed lines, 2 probes
+    fx = _arena_fixture(tmp_path)  # 2 seed lines, 2 probes
     _FakeTini.script = {"q1?": "alpha", "q2?": "new"}
     _FakeTini.gate = True
     _FakeTini.built = []
@@ -574,12 +704,12 @@ def test_a_store_that_never_settles_says_so_instead_of_scoring_silently(tmp_path
     _FakeTini.script = {"q1?": "alpha", "q2?": "new"}
     _FakeTini.gate = True
     _FakeTini.built = []
-    _FakeTini.settles = False            # the store never confirms
+    _FakeTini.settles = False  # the store never confirms
     monkeypatch.setattr(tini.app, "Tini", _FakeTini)
     _offline(monkeypatch)
     events = []
     arena.run_arena(["sqlite"], "t", lambda k, e: events.append((k, e)), fixture=fx)
-    _FakeTini.settles = True             # do not leak the flag into other tests
+    _FakeTini.settles = True  # do not leak the flag into other tests
 
     warnings = [e for k, e in events if k == "warn"]
     assert warnings, "a store that never confirmed readiness must emit a warning"
@@ -617,9 +747,7 @@ def test_the_control_reports_why_it_is_empty_instead_of_crashing():
     rows = arena.store_contents()
     control = [r for r in rows if r["store"] == arena.CONTROL]
     assert control, "the control must still appear — its emptiness is the lesson"
-    assert not control[0]["error"], (
-        f"the control must not report an error: {control[0]['error']}"
-    )
+    assert not control[0]["error"], f"the control must not report an error: {control[0]['error']}"
     assert "by design" in control[0]["note"], control[0]["note"]
 
 
@@ -636,7 +764,7 @@ def test_a_store_already_told_is_not_told_again(tmp_path, monkeypatch):
     """
     import tini.app
 
-    fx = _arena_fixture(tmp_path)          # 2 seed lines, 2 probes
+    fx = _arena_fixture(tmp_path)  # 2 seed lines, 2 probes
     home = tmp_path / "pinned"
     _FakeTini.script = {"q1?": "alpha", "q2?": "new"}
     _FakeTini.gate = True
@@ -659,7 +787,8 @@ def test_a_store_already_told_is_not_told_again(tmp_path, monkeypatch):
 
 
 def test_a_home_is_only_marked_ready_once_the_store_confirms_it_is_searchable(
-        tmp_path, monkeypatch):
+    tmp_path, monkeypatch
+):
     """The marker goes last, after settle(). A home marked ready while the store
     was still filing would be reused by the NEXT race and probed mid-ingest —
     turning one race condition into a permanent, cached one."""
@@ -670,7 +799,7 @@ def test_a_home_is_only_marked_ready_once_the_store_confirms_it_is_searchable(
     _FakeTini.script = {"q1?": "alpha", "q2?": "new"}
     _FakeTini.gate = True
     _FakeTini.built = []
-    _FakeTini.settles = False            # the store never confirms
+    _FakeTini.settles = False  # the store never confirms
     monkeypatch.setattr(tini.app, "Tini", _FakeTini)
     _offline(monkeypatch)
     monkeypatch.setattr(arena, "arena_home", lambda *a, **k: home)
@@ -766,6 +895,7 @@ def test_a_partition_that_was_already_gone_is_not_an_error():
 
     Reporting "already gone" as failure trains you to ignore the error line —
     and the day it says something real, you ignore that too."""
+
     class _Gone(Exception):
         status_code = 404
 
@@ -794,8 +924,9 @@ def test_the_panel_reads_the_races_hosted_partition_too(monkeypatch):
             return []
 
     monkeypatch.setattr(arena, "_available_backends", lambda: ["mem0"])
-    monkeypatch.setattr("tini.memory.Memory._make_fact_store",
-                        staticmethod(lambda conn, settings: _Store()))
+    monkeypatch.setattr(
+        "tini.memory.Memory._make_fact_store", staticmethod(lambda conn, settings: _Store())
+    )
     monkeypatch.delenv("MEM0_USER_ID", raising=False)
 
     rows = arena.store_contents(track="example", model="test:model")
@@ -868,7 +999,7 @@ def test_an_already_told_store_emits_one_cached_event_not_a_fake_count(tmp_path,
     animate through a telling phase it was not doing."""
     import tini.app
 
-    fx = _arena_fixture(tmp_path)          # 2 seed lines
+    fx = _arena_fixture(tmp_path)  # 2 seed lines
     home = tmp_path / "pinned"
     _FakeTini.script = {"q1?": "alpha", "q2?": "new"}
     _FakeTini.gate = True
@@ -878,7 +1009,7 @@ def test_an_already_told_store_emits_one_cached_event_not_a_fake_count(tmp_path,
     monkeypatch.setattr(arena, "arena_home", lambda *a, **k: home)
 
     _FakeTini.built = []
-    arena.run_arena(["sqlite"], "t", lambda k, e: None, fixture=fx)   # first: seeds
+    arena.run_arena(["sqlite"], "t", lambda k, e: None, fixture=fx)  # first: seeds
 
     events = []
     _FakeTini.built = []

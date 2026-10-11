@@ -57,11 +57,18 @@ def run_triage(observer=None, message: str = "") -> dict:
         result = agent._respond_via_graph(text, notify, stream=False)
 
     if result is None:
-        return {"digest": ("The graph produced no answer, so a real turn would have "
-                           "fallen open to the plain loop — that is the fail-open rule "
-                           "working."), **seen}
+        return {
+            "digest": (
+                "The graph produced no answer, so a real turn would have "
+                "fallen open to the plain loop — that is the fail-open rule "
+                "working."
+            ),
+            **seen,
+        }
     door = "quick" if seen.get("route") == "quick_reply" else "full"
-    header = (f"**{door} door** — {seen.get('reason', '')}\n\n"
-              if seen.get("route") else "")
-    return {"digest": header + result.reply,
-            "route": seen.get("route"), "reason": seen.get("reason")}
+    header = f"**{door} door** — {seen.get('reason', '')}\n\n" if seen.get("route") else ""
+    return {
+        "digest": header + result.reply,
+        "route": seen.get("route"),
+        "reason": seen.get("reason"),
+    }

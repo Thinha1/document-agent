@@ -15,7 +15,7 @@ def _gate_skip():
 
 
 def test_prompt_history_is_windowed(tmp_path, monkeypatch):
-    monkeypatch.setenv("TINI_HISTORY_TURNS", "3")   # keep only last 3 turns
+    monkeypatch.setenv("TINI_HISTORY_TURNS", "3")  # keep only last 3 turns
     sent = []
 
     class Recorder(ScriptedClient):
@@ -39,7 +39,7 @@ def test_prompt_history_is_windowed(tmp_path, monkeypatch):
     assert len(last) <= 3 * 2 + 1, f"window not applied: {len(last)} messages"
     text_blob = " ".join(str(m.get("content", "")) for m in last)
     assert "message number 0" not in text_blob
-    assert "message number 4" in text_blob   # the newest turn is present
+    assert "message number 4" in text_blob  # the newest turn is present
 
 
 def test_default_window_is_generous_but_finite(tmp_path, monkeypatch):

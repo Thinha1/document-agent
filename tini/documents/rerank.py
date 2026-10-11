@@ -6,20 +6,31 @@ A reranker reads the question and each candidate together and reorders them.
 `RerankingIndex` wraps any `DocumentIndex`, so the agent's `search_documents`
 tool, the CLI and the dashboard all get it without knowing.
 
-Off by default (`TINI_RERANK_PROVIDER=none`). The one provider so far is Jev,
-TypeSafe's hosted "System One" decision model — chosen because it is being
-evaluated, not because it is a purpose-built reranker (the docs describe
+Off by default (`TINI_RERANK_PROVIDER=none`). Two providers:
+
+`tei` — a self-hosted cross-encoder behind Hugging Face text-embeddings-
+inference's `/rerank` endpoint (docker-compose.yml's `reranker` profile runs
+BAAI/bge-reranker-v2-m3, multilingual, on the same GPU as the embedder). Nothing
+leaves the machine:
+
+    TINI_RERANK_PROVIDER=tei
+    # TINI_RERANK_URL=http://127.0.0.1:8081   # local addresses only, see below
+    TINI_RERANK_CANDIDATES=20
+
+`jev` — TypeSafe's hosted "System One" decision model, chosen because it was
+being evaluated, not because it is a purpose-built reranker (the docs describe
 typed decisions with calibrated probabilities, not reranking):
 
     TINI_RERANK_PROVIDER=jev
     TYPESAFE_API_KEY=...        # or TINI_RERANK_API_KEY
-    TINI_RERANK_CANDIDATES=20
 
-PRIVACY: this sends the question and the candidate chunks' TEXT to
-api.typesafe.ai on every search. The endpoint is fixed in this file on
+PRIVACY: `jev` sends the question and the candidate chunks' TEXT to
+api.typesafe.ai on every search. Its endpoint is fixed in this file on
 purpose — a setting that could point document text somewhere else is a
-setting that can quietly exfiltrate it. If chunks must stay on the machine,
-leave the provider at `none` and use a self-hosted reranker instead.
+setting that can quietly exfiltrate it. `tei` does have a URL setting, so the
+same rule is enforced differently: `local_rerank_url` accepts only loopback or
+the compose service name and refuses every other host, so the setting cannot be
+used to send text off the machine.
 
 Request shape (docs.typesafe.ai/api.md): POST /v1/systemone with
 `state` (the content), `model`, and `questions`. One `noul` (yes/no) question
@@ -38,8 +49,9 @@ from __future__ import annotations
 import json
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import replace
 from typing import Protocol
 
@@ -57,6 +69,13 @@ JEV_ENDPOINT = "https://api.typesafe.ai/v1/systemone"
 JEV_DEFAULT_MODEL = "jev-latest"
 JEV_MAX_DOCS_PER_CALL = 30
 PASSAGE_CHAR_LIMIT = 2000
+# text-embeddings-inference rejects a /rerank request with more texts than its
+# --max-client-batch-size (32 by default); candidates can go up to 50.
+TEI_MAX_TEXTS_PER_CALL = 32
+TEI_DEFAULT_MODEL = "BAAI/bge-reranker-v2-m3"  # what docker-compose.yml serves
+# The only hosts a self-hosted reranker may live on: this machine, or the
+# `reranker` service on the compose network.
+LOCAL_RERANK_HOSTS = frozenset({"127.0.0.1", "localhost", "::1", "reranker"})
 RETRY_STATUS = {429, 529}
 MAX_RETRIES = 2
 
@@ -153,6 +172,97 @@ class JevReranker:
         raise RerankError("Jev request failed after retries")  # pragma: no cover
 
 
+def local_rerank_url(url: str) -> str:
+    """The base URL of a self-hosted reranker, or ValueError if it is not local.
+
+    Chunk text is sent to this address on every search, so it must be this
+    machine or the compose service — never another host, whatever the setting
+    says. The host is compared as parsed (not by substring), so
+    `http://localhost@evil.example` and `http://localhost.evil.example` are both
+    refused; credentials in the URL and any path are refused too."""
+    try:
+        parsed = urllib.parse.urlsplit(url.strip())
+        host = (parsed.hostname or "").lower()
+        parsed.port  # noqa: B018 - raises ValueError on a malformed port
+    except ValueError as exc:
+        raise ValueError(f"TINI_RERANK_URL is not a valid URL: {exc}") from exc
+    if parsed.scheme not in {"http", "https"} or parsed.username or parsed.password:
+        raise ValueError("TINI_RERANK_URL must be a plain http(s) URL without credentials")
+    if host not in LOCAL_RERANK_HOSTS:
+        raise ValueError(
+            f"TINI_RERANK_URL host {host or '(none)'!r} is not local: a reranker receives "
+            f"document text, so only {', '.join(sorted(LOCAL_RERANK_HOSTS))} are accepted"
+        )
+    if parsed.path not in {"", "/"} or parsed.query or parsed.fragment:
+        raise ValueError("TINI_RERANK_URL must be a bare address such as http://127.0.0.1:8081")
+    return f"{parsed.scheme}://{parsed.netloc}"
+
+
+class TeiReranker:
+    """A cross-encoder served by Hugging Face text-embeddings-inference.
+
+    Unlike a bi-encoder (which is what vector search uses: question and chunk
+    embedded separately, compared by distance), a cross-encoder reads the question
+    and one candidate TOGETHER, so it can tell "near" from "answers it". Scores
+    are per (question, passage) pair and independent of the other candidates,
+    which is why batches of one search can be scored in separate calls and still
+    be compared with each other."""
+
+    provider = "tei"
+
+    def __init__(self, url: str, model: str = TEI_DEFAULT_MODEL, timeout: float = 30.0):
+        self.url = local_rerank_url(url)
+        self.model = model or TEI_DEFAULT_MODEL  # informational: the server decides
+        self.timeout = timeout
+
+    def rerank(self, query: str, passages: Sequence[str]) -> list[float]:
+        scores: list[float] = []
+        for start in range(0, len(passages), TEI_MAX_TEXTS_PER_CALL):
+            scores.extend(self._score_batch(query, passages[start : start + TEI_MAX_TEXTS_PER_CALL]))
+        return scores
+
+    def _score_batch(self, query: str, batch: Sequence[str]) -> list[float]:
+        # truncate: a chunk longer than the model's window is cut, not an error.
+        payload = self._post({"query": query, "texts": list(batch), "truncate": True})
+        if not isinstance(payload, list):
+            raise RerankError("reranker returned something other than a list of scores")
+        scores: list[float | None] = [None] * len(batch)
+        for entry in payload:
+            index = entry.get("index") if isinstance(entry, dict) else None
+            score = entry.get("score") if isinstance(entry, dict) else None
+            if not isinstance(index, int) or not 0 <= index < len(batch):
+                raise RerankError(f"reranker returned an unusable index: {index!r}")
+            if not isinstance(score, int | float):
+                raise RerankError(f"reranker returned no score for passage {index}")
+            scores[index] = float(score)
+        if any(score is None for score in scores):
+            raise RerankError(f"reranker scored {sum(s is not None for s in scores)} of {len(batch)} passages")
+        return [float(score) for score in scores]
+
+    def _post(self, body: dict):
+        request = urllib.request.Request(
+            f"{self.url}/rerank",
+            data=json.dumps(body).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        for attempt in range(MAX_RETRIES + 1):
+            try:
+                with urllib.request.urlopen(request, timeout=self.timeout) as response:
+                    return json.loads(response.read().decode("utf-8"))
+            except urllib.error.HTTPError as exc:
+                if exc.code in {429, 503} and attempt < MAX_RETRIES:  # overloaded / still warming up
+                    _sleep(0.5 * (2**attempt))
+                    continue
+                detail = exc.read().decode("utf-8", errors="replace")[:200]
+                raise RerankError(f"reranker request failed ({exc.code}): {detail}") from exc
+            except (OSError, ValueError) as exc:
+                raise RerankError(
+                    f"reranker at {self.url} is not reachable: {type(exc).__name__}: {exc}"
+                ) from exc
+        raise RerankError("reranker request failed after retries")  # pragma: no cover
+
+
 def make_reranker(settings: Settings) -> Reranker | None:
     provider = settings.rerank_provider.strip().lower()
     if provider in {"", "none"}:
@@ -161,6 +271,8 @@ def make_reranker(settings: Settings) -> Reranker | None:
         if not settings.rerank_api_key:
             raise ValueError("TINI_RERANK_API_KEY or TYPESAFE_API_KEY is required for Jev")
         return JevReranker(settings.rerank_api_key, settings.rerank_model)
+    if provider == "tei":
+        return TeiReranker(settings.rerank_url, settings.rerank_model)
     raise ValueError(f"Unsupported rerank provider: {provider}")
 
 
@@ -172,10 +284,21 @@ class RerankingIndex:
     dashboard can say the numbers include unranked results, instead of a
     provider outage quietly looking like "reranking changed nothing"."""
 
-    def __init__(self, inner, reranker: Reranker, candidates: int = 20):
+    def __init__(
+        self,
+        inner,
+        reranker: Reranker,
+        candidates: int = 20,
+        rewrite_query: Callable[[str], str] | None = None,
+    ):
         self.inner = inner
         self.reranker = reranker
         self.candidates = max(1, min(int(candidates), 50))
+        # Turns the question into the one the reranker reads (search keeps the
+        # original). Used to score Vietnamese questions in English; any failure
+        # falls back to the question as asked.
+        self.rewrite_query = rewrite_query
+        self.rewritten = 0
         self.errors = 0
         self.last_error = ""
 
@@ -192,6 +315,11 @@ class RerankingIndex:
     def delete_document(self, document_id: str, workspace_id: str = DEFAULT_WORKSPACE) -> bool:
         return self.inner.delete_document(document_id, workspace_id)
 
+    def opening_text(
+        self, document_id: str, workspace_id: str = DEFAULT_WORKSPACE, chars: int = 3000
+    ) -> str:
+        return self.inner.opening_text(document_id, workspace_id, chars)
+
     def search(
         self, query: str, top_k: int = 6, workspace_id: str = DEFAULT_WORKSPACE
     ) -> list[SearchHit]:
@@ -202,7 +330,7 @@ class RerankingIndex:
         if len(pool) <= 1:
             return pool[:limit]
         try:
-            scores = self.reranker.rerank(query, [hit.text for hit in pool])
+            scores = self.reranker.rerank(self._rerank_query(query), [hit.text for hit in pool])
             if len(scores) != len(pool):
                 raise RerankError(f"expected {len(pool)} scores, got {len(scores)}")
         except RerankError as exc:
@@ -211,6 +339,18 @@ class RerankingIndex:
             return pool[:limit]
         ranked = sorted(range(len(pool)), key=lambda n: (-scores[n], n))
         return [replace(pool[n], score=scores[n]) for n in ranked[:limit]]
+
+    def _rerank_query(self, query: str) -> str:
+        if self.rewrite_query is None:
+            return query
+        try:
+            rewritten = self.rewrite_query(query)
+        except Exception:  # a translation problem must never fail a search
+            return query
+        if rewritten and rewritten != query:
+            self.rewritten += 1
+            return rewritten
+        return query
 
     def __getattr__(self, name: str):
         # embedder, collection, conn... — whatever the wrapped index exposes.

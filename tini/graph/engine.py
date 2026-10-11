@@ -54,8 +54,8 @@ class GraphStateCollision(Exception):
 class Node:
     name: str
     fn: NodeFn
-    kind: str = "fn"          # tool / llm / agent / router label for describe()
-    max_visits: int = 1       # >1 only on nodes inside an intended cycle
+    kind: str = "fn"  # tool / llm / agent / router label for describe()
+    max_visits: int = 1  # >1 only on nodes inside an intended cycle
     on_error: str | None = None  # node to jump to if fn raises (default: drain to END)
 
 
@@ -94,15 +94,20 @@ class Graph:
         (never from a hand-copied picture) is what keeps the chart honest."""
         edges = [{"src": s, "dst": d, "conditional": False} for s, d in self.edges]
         for src, (_route, targets) in self.routers.items():
-            edges += [{"src": src, "dst": dst, "conditional": True}
-                      for dst in dict.fromkeys(targets.values())]
-        return {"name": self.name,
-                "nodes": [{"name": n.name, "kind": n.kind} for n in self.nodes.values()],
-                "edges": edges}
+            edges += [
+                {"src": src, "dst": dst, "conditional": True}
+                for dst in dict.fromkeys(targets.values())
+            ]
+        return {
+            "name": self.name,
+            "nodes": [{"name": n.name, "kind": n.kind} for n in self.nodes.values()],
+            "edges": edges,
+        }
 
 
-def run_graph(graph: Graph, state: dict, observer: Observer | None = None,
-              max_steps: int = 25) -> dict:
+def run_graph(
+    graph: Graph, state: dict, observer: Observer | None = None, max_steps: int = 25
+) -> dict:
     """Run one graph workflow to completion. Returns the final state; errors
     land in state["errors"] and the graph_end event, they are never raised."""
     lock = threading.Lock()
@@ -112,11 +117,11 @@ def run_graph(graph: Graph, state: dict, observer: Observer | None = None,
         with lock:  # pool threads share the tracer's file append — keep lines whole
             raw(kind, ev)
 
-    deps: dict[str, set] = defaultdict(set)      # static in-edges per node
+    deps: dict[str, set] = defaultdict(set)  # static in-edges per node
     for src, dst in graph.edges:
         if dst != END:
             deps[dst].add(src)
-    fired: dict[str, set] = defaultdict(set)     # which in-edges have fired
+    fired: dict[str, set] = defaultdict(set)  # which in-edges have fired
     runs: dict[str, int] = defaultdict(int)
     path: list[str] = []
     errors: dict[str, str] = state.setdefault("errors", {})
@@ -126,8 +131,9 @@ def run_graph(graph: Graph, state: dict, observer: Observer | None = None,
     def next_wave(jumps: list[str]) -> list[str]:
         """Forcible router/error jumps + nodes whose static deps have all fired."""
         wave: list[str] = []
-        for name in jumps + [n for n in graph.nodes
-                             if deps[n] and deps[n] <= fired[n] and runs[n] == 0]:
+        for name in jumps + [
+            n for n in graph.nodes if deps[n] and deps[n] <= fired[n] and runs[n] == 0
+        ]:
             if name == END or name in wave:
                 continue
             if runs[name] >= graph.nodes[name].max_visits:
@@ -174,11 +180,14 @@ def run_graph(graph: Graph, state: dict, observer: Observer | None = None,
                 if wave_writes.get(key, name) != name:
                     raise GraphStateCollision(
                         f"'{name}' and '{wave_writes[key]}' both wrote '{key}' — "
-                        f"parallel branches must write disjoint keys")
+                        f"parallel branches must write disjoint keys"
+                    )
                 wave_writes[key] = name
                 state[key] = out[key]
-            notify("node_end", {"workflow": graph.name, "node": name,
-                                "ms": ms, "keys": keys, "error": error})
+            notify(
+                "node_end",
+                {"workflow": graph.name, "node": name, "ms": ms, "keys": keys, "error": error},
+            )
             if error:
                 errors[name] = error
                 if graph.nodes[name].on_error:
@@ -188,8 +197,15 @@ def run_graph(graph: Graph, state: dict, observer: Observer | None = None,
                 route, targets = graph.routers[name]
                 label = route(state)
                 target = targets.get(label)
-                notify("route", {"workflow": graph.name, "router": name,
-                                 "target": target or END, "reason": label})
+                notify(
+                    "route",
+                    {
+                        "workflow": graph.name,
+                        "router": name,
+                        "target": target or END,
+                        "reason": label,
+                    },
+                )
                 if target is None:
                     errors[name] = f"router returned unknown label '{label}'"
                 elif target != END:
@@ -201,6 +217,14 @@ def run_graph(graph: Graph, state: dict, observer: Observer | None = None,
         wave = next_wave(jumps)
 
     first_error = next(iter(errors.values()), None)
-    notify("graph_end", {"workflow": graph.name, "ms": int((time.perf_counter() - t0) * 1000),
-                         "steps": len(path), "path": path, "error": first_error})
+    notify(
+        "graph_end",
+        {
+            "workflow": graph.name,
+            "ms": int((time.perf_counter() - t0) * 1000),
+            "steps": len(path),
+            "path": path,
+            "error": first_error,
+        },
+    )
     return state

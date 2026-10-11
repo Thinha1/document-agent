@@ -92,8 +92,13 @@ class SupabaseFactStore:
             .execute()
         )
         return [
-            {"id": r["id"], "subject": r["source"], "content": r["text"],
-             "source": "", "created_at": r.get("created_at")}
+            {
+                "id": r["id"],
+                "subject": r["source"],
+                "content": r["text"],
+                "source": "",
+                "created_at": r.get("created_at"),
+            }
             for r in (rows.data or [])
         ]
 
@@ -121,8 +126,11 @@ class SupabaseFactStore:
         by_chunk = {r["chunk_id"]: r for r in (rows.data or [])}
         # re-impose the RPC's similarity order; the `in_` select does not keep it
         return [
-            {"id": by_chunk[c]["id"], "subject": by_chunk[c]["source"],
-             "content": by_chunk[c]["text"]}
+            {
+                "id": by_chunk[c]["id"],
+                "subject": by_chunk[c]["source"],
+                "content": by_chunk[c]["text"],
+            }
             for c in chunk_ids
             if c in by_chunk
         ]
@@ -133,19 +141,19 @@ class SupabaseFactStore:
         the new one not at all — the silent-wrong-answer failure this whole
         file is a reaction to."""
         column = self._column_for(fact_id)
-        current = (
-            self.supabase.table("rag_chunks").select("source").eq(column, fact_id).execute()
-        )
+        current = self.supabase.table("rag_chunks").select("source").eq(column, fact_id).execute()
         if not current.data:
             return False
         new_subject = (subject or current.data[0]["source"]).lower().strip()
         result = (
             self.supabase.table("rag_chunks")
-            .update({
-                "source": new_subject,
-                "text": content,
-                "embedding": self._embed(f"{new_subject}: {content}"),
-            })
+            .update(
+                {
+                    "source": new_subject,
+                    "text": content,
+                    "embedding": self._embed(f"{new_subject}: {content}"),
+                }
+            )
             .eq(column, fact_id)
             .execute()
         )

@@ -63,14 +63,22 @@ def test_a_subdirectory_still_finds_the_project_env(tmp_path):
 
     env = {k: v for k, v in os.environ.items() if k != "ANTHROPIC_API_KEY"}
     out = subprocess.run(
-        [sys.executable, "-c", textwrap.dedent("""
+        [
+            sys.executable,
+            "-c",
+            textwrap.dedent("""
             from dotenv import find_dotenv, load_dotenv
             import os
             load_dotenv(find_dotenv(usecwd=True))
             print(os.getenv("ANTHROPIC_API_KEY", ""))
-        """)],
-        cwd=root / "deep" / "nested", env=env,
-        capture_output=True, text=True, check=False)
+        """),
+        ],
+        cwd=root / "deep" / "nested",
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
     assert out.stdout.strip() == "from-project-root", out
 
 

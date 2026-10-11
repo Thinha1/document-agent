@@ -33,10 +33,17 @@ _CODING = Path(__file__).resolve().parents[2] / "evals" / "coding.jsonl"
 
 # Tini provider id -> pi's built-in provider id (see `pi --list-models`).
 PI_PROVIDER = {
-    "anthropic": "anthropic", "openai": "openai", "gemini": "google",
-    "kimi": "moonshotai", "xai": "xai", "glm": "zai",
-    "deepseek": "deepseek", "minimax": "minimax", "openrouter": "openrouter",
-    "opencode_zen": "opencode_zen", "opencode_go": "opencode_go",
+    "anthropic": "anthropic",
+    "openai": "openai",
+    "gemini": "google",
+    "kimi": "moonshotai",
+    "xai": "xai",
+    "glm": "zai",
+    "deepseek": "deepseek",
+    "minimax": "minimax",
+    "openrouter": "openrouter",
+    "opencode_zen": "opencode_zen",
+    "opencode_go": "opencode_go",
 }
 
 
@@ -58,14 +65,21 @@ def coding_case_for_message(message: str, cases: list[dict] | None = None) -> di
     free-form coding prompt ("build snake and run it") — pi still runs and
     streams, there's just no test to score against."""
     msg = (message or "").strip()
-    for c in (cases if cases is not None else load_coding_cases()):
+    for c in cases if cases is not None else load_coding_cases():
         if (c.get("input") or "").strip() == msg:
             return c
     return None
 
 
-def run_coding_stream(provider: str, model: str, task: str, files: dict | None,
-                      verify: str | None, on_line, timeout: int = 300) -> tuple:
+def run_coding_stream(
+    provider: str,
+    model: str,
+    task: str,
+    files: dict | None,
+    verify: str | None,
+    on_line,
+    timeout: int = 300,
+) -> tuple:
     """Like run_coding_case, but STREAMS pi's stdout line-by-line to `on_line` as
     it works — so the arena can show the terminal doing the job live. Returns
     (passed, why, seconds); `passed` is None when there's no verify (a free-form
@@ -90,18 +104,34 @@ def run_coding_stream(provider: str, model: str, task: str, files: dict | None,
     t0 = time.perf_counter()
     try:
         proc = subprocess.Popen(
-            [pi_bin, "--provider", pi_prov, "--model", model, "--api-key", key,
-             "-p", task, "-a", "--no-session"],
-            cwd=workdir, stdin=subprocess.DEVNULL,   # no TTY under the server: pi
-            stdout=subprocess.PIPE, stderr=subprocess.STDOUT,  # must not block on stdin
-            text=True, bufsize=1, env=benchmark_env())
+            [
+                pi_bin,
+                "--provider",
+                pi_prov,
+                "--model",
+                model,
+                "--api-key",
+                key,
+                "-p",
+                task,
+                "-a",
+                "--no-session",
+            ],
+            cwd=workdir,
+            stdin=subprocess.DEVNULL,  # no TTY under the server: pi
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,  # must not block on stdin
+            text=True,
+            bufsize=1,
+            env=benchmark_env(),
+        )
     except OSError as exc:
         return (False, f"couldn't launch pi: {exc}", round(time.perf_counter() - t0, 1))
 
-    killer = threading.Timer(timeout, proc.kill)   # watchdog: kill a hung pi
+    killer = threading.Timer(timeout, proc.kill)  # watchdog: kill a hung pi
     killer.start()
     try:
-        for line in proc.stdout:                    # blocks per line until pi exits
+        for line in proc.stdout:  # blocks per line until pi exits
             on_line(line.rstrip("\n"))
         proc.wait()
     finally:
@@ -112,8 +142,16 @@ def run_coding_stream(provider: str, model: str, task: str, files: dict | None,
         on_line("[done — no test to score]")
         return (None, "ran (no test)", secs)
     try:
-        v = subprocess.run(verify, shell=True, cwd=workdir, capture_output=True,
-                           text=True, timeout=120, check=False, env=benchmark_env())
+        v = subprocess.run(
+            verify,
+            shell=True,
+            cwd=workdir,
+            capture_output=True,
+            text=True,
+            timeout=120,
+            check=False,
+            env=benchmark_env(),
+        )
     except subprocess.TimeoutExpired:
         on_line("[verify timed out]")
         return (False, "verify timed out", secs)
@@ -131,8 +169,9 @@ def _key_for(provider: str) -> str:
     return os.getenv(prov.key_env, "") if prov else ""
 
 
-def run_coding_case(provider: str, model: str, case: dict,
-                    timeout: int = 300) -> tuple[bool, str, float]:
+def run_coding_case(
+    provider: str, model: str, case: dict, timeout: int = 300
+) -> tuple[bool, str, float]:
     """Run one coding case on (provider, model) through pi, then score by the
     case's `verify` command. Returns (passed, why, seconds).
 
@@ -158,10 +197,27 @@ def run_coding_case(provider: str, model: str, case: dict,
     try:
         # -a trusts project-local files; --no-session keeps the run ephemeral.
         subprocess.run(
-            [pi_bin, "--provider", pi_prov, "--model", model, "--api-key", key,
-             "-p", case["input"], "-a", "--no-session"],
-            cwd=workdir, stdin=subprocess.DEVNULL, capture_output=True,
-            text=True, timeout=timeout, check=False, env=benchmark_env())
+            [
+                pi_bin,
+                "--provider",
+                pi_prov,
+                "--model",
+                model,
+                "--api-key",
+                key,
+                "-p",
+                case["input"],
+                "-a",
+                "--no-session",
+            ],
+            cwd=workdir,
+            stdin=subprocess.DEVNULL,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            check=False,
+            env=benchmark_env(),
+        )
     except subprocess.TimeoutExpired:
         return (False, f"pi timed out after {timeout}s", round(time.perf_counter() - t0, 1))
     except OSError as exc:
@@ -173,8 +229,16 @@ def run_coding_case(provider: str, model: str, case: dict,
     if not verify:
         return (True, "no verify (ran clean)", round(time.perf_counter() - t0, 1))
     try:
-        v = subprocess.run(verify, shell=True, cwd=workdir, capture_output=True,
-                           text=True, timeout=120, check=False, env=benchmark_env())
+        v = subprocess.run(
+            verify,
+            shell=True,
+            cwd=workdir,
+            capture_output=True,
+            text=True,
+            timeout=120,
+            check=False,
+            env=benchmark_env(),
+        )
     except subprocess.TimeoutExpired:
         return (False, "verify timed out", round(time.perf_counter() - t0, 1))
     secs = round(time.perf_counter() - t0, 1)

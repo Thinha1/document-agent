@@ -30,6 +30,10 @@ def isolated(tmp_path, monkeypatch):
     # tini/documents/rerank.py) without a working key yet, which would make
     # every Tini() build here raise in make_document_index.
     monkeypatch.delenv("TINI_RERANK_PROVIDER", raising=False)
+    # Same for the document index: a .env pointing at a real Qdrant made this
+    # suite depend on that server being up (network in a deterministic test).
+    monkeypatch.setenv("TINI_DOCUMENT_INDEX", "sqlite")
+    monkeypatch.setenv("TINI_EMBEDDING_PROVIDER", "none")
     monkeypatch.setattr(browser_agent, "_agent", None)
     monkeypatch.setattr(browser_agent, "_dashboard_session", None)
     return tmp_path
@@ -41,7 +45,7 @@ def test_rebuild_keeps_the_conversation(isolated):
     session = first.session.session_id
     assert session != "default", "a dashboard run must never chat into 'default'"
 
-    assert browser_agent.rebuild() is None          # None == success
+    assert browser_agent.rebuild() is None  # None == success
     after = browser_agent.current()
 
     assert after is not first, "rebuild must actually build a new agent"
@@ -65,7 +69,7 @@ def test_a_failed_rebuild_keeps_the_working_agent(isolated, monkeypatch):
     first = browser_agent.get_agent()
 
     def explode(*a, **k):
-        raise SystemExit("no API key found")     # what get_client actually raises
+        raise SystemExit("no API key found")  # what get_client actually raises
 
     monkeypatch.setattr("tini.app.Tini", explode)
 

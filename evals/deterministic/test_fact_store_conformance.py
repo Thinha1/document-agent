@@ -89,8 +89,13 @@ def _langmem_store(tmp_path):
     return LangMemFactStore(Settings(home=tmp_path))
 
 
-BACKENDS = {"sqlite": _sqlite_store, "supabase": _supabase_store, "mem0": _mem0_store,
-            "zep": _zep_store, "langmem": _langmem_store}
+BACKENDS = {
+    "sqlite": _sqlite_store,
+    "supabase": _supabase_store,
+    "mem0": _mem0_store,
+    "zep": _zep_store,
+    "langmem": _langmem_store,
+}
 
 
 @pytest.fixture(params=list(BACKENDS), ids=list(BACKENDS))
@@ -146,7 +151,7 @@ def test_delete_removes_the_fact(store):
 def test_an_unknown_id_is_false_not_an_exception(store, method):
     """False means "no such row". Raising here would turn a stale id in the
     dashboard into a 500."""
-    assert getattr(store, method)(*( (999_999, "x") if method == "update" else (999_999,) )) is False
+    assert getattr(store, method)(*((999_999, "x") if method == "update" else (999_999,))) is False
 
 
 def test_list_returns_what_was_added(store):
@@ -194,6 +199,7 @@ def test_settle_is_safe_to_call_on_an_empty_store(store):
 
 # --- the suite keeps itself honest -------------------------------------------
 
+
 def _protocol_methods() -> list[str]:
     """The contract's own method names, read off the class.
 
@@ -211,12 +217,14 @@ def test_every_method_on_the_contract_is_actually_exercised_here():
     which is the exact assumption that broke."""
     source = inspect.getsource(inspect.getmodule(test_add_then_search_round_trips))
     body = source.split("# --- the suite keeps itself honest", 1)[0]
-    untested = [m for m in _protocol_methods() if f"store.{m}(" not in body
-                and f'"{m}"' not in body]
+    untested = [
+        m for m in _protocol_methods() if f"store.{m}(" not in body and f'"{m}"' not in body
+    ]
     assert untested == [], f"FactStore methods with no test in this file: {untested}"
 
 
 # --- the blank-optional-field trap -------------------------------------------
+
 
 def test_a_blank_optional_field_falls_back_to_its_default(monkeypatch):
     """The Connections form writes EVERY optional field it shows, so leaving one

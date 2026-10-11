@@ -83,3 +83,35 @@ def make_tini(home: Path, client=None, **settings_overrides):
     if client is not None and not settings.api_key:
         settings.api_key = "offline"  # never read the real key for scripted runs
     return Tini(settings=settings, client=client)
+
+
+def pdf_with_pages(texts: list[str]) -> bytes:
+    """A hand-built PDF with one real text page per string (see test_document_ocr)."""
+    count = len(texts)
+    font_num = 3 + count * 2
+    kids = " ".join(f"{3 + i * 2} 0 R" for i in range(count))
+    objects = {
+        1: b"<< /Type /Catalog /Pages 2 0 R >>",
+        2: f"<< /Type /Pages /Kids [{kids}] /Count {count} >>".encode(),
+        font_num: b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+    }
+    for i, text in enumerate(texts):
+        page_num, content_num = 3 + i * 2, 4 + i * 2
+        objects[page_num] = (
+            f"<< /Type /Page /Parent 2 0 R /Resources << /Font << /F1 {font_num} 0 R >> >> "
+            f"/MediaBox [0 0 600 200] /Contents {content_num} 0 R >>"
+        ).encode()
+        stream = f"BT /F1 12 Tf 20 100 Td ({text}) Tj ET".encode()
+        objects[content_num] = b"<< /Length " + str(len(stream)).encode() + b" >>\nstream\n" + stream + b"\nendstream"
+    out = bytearray(b"%PDF-1.4\n")
+    total = max(objects) + 1
+    offsets = [0] * total
+    for num in sorted(objects):
+        offsets[num] = len(out)
+        out += f"{num} 0 obj\n".encode() + objects[num] + b"\nendobj\n"
+    xref = len(out)
+    out += f"xref\n0 {total}\n".encode() + b"0000000000 65535 f \n"
+    for num in range(1, total):
+        out += f"{offsets[num]:010d} 00000 n \n".encode()
+    out += b"trailer\n<< /Size " + str(total).encode() + b" /Root 1 0 R >>\nstartxref\n" + str(xref).encode() + b"\n%%EOF"
+    return bytes(out)

@@ -19,6 +19,7 @@ same commit — that edit is the review signal that the public surface changed.
 from __future__ import annotations
 
 import inspect
+import io
 
 from tini.ops import dashboard
 
@@ -32,6 +33,8 @@ POST_ROUTES = {
     "/api/query",
     "/api/session",
     "/api/pin",
+    "/api/documents/search",
+    "/api/documents/action",
     "/api/compare/clear",
     "/api/compare/regrade",
     "/api/compare/delete_run",
@@ -44,12 +47,18 @@ GET_PATHS = {
     "/api/events",
     "/api/reveal",
     "/api/compare/history",
+    "/api/documents/chunks",
     "/static/",
 }
 
 # Streaming endpoints. These are what the dashboard actually uses for chat and
 # racing; the browser reads them as SSE, so they are handled before the router.
-STREAM_ROUTES = {"/api/chat/stream", "/api/compare/stream", "/api/voice"}
+STREAM_ROUTES = {
+    "/api/chat/stream",
+    "/api/compare/stream",
+    "/api/voice",
+    "/api/documents/ingest",
+}
 
 
 def _source() -> str:
@@ -77,10 +86,25 @@ def test_streaming_routes_survive():
 
 
 def test_the_handlers_behind_the_routes_exist_and_are_callable():
-    for name in ("collect", "chat", "chat_stream", "compare_stream", "memory_action",
-                 "apply_settings", "run_query", "session_action", "pin_action",
-                 "list_models", "events_since", "reveal_path", "settings_info",
-                 "tools_info", "compare_clear", "compare_regrade", "compare_delete_run"):
+    for name in (
+        "collect",
+        "chat",
+        "chat_stream",
+        "compare_stream",
+        "memory_action",
+        "apply_settings",
+        "run_query",
+        "session_action",
+        "pin_action",
+        "list_models",
+        "events_since",
+        "reveal_path",
+        "settings_info",
+        "tools_info",
+        "compare_clear",
+        "compare_regrade",
+        "compare_delete_run",
+    ):
         fn = getattr(dashboard, name, None)
         assert callable(fn), f"handler missing or not callable: {name}"
 
@@ -99,9 +123,7 @@ def test_api_models_returns_picker_contract(monkeypatch):
     monkeypatch.delenv("TINI_SMALL_MODEL", raising=False)
 
     def fake_urlopen(req, timeout=10):
-        return io.BytesIO(json.dumps(
-            {"data": [{"id": "vendor/model:free"}]}
-        ).encode())
+        return io.BytesIO(json.dumps({"data": [{"id": "vendor/model:free"}]}).encode())
 
     monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
     catalog._models_cache.clear()
@@ -118,8 +140,21 @@ def test_collect_returns_the_keys_the_page_reads():
     """`/api/data` is read by every view in static/js/. These are the keys the
     frontend indexes into; dropping one blanks a tab with no error."""
     expected = {
-        "settings", "tools", "facts", "episodes", "soul", "chat_log", "sessions",
-        "turns", "stats", "db", "skills", "trace_file", "chat_pending", "graph",
+        "settings",
+        "tools",
+        "facts",
+        "episodes",
+        "soul",
+        "chat_log",
+        "sessions",
+        "turns",
+        "stats",
+        "db",
+        "skills",
+        "trace_file",
+        "chat_pending",
+        "graph",
+        "documents",
     }
     src = inspect.getsource(dashboard.collect)
     for key in expected:
@@ -134,3 +169,19 @@ def test_the_removed_arena_duplicate_stays_removed():
     src = _source()
     assert "def _compare_one" not in src
     assert "def compare_models" not in src
+
+
+def test_invalid_json_gets_a_400_instead_of_dropping_the_connection():
+    handler = object.__new__(dashboard.Handler)
+    handler.rfile = io.BytesIO(b"{broken")
+    response = {}
+
+    def capture(body, ctype, **kwargs):
+        response.update(body=body, ctype=ctype, **kwargs)
+
+    handler._send = capture
+
+    assert handler._read_json(7) is None
+    assert response["status"] == 400
+    assert response["ctype"] == "application/json"
+    assert b"invalid JSON body" in response["body"]

@@ -7,8 +7,9 @@ from pathlib import Path
 
 from tini.config import load_settings
 from tini.db import connect
+from tini.documents import catalog
 from tini.documents.embeddings import make_embedding_provider
-from tini.documents.ocr import make_ocr_provider
+from tini.documents.ocr import make_ocr_provider, make_usage_logger
 from tini.documents.pipeline import IngestionPipeline
 from tini.documents.store import make_document_index
 
@@ -37,8 +38,11 @@ def ingest_main(argv: list[str]) -> int:
             chunk_max_tokens=args.chunk_max_tokens,
             chunk_min_tokens=args.chunk_min_tokens,
             chunk_overlap_tokens=args.chunk_overlap_tokens,
+            table_chunking=settings.document_table_chunking,
             max_file_bytes=settings.document_max_file_bytes,
             max_text_chars=settings.document_max_text_chars,
+            usage_log=make_usage_logger(settings.home),
+            catalog_log=catalog.make_recorder(settings.home),
         )
         reports = pipeline.ingest_path(
             args.path, workspace_id=args.workspace, recursive=not args.no_recursive
@@ -72,7 +76,7 @@ def documents_main(argv: list[str]) -> int:
     try:
         if args.search:
             for hit in index.search(args.search, args.limit, args.workspace):
-                print(f"[{hit.title}#chunk-{hit.ordinal}] {hit.text}\n{hit.source_uri}\n")
+                print(f"[{hit.title}#chunk-{hit.ordinal}{', ' + hit.page_label if hit.page_label else ''}] {hit.text}\n{hit.source_uri}\n")
         else:
             for document in index.list_documents(args.workspace, args.limit):
                 print(

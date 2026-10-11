@@ -1,0 +1,2041 @@
+{
+ "label": "xl2-bge-c20-2026-09-28",
+ "created": "2026-09-28T08:57:52",
+ "runs": {
+  "synthetic_denso_xl.jsonl": {
+   "run_at": "2026-09-28T08:57:52",
+   "config": {
+    "embedding": {
+     "provider": "openai_compatible",
+     "model": "bge-m3",
+     "dimensions": 1024
+    },
+    "index": {
+     "backend": "qdrant",
+     "collection": "tini_documents_bge3_hybrid",
+     "hybrid": {
+      "enabled": false,
+      "fusion": "rrf",
+      "lexical_weight": 1.0
+     }
+    },
+    "chunking": {
+     "max_tokens": 512,
+     "min_tokens": 120,
+     "overlap_tokens": 48
+    },
+    "ocr": {
+     "provider": "deepseek",
+     "model": "deepseek-v4-flash-vision-exp"
+    },
+    "rerank": {
+     "enabled": true,
+     "provider": "tei",
+     "model": null,
+     "candidates": 20
+    },
+    "translate": {
+     "languages": []
+    },
+    "search_k": 3,
+    "workspace": "denso-xl",
+    "corpus": [
+     {
+      "title": "syn-compliance-code-vi",
+      "chunks": 6
+     },
+     {
+      "title": "syn-governance-a-ja",
+      "chunks": 9
+     },
+     {
+      "title": "syn-governance-b-en",
+      "chunks": 4
+     },
+     {
+      "title": "syn-human-rights-ja",
+      "chunks": 4
+     },
+     {
+      "title": "syn-integrated-report-a-en",
+      "chunks": 11
+     },
+     {
+      "title": "syn-integrated-report-b-vi",
+      "chunks": 13
+     },
+     {
+      "title": "syn-qa-manual-ja",
+      "chunks": 11
+     },
+     {
+      "title": "syn-securities-report-a-en",
+      "chunks": 13
+     },
+     {
+      "title": "syn-securities-report-b-vi",
+      "chunks": 16
+     }
+    ]
+   },
+   "question_set": "synthetic_denso_xl.jsonl",
+   "workspace": "denso-xl",
+   "k": 3,
+   "use_llm": false,
+   "cases": [
+    {
+     "id": "xl-compliance-code-1-en",
+     "lang": "en",
+     "format": "vi-doc",
+     "query": "Which advisory service can DENSO employees contact when they are unsure whether conduct is unethical?",
+     "expected_title": "syn-compliance-code-vi",
+     "hit": false,
+     "got_titles": [
+      "syn-integrated-report-a-en",
+      "syn-integrated-report-a-en",
+      "syn-integrated-report-a-en"
+     ],
+     "keyword_hits": [],
+     "keyword_total": 1,
+     "latency_ms": 593.4
+    },
+    {
+     "id": "xl-compliance-code-1-ja",
+     "lang": "ja",
+     "format": "vi-doc",
+     "query": "DENSOの従業員が、ある行為が非倫理的かどうか判断に迷ったときに相談できる窓口は何ですか？",
+     "expected_title": "syn-compliance-code-vi",
+     "hit": false,
+     "got_titles": [
+      "syn-integrated-report-a-en",
+      "syn-integrated-report-a-en",
+      "syn-integrated-report-a-en"
+     ],
+     "keyword_hits": [],
+     "keyword_total": 1,
+     "latency_ms": 694.0
+    },
+    {
+     "id": "xl-compliance-code-1-vi",
+     "lang": "vi",
+     "format": "vi-doc",
+     "query": "Nhân viên DENSO có thể liên hệ dịch vụ tư vấn nào khi không chắc một hành vi có phi đạo đức hay không?",
+     "expected_title": "syn-compliance-code-vi",
+     "hit": true,
+     "got_titles": [
+      "syn-compliance-code-vi",
+      "syn-compliance-code-vi",
+      "syn-compliance-code-vi"
+     ],
+     "keyword_hits": [
+      "Business Ethics Hotline"
+     ],
+     "keyword_total": 1,
+     "latency_ms": 668.0
+    },
+    {
+     "id": "xl-compliance-code-2-en",
+     "lang": "en",
+     "format": "vi-doc",
+     "query": "Which meeting has the sole authority to amend or abolish the DENSO Code of Conduct?",
+     "expected_title": "syn-compliance-code-vi",
+     "hit": true,
+     "got_titles": [
+      "syn-compliance-code-vi",
+      "syn-integrated-report-a-en",
+      "syn-securities-report-a-en"
+     ],
+     "keyword_hits": [
+      "Cuộc họp Thảo luận Quản lý"
+     ],
+     "keyword_total": 1,
+     "latency_ms": 656.1
+    },
+    {
+     "id": "xl-compliance-code-2-ja",
+     "lang": "ja",
+     "format": "vi-doc",
+     "query": "DENSOの行動規範を改正または廃止できる唯一の権限を持つ会議体は何ですか？",
+     "expected_title": "syn-compliance-code-vi",
+     "hit": true,
+     "got_titles": [
+      "syn-compliance-code-vi",
+      "syn-integrated-report-a-en",
+      "syn-integrated-report-a-en"
+     ],
+     "keyword_hits": [
+      "Cuộc họp Thảo luận Quản lý"
+     ],
+     "keyword_total": 1,
+     "latency_ms": 632.5
+    },
+    {
+     "id": "xl-compliance-code-2-vi",
+     "lang": "vi",
+     "format": "vi-doc",
+     "query": "Cuộc họp nào có quyền duy nhất sửa đổi hoặc bãi bỏ Quy tắc ứng xử của DENSO?",
+     "expected_title": "syn-compliance-code-vi",
+     "hit": true,
+     "got_titles": [
+      "syn-compliance-code-vi",
+      "syn-integrated-report-b-vi",
+      "syn-integrated-report-a-en"
+     ],
+     "keyword_hits": [
+      "Cuộc họp Thảo luận Quản lý"
+     ],
+     "keyword_total": 1,
+     "latency_ms": 647.2
+    },
+    {
+     "id": "xl-compliance-code-3-en",
+     "lang": "en",
+     "format": "vi-doc",
+     "query": "Which internationally recognized sustainability standard does the DENSO Code of Conduct cite as an example?",
+     "expected_title": "syn-compliance-code-vi",
+     "hit": true,
+     "got_titles": [
+      "syn-compliance-code-vi",
+      "syn-integrated-report-a-en",
+      "syn-governance-a-ja"
+     ],
+     "keyword_hits": [
+      "Các Mục tiêu Phát triển Bền vững (SDGs)"
+     ],
+     "keyword_total": 1,
+     "latency_ms": 650.0
+    },
+    {
+     "id": "xl-compliance-code-3-ja",
+     "lang": "ja",
+     "format": "vi-doc",
+     "query": "DENSOの行動規範は、国際的に認められたサステナビリティ基準の例として何を挙げていますか？",
+     "expected_title": "syn-compliance-code-vi",
+     "hit": false,
+     "got_titles": [
+      "syn-human-rights-ja",
+      "syn-human-rights-ja",
+      "syn-governance-a-ja"
+     ],
+     "keyword_hits": [],
+     "keyword_total": 1,
+     "latency_ms": 570.5
+    },
+    {
+     "id": "xl-compliance-code-3-vi",
+     "lang": "vi",
+     "format": "vi-doc",
+     "query": "Quy tắc ứng xử của DENSO nêu chuẩn mực bền vững được quốc tế công nhận nào làm ví dụ?",
+     "expected_title": "syn-compliance-code-vi",
+     "hit": true,
+     "got_titles": [
+      "syn-compliance-code-vi",
+      "syn-integrated-report-b-vi",
+      "syn-integrated-report-b-vi"
+     ],
+     "keyword_hits": [
+      "Các Mục tiêu Phát triển Bền vững (SDGs)"
+     ],
+     "keyword_total": 1,
+     "latency_ms": 695.1
+    },
+    {
+     "id": "xl-compliance-code-4-en",
+     "lang": "en",
+     "format": "vi-doc",
+     "query": "What kind of proposals should DENSO employees proactively submit when they see room for improvement?",
+     "expected_title": "syn-compliance-code-vi",
+     "hit": false,
+     "got_titles": [
+      "syn-integrated-report-a-en",
+      "syn-integrated-report-a-en",
+      "syn-integrated-report-a-en"
+     ],
+     "keyword_hits": [],
+     "keyword_total": 1,
+     "latency_ms": 574.5
+    },
+    {
+     "id": "xl-compliance-code-4-ja",
+     "lang": "ja",
+     "format": "vi-doc",
+     "query": "改善の余地に気づいたとき、DENSOの従業員が自発的に提出すべき提案は何ですか？",
+     "expected_title": "syn-compliance-code-vi",
+     "hit": false,
+     "got_titles": [
+      "syn-integrated-report-a-en",
+      "syn-integrated-report-a-en",
+      "syn-integrated-report-a-en"
+     ],
+     "keyword_hits": [],
+     "keyword_total": 1,
+     "latency_ms": 587.6
+    },
+    {
+     "id": "xl-compliance-code-4-vi",
+     "lang": "vi",
+     "format": "vi-doc",
+     "query": "Nhân viên DENSO nên chủ động gửi loại đề xuất nào khi thấy cần cải tiến?",
+     "expected_title": "syn-compliance-code-vi",
+     "hit": false,
+     "got_titles": [
+      "syn-integrated-report-b-vi",
+      "syn-integrated-report-b-vi",
+      "syn-integrated-report-b-vi"
+     ],
+     "keyword_hits": [],
+     "keyword_total": 1,
+     "latency_ms": 570.7
+    },
+    {
+     "id": "xl-governance-a-1-en",
+     "lang": "en",
+     "format": "ja-doc",
+     "query": "Since which year of its establishment has DENSO treated people as its most important management capital?",
+     "expected_title": "syn-governance-a-ja",
+     "hit": true,
+     "got_titles": [
+      "syn-governance-a-ja",
+      "syn-integrated-report-a-en",
+      "syn-integrated-report-a-en"
+     ],
+     "keyword_hits": [
+      "1949年"
+     ],
+     "keyword_total": 1,
+     "latency_ms": 605.4
+    },
+    {
+     "id": "xl-governance-a-1-ja",
+     "lang": "ja",
+     "format": "ja-doc",
+     "query": "DENSOが人を最も重要な経営資本と捉えてきたのは、何年の設立以来ですか？",
+     "expected_title": "syn-governance-a-ja",
+     "hit": true,
+     "got_titles": [
+      "syn-governance-a-ja",
+      "syn-integrated-report-a-en",
+      "syn-governance-a-ja"
+     ],
+     "keyword_hits": [
+      "1949年"
+     ],
+     "keyword_total": 1,
+     "latency_ms": 627.1
+    },
+    {
+     "id": "xl-governance-a-1-vi",
+     "lang": "vi",
+     "format": "ja-doc",
+     "query": "DENSO coi con người là nguồn vốn quản trị quan trọng nhất kể từ khi thành lập vào năm nào?",
+     "expected_title": "syn-governance-a-ja",
+     "hit": true,
+     "got_titles": [
+      "syn-governance-a-ja",
+      "syn-integrated-report-b-vi",
+      "syn-integrated-report-b-vi"
+     ],
+     "keyword_hits": [
+      "1949年"
+     ],
+     "keyword_total": 1,
+     "latency_ms": 567.3
+    },
+    {
+     "id": "xl-governance-a-2-en",
+     "lang": "en",
+     "format": "ja-doc",
+     "query": "In what year did DENSO establish its technical training institute to strengthen technical skills?",
+     "expected_title": "syn-governance-a-ja",
+     "hit": true,
+     "got_titles": [
+      "syn-governance-a-ja",
+      "syn-integrated-report-a-en",
+      "syn-securities-report-a-en"
+     ],
+     "keyword_hits": [
+      "1954年"
+     ],
+     "keyword_total": 1,
+     "latency_ms": 636.9
+    },
+    {
+     "id": "xl-governance-a-2-ja",
+     "lang": "ja",
+     "format": "ja-doc",
+     "query": "DENSOが技術・技能の強化を目的として技術研修所を設立したのは何年ですか？",
+     "expected_title": "syn-governance-a-ja",
+     "hit": true,
+     "got_titles": [
+      "syn-governance-a-ja",
+      "syn-integrated-report-a-en",
+      "syn-integrated-report-a-en"
+     ],
+     "keyword_hits": [
+      "1954年"
+     ],
+     "keyword_total": 1,
+     "latency_ms": 673.0
+    },
+    {
+     "id": "xl-governance-a-2-vi",
+     "lang": "vi",
+     "format": "ja-doc",
+     "query": "DENSO thành lập cơ sở đào tạo kỹ thuật nhằm nâng cao kỹ thuật và kỹ năng vào năm nào?",
+     "expected_title": "syn-governance-a-ja",
+     "hit": true,
+     "got_titles": [
+      "syn-governance-a-ja",
+      "syn-integrated-report-b-vi",
+      "syn-integrated-report-a-en"
+     ],
+     "keyword_hits": [
+      "1954年"
+     ],
+     "keyword_total": 1,
+     "latency_ms": 762.5
+    },
+    {
+     "id": "xl-governance-a-3-en",
+     "lang": "en",
+     "format": "ja-doc",
+     "query": "How many world-first technologies and products has DENSO created through its people-focused management?",
+     "expected_title": "syn-governance-a-ja",
+     "hit": true,
+     "got_titles": [
+      "syn-governance-a-ja",
+      "syn-integrated-report-a-en",
+      "syn-integrated-report-a-en"
+     ],
+     "keyword_hits": [
+      "180以上"
+     ],
+     "keyword_total": 1,
+     "latency_ms": 606.9
+    },
+    {
+     "id": "xl-governance-a-3-ja",
+     "lang": "ja",
+     "format": "ja-doc",
+     "query": "人を重視する経営を通じて、DENSOが生み出してきた世界初の技術・製品はいくつですか？",
+     "expected_title": "syn-governance-a-ja",
+     "hit": true,
+     "got_titles": [
+      "syn-governance-a-ja",
+      "syn-governance-a-ja",
+      "syn-human-rights-ja"
+     ],
+     "keyword_hits": [
+      "180以上"
+     ],
+     "keyword_total": 1,
+     "latency_ms": 656.0
+    },
+    {
+     "id": "xl-governance-a-3-vi",
+     "lang": "vi",
+     "format": "ja-doc",
+     "query": "Nhờ quản trị coi trọng con người, DENSO đã tạo ra bao nhiêu công nghệ và sản phẩm đầu tiên trên thế giới?",
+     "expected_title": "syn-governance-a-ja",
+     "hit": true,
+     "got_titles": [
+      "syn-governance-a-ja",
+      "syn-integrated-report-b-vi",
+      "syn-integrated-report-b-vi"
+     ],
+     "keyword_hits": [
+      "180以上"
+     ],
+     "keyword_total": 1,
+     "latency_ms": 556.9
+    },
+    {
+     "id": "xl-governance-a-4-en",
+     "lang": "en",
+     "format": "ja-doc",
+     "query": "When did DENSO announce its support for the Task Force on Climate-related Financial Disclosures (TCFD)?",
+     "expected_title": "syn-governance-a-ja",
+     "hit": true,
+     "got_titles": [
+      "syn-governance-a-ja",
+      "syn-integrated-report-a-en",
+      "syn-integrated-report-a-en"
+     ],
+     "keyword_hits": [
+      "2019年5月"
+     ],
+     "keyword_total": 1,
+     "latency_ms": 618.5
+    },
+    {
+     "id": "xl-governance-a-4-ja",
+     "lang": "ja",
+     "format": "ja-doc",
+     "query": "DENSOが気候関連財務情報開示タスクフォース（TCFD）への支持を表明したのはいつですか？",
+     "expected_title": "syn-governance-a-ja",
+     "hit": true,
+     "got_titles": [
+      "syn-governance-a-ja",
+      "syn-governance-a-ja",
+      "syn-integrated-report-a-en"
+     ],
+     "keyword_hits": [
+      "2019年5月"
+     ],
+     "keyword_total": 1,
+     "latency_ms": 623.7
+    },
+    {
+     "id": "xl-governance-a-4-vi",
+     "lang": "vi",
+     "format": "ja-doc",
+     "query": "DENSO tuyên bố ủng hộ Lực lượng đặc nhiệm về công bố thông tin tài chính liên quan đến khí hậu (TCFD) vào thời điểm nào?",
+     "expected_title": "syn-governance-a-ja",
+     "hit": true,
+     "got_titles": [
+      "syn-governance-a-ja",
+      "syn-integrated-report-a-en",
+      "syn-integrated-report-a-en"
+     ],
+     "keyword_hits": [
+      "2019年5月"
+     ],
+     "keyword_total": 1,
+     "latency_ms": 579.7
+    },
+    {
+     "id": "xl-governance-b-1-en",
+     "lang": "en",
+     "format": "en-doc",
+     "query": "In which report does DENSO disclose individual remuneration for directors paid 100 million yen or more in total?",
+     "expected_title": "syn-governance-b-en",
+     "hit": true,
+     "got_titles": [
+      "syn-governance-b-en",
+      "syn-securities-report-a-en",
+      "syn-securities-report-b-vi"
+     ],
+     "keyword_hits": [
+      "Annual Securities Report"
+     ],
+     "keyword_total": 1,
+     "latency_ms": 743.0
+    },
+    {
+     "id": "xl-governance-b-1-ja",
+     "lang": "ja",
+     "format": "en-doc",
+     "query": "連結報酬の総額が1億円以上の取締役について、DENSOは個別の報酬をどの報告書で開示していますか？",
+     "expected_title": "syn-governance-b-en",
+     "hit": true,
+     "got_titles": [
+      "syn-governance-b-en",
+      "syn-securities-report-a-en",
+      "syn-human-rights-ja"
+     ],
+     "keyword_hits": [
+      "Annual Securities Report"
+     ],
+     "keyword_total": 1,
+     "latency_ms": 708.3
+    },
+    {
+     "id": "xl-governance-b-1-vi",
+     "lang": "vi",
+     "format": "en-doc",
+     "query": "DENSO công bố thù lao cá nhân của các thành viên Hội đồng quản trị có tổng thù lao hợp nhất từ 100 triệu yên trở lên trong báo cáo nào?",
+     "expected_title": "syn-governance-b-en",
+     "hit": true,
+     "got_titles": [
+      "syn-governance-b-en",
+      "syn-securities-report-b-vi",
+      "syn-securities-report-b-vi"
+     ],
+     "keyword_hits": [
+      "Annual Securities Report"
+     ],
+     "keyword_total": 1,
+     "latency_ms": 655.1
+    },
+    {
+     "id": "xl-governance-b-2-en",
+     "lang": "en",
+     "format": "en-doc",
+     "query": "What is the approximate ratio of basic compensation, bonus and stock-based compensation for DENSO's president?",
+     "expected_title": "syn-governance-b-en",
+     "hit": true,
+     "got_titles": [
+      "syn-governance-b-en",
+      "syn-securities-report-a-en",
+      "syn-integrated-report-a-en"
+     ],
+     "keyword_hits": [
+      "25% : 25% : 50%"
+     ],
+     "keyword_total": 1,
+     "latency_ms": 666.9
+    },
+    {
+     "id": "xl-governance-b-2-ja",
+     "lang": "ja",
+     "format": "en-doc",
+     "query": "DENSOの社長の基本報酬・賞与・株式報酬のおおよその比率はどのくらいですか？",
+     "expected_title": "syn-governance-b-en",
+     "hit": true,
+     "got_titles": [
+      "syn-governance-b-en",
+      "syn-integrated-report-a-en",
+      "syn-securities-report-a-en"
+     ],
+     "keyword_hits": [
+      "25% : 25% : 50%"
+     ],
+     "keyword_total": 1,
+     "latency_ms": 636.9
+    },
+    {
+     "id": "xl-governance-b-2-vi",
+     "lang": "vi",
+     "format": "en-doc",
+     "query": "Tỷ lệ gần đúng giữa lương cơ bản, tiền thưởng và thù lao bằng cổ phiếu của president DENSO là bao nhiêu?",
+     "expected_title": "syn-governance-b-en",
+     "hit": true,
+     "got_titles": [
+      "syn-governance-b-en",
+      "syn-securities-report-a-en",
+      "syn-integrated-report-a-en"
+     ],
+     "keyword_hits": [
+      "25% : 25% : 50%"
+     ],
+     "keyword_total": 1,
+     "latency_ms": 662.4
+    },
+    {
+     "id": "xl-governance-b-3-en",
+     "lang": "en",
+     "format": "en-doc",
+     "query": "What is the annual cap on stock-based compensation for DENSO's directors?",
+     "expected_title": "syn-governance-b-en",
+     "hit": true,
+     "got_titles": [
+      "syn-governance-b-en",
+      "syn-securities-report-a-en",
+      "syn-integrated-report-a-en"
+     ],
+     "keyword_hits": [],
+     "keyword_total": 1,
+     "latency_ms": 617.6
+    },
+    {
+     "id": "xl-governance-b-3-ja",
+     "lang": "ja",
+     "format": "en-doc",
+     "query": "DENSOの取締役に対する株式報酬の年間上限額はいくらですか？",
+     "expected_title": "syn-governance-b-en",
+     "hit": true,
+     "got_titles": [
+      "syn-governance-b-en",
+      "syn-securities-report-a-en",
+      "syn-integrated-report-a-en"
+     ],
+     "keyword_hits": [],
+     "keyword_total": 1,
+     "latency_ms": 699.8
+    },
+    {
+     "id": "xl-governance-b-3-vi",
+     "lang": "vi",
+     "format": "en-doc",
+     "query": "Mức trần hằng năm đối với thù lao bằng cổ phiếu dành cho các thành viên Hội đồng quản trị của DENSO là bao nhiêu?",
+     "expected_title": "syn-governance-b-en",
+     "hit": true,
+     "got_titles": [
+      "syn-governance-b-en",
+      "syn-securities-report-a-en",
+      "syn-integrated-report-a-en"
+     ],
+     "keyword_hits": [],
+     "keyword_total": 1,
+     "latency_ms": 657.9
+    },
+    {
+     "id": "xl-governance-b-4-en",
+     "lang": "en",
+     "format": "en-doc",
+     "query": "How many members in total sit on DENSO's Board of Directors, including Audit & Supervisory Board members?",
+     "expected_title": "syn-governance-b-en",
+     "hit": true,
+     "got_titles": [
+      "syn-governance-b-en",
+      "syn-integrated-report-a-en",
+      "syn-securities-report-a-en"
+     ],
+     "keyword_hits": [],
+     "keyword_total": 1,
+     "latency_ms": 659.9
+    },
+    {
+     "id": "xl-governance-b-4-ja",
+     "lang": "ja",
+     "format": "en-doc",
+     "query": "DENSOの取締役会は、監査役を含めて合計で何名で構成されていますか？",
+     "expected_title": "syn-governance-b-en",
+     "hit": false,
+     "got_titles": [
+      "syn-integrated-report-a-en",
+      "syn-securities-report-a-en",
+      "syn-securities-report-a-en"
+     ],
+     "keyword_hits": [],
+     "keyword_total": 1,
+     "latency_ms": 643.7
+    },
+    {
+     "id": "xl-governance-b-4-vi",
+     "lang": "vi",
+     "format": "en-doc",
+     "query": "Hội đồng quản trị của DENSO gồm tổng cộng bao nhiêu thành viên, bao gồm cả thành viên Ban Kiểm toán và Giám sát?",
+     "expected_title": "syn-governance-b-en",
+     "hit": false,
+     "got_titles": [
+      "syn-integrated-report-b-vi",
+      "syn-integrated-report-a-en",
+      "syn-integrated-report-a-en"
+     ],
+     "keyword_hits": [],
+     "keyword_total": 1,
+     "latency_ms": 638.8
+    },
+    {
+     "id": "xl-qa-manual-1-en",
+     "lang": "en",
+     "format": "ja-doc",
+     "query": "In DENSO TEN's quality terminology, what does the abbreviation NTF stand for?",
+     "expected_title": "syn-qa-manual-ja",
+     "hit": true,
+     "got_titles": [
+      "syn-qa-manual-ja",
+      "syn-securities-report-a-en",
+      "syn-qa-manual-ja"
+     ],
+     "keyword_hits": [
+      "No Trouble Found"
+     ],
+     "keyword_total": 1,
+     "latency_ms": 585.9
+    },
+    {
+     "id": "xl-qa-manual-1-ja",
+     "lang": "ja",
+     "format": "ja-doc",
+     "query": "DENSO TENの品質用語で、略語NTFは何の略ですか？",
+     "expected_title": "syn-qa-manual-ja",
+     "hit": true,
+     "got_titles": [
+      "syn-qa-manual-ja",
+      "syn-qa-manual-ja",
+      "syn-qa-manual-ja"
+     ],
+     "keyword_hits": [
+      "No Trouble Found"
+     ],
+     "keyword_total": 1,
+     "latency_ms": 541.8
+    },
+    {
+     "id": "xl-qa-manual-1-vi",
+     "lang": "vi",
+     "format": "ja-doc",
+     "query": "Trong thuật ngữ chất lượng của DENSO TEN, chữ viết tắt NTF nghĩa là gì?",
+     "expected_title": "syn-qa-manual-ja",
+     "hit": true,
+     "got_titles": [
+      "syn-qa-manual-ja",
+      "syn-securities-report-a-en",
+      "syn-integrated-report-b-vi"
+     ],
+     "keyword_hits": [
+      "No Trouble Found"
+     ],
+     "keyword_total": 1,
+     "latency_ms": 590.9
+    },
+    {
+     "id": "xl-qa-manual-2-en",
+     "lang": "en",
+     "format": "ja-doc",
+     "query": "What classification does DENSO TEN assign to parts that may cause significant or mass defects?",
+     "expected_title": "syn-qa-manual-ja",
+     "hit": true,
+     "got_titles": [
+      "syn-qa-manual-ja",
+      "syn-qa-manual-ja",
+      "syn-qa-manual-ja"
+     ],
+     "keyword_hits": [
+      "特別管理部品"
+     ],
+     "keyword_total": 1,
+     "latency_ms": 581.5
+    },
+    {
+     "id": "xl-qa-manual-2-ja",
+     "lang": "ja",
+     "format": "ja-doc",
+     "query": "重要または大量の欠陥につながる可能性のある部品にDENSO TENが付与する分類は何ですか？",
+     "expected_title": "syn-qa-manual-ja",
+     "hit": true,
+     "got_titles": [
+      "syn-qa-manual-ja",
+      "syn-qa-manual-ja",
+      "syn-qa-manual-ja"
+     ],
+     "keyword_hits": [
+      "特別管理部品"
+     ],
+     "keyword_total": 1,
+     "latency_ms": 563.0
+    },
+    {
+     "id": "xl-qa-manual-2-vi",
+     "lang": "vi",
+     "format": "ja-doc",
+     "query": "DENSO TEN gán phân loại nào cho các bộ phận có thể gây ra lỗi nghiêm trọng hoặc lỗi hàng loạt?",
+     "expected_title": "syn-qa-manual-ja",
+     "hit": true,
+     "got_titles": [
+      "syn-qa-manual-ja",
+      "syn-qa-manual-ja",
+      "syn-qa-manual-ja"
+     ],
+     "keyword_hits": [
+      "特別管理部品"
+     ],
+     "keyword_total": 1,
+     "latency_ms": 600.1
+    },
+    {
+     "id": "xl-qa-manual-3-en",
+     "lang": "en",
+     "format": "ja-doc",
+     "query": "Which form does an external provider use to nominate its representative to DENSO TEN America?",
+     "expected_title": "syn-qa-manual-ja",
+     "hit": true,
+     "got_titles": [
+      "syn-qa-manual-ja",
+      "syn-qa-manual-ja",
+      "syn-qa-manual-ja"
+     ],
+     "keyword_hits": [
+      "FM529"
+     ],
+     "keyword_total": 1,
+     "latency_ms": 484.6
+    },
+    {
+     "id": "xl-qa-manual-3-ja",
+     "lang": "ja",
+     "format": "ja-doc",
+     "query": "外部提供者がDENSO TEN AMERICAに代表者を指名する際に使用するフォームは何番ですか？",
+     "expected_title": "syn-qa-manual-ja",
+     "hit": true,
+     "got_titles": [
+      "syn-qa-manual-ja",
+      "syn-qa-manual-ja",
+      "syn-qa-manual-ja"
+     ],
+     "keyword_hits": [
+      "FM529"
+     ],
+     "keyword_total": 1,
+     "latency_ms": 598.4
+    },
+    {
+     "id": "xl-qa-manual-3-vi",
+     "lang": "vi",
+     "format": "ja-doc",
+     "query": "Nhà cung cấp bên ngoài dùng biểu mẫu số mấy để chỉ định người đại diện với DENSO TEN America?",
+     "expected_title": "syn-qa-manual-ja",
+     "hit": true,
+     "got_titles": [
+      "syn-qa-manual-ja",
+      "syn-integrated-report-b-vi",
+      "syn-qa-manual-ja"
+     ],
+     "keyword_hits": [],
+     "keyword_total": 1,
+     "latency_ms": 539.2
+    },
+    {
+     "id": "xl-qa-manual-4-en",
+     "lang": "en",
+     "format": "ja-doc",
+     "query": "Which process must external providers use as the basic tool for prioritizing risk mitigation and preventive action?",
+     "expected_title": "syn-qa-manual-ja",
+     "hit": true,
+     "got_titles": [
+      "syn-qa-manual-ja",
+      "syn-qa-manual-ja",
+      "syn-qa-manual-ja"
+     ],
+     "keyword_hits": [
+      "FMEAプロセス"
+     ],
+     "keyword_total": 1,
+     "latency_ms": 527.3
+    },
+    {
+     "id": "xl-qa-manual-4-ja",
+     "lang": "ja",
+     "format": "ja-doc",
+     "query": "外部提供者が、リスク軽減と予防処置の実施を優先順位付けするための基本的なツールとして使用しなければならないプロセスは何ですか？",
+     "expected_title": "syn-qa-manual-ja",
+     "hit": true,
+     "got_titles": [
+      "syn-qa-manual-ja",
+      "syn-qa-manual-ja",
+      "syn-qa-manual-ja"
+     ],
+     "keyword_hits": [
+      "FMEAプロセス"
+     ],
+     "keyword_total": 1,
+     "latency_ms": 446.2
+    },
+    {
+     "id": "xl-qa-manual-4-vi",
+     "lang": "vi",
+     "format": "ja-doc",
+     "query": "Nhà cung cấp bên ngoài phải dùng quy trình nào làm công cụ cơ bản để ưu tiên giảm thiểu rủi ro và thực hiện hành động phòng ngừa?",
+     "expected_title": "syn-qa-manual-ja",
+     "hit": true,
+     "got_titles": [
+      "syn-qa-manual-ja",
+      "syn-integrated-report-b-vi",
+      "syn-integrated-report-b-vi"
+     ],
+     "keyword_hits": [
+      "FMEAプロセス"
+     ],
+     "keyword_total": 1,
+     "latency_ms": 529.3
+    },
+    {
+     "id": "xl-human-rights-1-en",
+     "lang": "en",
+     "format": "ja-doc",
+     "query": "Which United Nations principles is the DENSO Group Human Rights Policy aligned with?",
+     "expected_title": "syn-human-rights-ja",
+     "hit": true,
+     "got_titles": [
+      "syn-human-rights-ja",
+      "syn-human-rights-ja",
+      "syn-human-rights-ja"
+     ],
+     "keyword_hits": [
+      "ビジネスと人権に関する指導原則"
+     ],
+     "keyword_total": 1,
+     "latency_ms": 590.4
+    },
+    {
+     "id": "xl-human-rights-1-ja",
+     "lang": "ja",
+     "format": "ja-doc",
+     "query": "DENSOグループ人権方針は、国連のどの原則に沿って策定されましたか？",
+     "expected_title": "syn-human-rights-ja",
+     "hit": true,
+     "got_titles": [
+      "syn-human-rights-ja",
+      "syn-human-rights-ja",
+      "syn-human-rights-ja"
+     ],
+     "keyword_hits": [
+      "ビジネスと人権に関する指導原則"
+     ],
+     "keyword_total": 1,
+     "latency_ms": 655.5
+    },
+    {
+     "id": "xl-human-rights-1-vi",
+     "lang": "vi",
+     "format": "ja-doc",
+     "query": "Chính sách Nhân quyền của Tập đoàn DENSO được xây dựng phù hợp với nguyên tắc nào của Liên hợp quốc?",
+     "expected_title": "syn-human-rights-ja",
+     "hit": true,
+     "got_titles": [
+      "syn-integrated-report-b-vi",
+      "syn-human-rights-ja",
+      "syn-human-rights-ja"
+     ],
+     "keyword_hits": [
+      "ビジネスと人権に関する指導原則"
+     ],
+     "keyword_total": 1,
+     "latency_ms": 613.6
+    },
+    {
+     "id": "xl-human-rights-2-en",
+     "lang": "en",
+     "format": "ja-doc",
+     "query": "What does DENSO commit to establishing in order to identify, prevent and mitigate adverse human rights impacts?",
+     "expected_title": "syn-human-rights-ja",
+     "hit": true,
+     "got_titles": [
+      "syn-human-rights-ja",
+      "syn-human-rights-ja",
+      "syn-integrated-report-b-vi"
+     ],
+     "keyword_hits": [
+      "人権デューデリジェンス"
+     ],
+     "keyword_total": 1,
+     "latency_ms": 614.9
+    },
+    {
+     "id": "xl-human-rights-2-ja",
+     "lang": "ja",
+     "format": "ja-doc",
+     "query": "人権への負の影響を特定・防止・軽減するために、DENSOが構築するとしている体制は何ですか？",
+     "expected_title": "syn-human-rights-ja",
+     "hit": true,
+     "got_titles": [
+      "syn-human-rights-ja",
+      "syn-human-rights-ja",
+      "syn-human-rights-ja"
+     ],
+     "keyword_hits": [
+      "人権デューデリジェンス"
+     ],
+     "keyword_total": 1,
+     "latency_ms": 641.9
+    },
+    {
+     "id": "xl-human-rights-2-vi",
+     "lang": "vi",
+     "format": "ja-doc",
+     "query": "DENSO cam kết xây dựng cơ chế nào để xác định, ngăn ngừa và giảm thiểu các tác động tiêu cực đến nhân quyền?",
+     "expected_title": "syn-human-rights-ja",
+     "hit": false,
+     "got_titles": [
+      "syn-integrated-report-b-vi",
+      "syn-integrated-report-b-vi",
+      "syn-integrated-report-b-vi"
+     ],
+     "keyword_hits": [],
+     "keyword_total": 1,
+     "latency_ms": 607.0
+    },
+    {
+     "id": "xl-human-rights-3-en",
+     "lang": "en",
+     "format": "ja-doc",
+     "query": "Whose approval and signature does the DENSO Group Human Rights Policy carry?",
+     "expected_title": "syn-human-rights-ja",
+     "hit": true,
+     "got_titles": [
+      "syn-human-rights-ja",
+      "syn-human-rights-ja",
+      "syn-integrated-report-a-en"
+     ],
+     "keyword_hits": [
+      "取締役会の承認および社長兼CEOの署名"
+     ],
+     "keyword_total": 1,
+     "latency_ms": 660.9
+    },
+    {
+     "id": "xl-human-rights-3-ja",
+     "lang": "ja",
+     "format": "ja-doc",
+     "query": "DENSOグループ人権方針は、誰の承認と署名を得ていますか？",
+     "expected_title": "syn-human-rights-ja",
+     "hit": true,
+     "got_titles": [
+      "syn-human-rights-ja",
+      "syn-human-rights-ja",
+      "syn-human-rights-ja"
+     ],
+     "keyword_hits": [
+      "取締役会の承認および社長兼CEOの署名"
+     ],
+     "keyword_total": 1,
+     "latency_ms": 584.1
+    },
+    {
+     "id": "xl-human-rights-3-vi",
+     "lang": "vi",
+     "format": "ja-doc",
+     "query": "Chính sách Nhân quyền của Tập đoàn DENSO có sự phê duyệt và chữ ký của ai?",
+     "expected_title": "syn-human-rights-ja",
+     "hit": true,
+     "got_titles": [
+      "syn-human-rights-ja",
+      "syn-integrated-report-b-vi",
+      "syn-human-rights-ja"
+     ],
+     "keyword_hits": [
+      "取締役会の承認および社長兼CEOの署名"
+     ],
+     "keyword_total": 1,
+     "latency_ms": 562.3
+    },
+    {
+     "id": "xl-human-rights-4-en",
+     "lang": "en",
+     "format": "ja-doc",
+     "query": "Which international labor organization's declaration on fundamental principles and rights at work does DENSO support?",
+     "expected_title": "syn-human-rights-ja",
+     "hit": true,
+     "got_titles": [
+      "syn-human-rights-ja",
+      "syn-integrated-report-b-vi",
+      "syn-human-rights-ja"
+     ],
+     "keyword_hits": [
+      "国際労働機関（ILO）"
+     ],
+     "keyword_total": 1,
+     "latency_ms": 630.9
+    },
+    {
+     "id": "xl-human-rights-4-ja",
+     "lang": "ja",
+     "format": "ja-doc",
+     "query": "DENSOが支持している「労働における基本的原則及び権利に関する宣言」を定めた国際機関はどこですか？",
+     "expected_title": "syn-human-rights-ja",
+     "hit": true,
+     "got_titles": [
+      "syn-human-rights-ja",
+      "syn-human-rights-ja",
+      "syn-integrated-report-a-en"
+     ],
+     "keyword_hits": [
+      "国際労働機関（ILO）"
+     ],
+     "keyword_total": 1,
+     "latency_ms": 575.6
+    },
+    {
+     "id": "xl-human-rights-4-vi",
+     "lang": "vi",
+     "format": "ja-doc",
+     "query": "DENSO ủng hộ Tuyên bố về các nguyên tắc và quyền cơ bản tại nơi làm việc của tổ chức quốc tế nào?",
+     "expected_title": "syn-human-rights-ja",
+     "hit": true,
+     "got_titles": [
+      "syn-human-rights-ja",
+      "syn-integrated-report-b-vi",
+      "syn-compliance-code-vi"
+     ],
+     "keyword_hits": [
+      "国際労働機関（ILO）"
+     ],
+     "keyword_total": 1,
+     "latency_ms": 645.6
+    },
+    {
+     "id": "xl-integrated-report-a-1-en",
+     "lang": "en",
+     "format": "en-doc",
+     "query": "In which fiscal year did DENSO select its priority issues (materiality) under its 2030 Long-term Policy?",
+     "expected_title": "syn-integrated-report-a-en",
+     "hit": true,
+     "got_titles": [
+      "syn-integrated-report-a-en",
+      "syn-integrated-report-a-en",
+      "syn-securities-report-a-en"
+     ],
+     "keyword_hits": [
+      "fiscal 2018"
+     ],
+     "keyword_total": 1,
+     "latency_ms": 712.9
+    },
+    {
+     "id": "xl-integrated-report-a-1-ja",
+     "lang": "ja",
+     "format": "en-doc",
+     "query": "DENSOが2030年長期方針のもとで重要課題（マテリアリティ）を選定したのは何年度ですか？",
+     "expected_title": "syn-integrated-report-a-en",
+     "hit": true,
+     "got_titles": [
+      "syn-integrated-report-a-en",
+      "syn-integrated-report-a-en",
+      "syn-integrated-report-a-en"
+     ],
+     "keyword_hits": [
+      "fiscal 2018"
+     ],
+     "keyword_total": 1,
+     "latency_ms": 580.7
+    },
+    {
+     "id": "xl-integrated-report-a-1-vi",
+     "lang": "vi",
+     "format": "en-doc",
+     "query": "DENSO đã lựa chọn các vấn đề ưu tiên (materiality) theo Chính sách dài hạn 2030 vào năm tài chính nào?",
+     "expected_title": "syn-integrated-report-a-en",
+     "hit": true,
+     "got_titles": [
+      "syn-integrated-report-a-en",
+      "syn-integrated-report-a-en",
+      "syn-integrated-report-a-en"
+     ],
+     "keyword_hits": [
+      "fiscal 2018"
+     ],
+     "keyword_total": 1,
+     "latency_ms": 684.3
+    },
+    {
+     "id": "xl-integrated-report-a-2-en",
+     "lang": "en",
+     "format": "en-doc",
+     "query": "How many areas were set as evaluation targets when DENSO extracted issues for its materiality review?",
+     "expected_title": "syn-integrated-report-a-en",
+     "hit": true,
+     "got_titles": [
+      "syn-integrated-report-a-en",
+      "syn-integrated-report-a-en",
+      "syn-integrated-report-a-en"
+     ],
+     "keyword_hits": [
+      "116 areas"
+     ],
+     "keyword_total": 1,
+     "latency_ms": 666.0
+    },
+    {
+     "id": "xl-integrated-report-a-2-ja",
+     "lang": "ja",
+     "format": "en-doc",
+     "query": "DENSOがマテリアリティの見直しで課題を抽出した際、評価対象として設定した領域はいくつですか？",
+     "expected_title": "syn-integrated-report-a-en",
+     "hit": true,
+     "got_titles": [
+      "syn-integrated-report-a-en",
+      "syn-integrated-report-a-en",
+      "syn-integrated-report-a-en"
+     ],
+     "keyword_hits": [
+      "116 areas"
+     ],
+     "keyword_total": 1,
+     "latency_ms": 568.7
+    },
+    {
+     "id": "xl-integrated-report-a-2-vi",
+     "lang": "vi",
+     "format": "en-doc",
+     "query": "Có bao nhiêu lĩnh vực được đặt làm đối tượng đánh giá khi DENSO trích xuất các vấn đề cho việc rà soát materiality?",
+     "expected_title": "syn-integrated-report-a-en",
+     "hit": true,
+     "got_titles": [
+      "syn-integrated-report-a-en",
+      "syn-integrated-report-a-en",
+      "syn-integrated-report-a-en"
+     ],
+     "keyword_hits": [
+      "116 areas"
+     ],
+     "keyword_total": 1,
+     "latency_ms": 624.7
+    },
+    {
+     "id": "xl-integrated-report-a-3-en",
+     "lang": "en",
+     "format": "en-doc",
+     "query": "Which analytical method does DENSO use to review future social forecasts for 2030?",
+     "expected_title": "syn-integrated-report-a-en",
+     "hit": true,
+     "got_titles": [
+      "syn-integrated-report-a-en",
+      "syn-integrated-report-a-en",
+      "syn-integrated-report-a-en"
+     ],
+     "keyword_hits": [
+      "PEST analysis"
+     ],
+     "keyword_total": 1,
+     "latency_ms": 652.4
+    },
+    {
+     "id": "xl-integrated-report-a-3-ja",
+     "lang": "ja",
+     "format": "en-doc",
+     "query": "DENSOが2030年に向けた将来の社会予測を検討する際に用いる分析手法は何ですか？",
+     "expected_title": "syn-integrated-report-a-en",
+     "hit": true,
+     "got_titles": [
+      "syn-integrated-report-a-en",
+      "syn-integrated-report-a-en",
+      "syn-integrated-report-a-en"
+     ],
+     "keyword_hits": [
+      "PEST analysis"
+     ],
+     "keyword_total": 1,
+     "latency_ms": 661.9
+    },
+    {
+     "id": "xl-integrated-report-a-3-vi",
+     "lang": "vi",
+     "format": "en-doc",
+     "query": "DENSO sử dụng phương pháp phân tích nào để rà soát dự báo xã hội trong tương lai cho năm 2030?",
+     "expected_title": "syn-integrated-report-a-en",
+     "hit": true,
+     "got_titles": [
+      "syn-integrated-report-a-en",
+      "syn-integrated-report-a-en",
+      "syn-integrated-report-a-en"
+     ],
+     "keyword_hits": [
+      "PEST analysis"
+     ],
+     "keyword_total": 1,
+     "latency_ms": 608.5
+    },
+    {
+     "id": "xl-integrated-report-a-4-en",
+     "lang": "en",
+     "format": "en-doc",
+     "query": "In which region did DENSO's fully automated harvesting robot Artemy start receiving orders?",
+     "expected_title": "syn-integrated-report-a-en",
+     "hit": true,
+     "got_titles": [
+      "syn-integrated-report-a-en",
+      "syn-integrated-report-a-en",
+      "syn-securities-report-a-en"
+     ],
+     "keyword_hits": [
+      "Europe"
+     ],
+     "keyword_total": 1,
+     "latency_ms": 743.8
+    },
+    {
+     "id": "xl-integrated-report-a-4-ja",
+     "lang": "ja",
+     "format": "en-doc",
+     "query": "DENSOの完全自動収穫ロボット「Artemy」が受注を開始した地域はどこですか？",
+     "expected_title": "syn-integrated-report-a-en",
+     "hit": true,
+     "got_titles": [
+      "syn-integrated-report-a-en",
+      "syn-integrated-report-a-en",
+      "syn-securities-report-a-en"
+     ],
+     "keyword_hits": [
+      "Europe"
+     ],
+     "keyword_total": 1,
+     "latency_ms": 635.7
+    },
+    {
+     "id": "xl-integrated-report-a-4-vi",
+     "lang": "vi",
+     "format": "en-doc",
+     "query": "Robot thu hoạch hoàn toàn tự động Artemy của DENSO bắt đầu nhận đơn hàng tại khu vực nào?",
+     "expected_title": "syn-integrated-report-a-en",
+     "hit": true,
+     "got_titles": [
+      "syn-integrated-report-a-en",
+      "syn-integrated-report-a-en",
+      "syn-integrated-report-b-vi"
+     ],
+     "keyword_hits": [
+      "Europe"
+     ],
+     "keyword_total": 1,
+     "latency_ms": 733.2
+    },
+    {
+     "id": "xl-integrated-report-b-1-en",
+     "lang": "en",
+     "format": "vi-doc",
+     "query": "Approximately how many shareholders does DENSO report among its key company figures?",
+     "expected_title": "syn-integrated-report-b-vi",
+     "hit": true,
+     "got_titles": [
+      "syn-integrated-report-b-vi",
+      "syn-securities-report-a-en",
+      "syn-integrated-report-a-en"
+     ],
+     "keyword_hits": [
+      "22,4 vạn người"
+     ],
+     "keyword_total": 1,
+     "latency_ms": 565.2
+    },
+    {
+     "id": "xl-integrated-report-b-1-ja",
+     "lang": "ja",
+     "format": "vi-doc",
+     "query": "DENSOが主要な会社データとして示している株主数は、およそ何人ですか？",
+     "expected_title": "syn-integrated-report-b-vi",
+     "hit": true,
+     "got_titles": [
+      "syn-integrated-report-b-vi",
+      "syn-securities-report-a-en",
+      "syn-securities-report-a-en"
+     ],
+     "keyword_hits": [
+      "22,4 vạn người"
+     ],
+     "keyword_total": 1,
+     "latency_ms": 556.4
+    },
+    {
+     "id": "xl-integrated-report-b-1-vi",
+     "lang": "vi",
+     "format": "vi-doc",
+     "query": "DENSO công bố khoảng bao nhiêu cổ đông trong các số liệu chính của công ty?",
+     "expected_title": "syn-integrated-report-b-vi",
+     "hit": true,
+     "got_titles": [
+      "syn-integrated-report-b-vi",
+      "syn-securities-report-b-vi",
+      "syn-securities-report-a-en"
+     ],
+     "keyword_hits": [
+      "22,4 vạn người"
+     ],
+     "keyword_total": 1,
+     "latency_ms": 617.2
+    },
+    {
+     "id": "xl-integrated-report-b-2-en",
+     "lang": "en",
+     "format": "vi-doc",
+     "query": "In how many countries and regions does DENSO operate its business worldwide?",
+     "expected_title": "syn-integrated-report-b-vi",
+     "hit": true,
+     "got_titles": [
+      "syn-integrated-report-b-vi",
+      "syn-integrated-report-a-en",
+      "syn-securities-report-a-en"
+     ],
+     "keyword_hits": [
+      "35 quốc gia"
+     ],
+     "keyword_total": 1,
+     "latency_ms": 596.4
+    },
+    {
+     "id": "xl-integrated-report-b-2-ja",
+     "lang": "ja",
+     "format": "vi-doc",
+     "query": "DENSOが世界で事業を展開している国・地域の数はいくつですか？",
+     "expected_title": "syn-integrated-report-b-vi",
+     "hit": true,
+     "got_titles": [
+      "syn-integrated-report-b-vi",
+      "syn-securities-report-a-en",
+      "syn-securities-report-a-en"
+     ],
+     "keyword_hits": [
+      "35 quốc gia"
+     ],
+     "keyword_total": 1,
+     "latency_ms": 658.6
+    },
+    {
+     "id": "xl-integrated-report-b-2-vi",
+     "lang": "vi",
+     "format": "vi-doc",
+     "query": "DENSO triển khai hoạt động kinh doanh trên toàn cầu tại bao nhiêu quốc gia và vùng lãnh thổ?",
+     "expected_title": "syn-integrated-report-b-vi",
+     "hit": true,
+     "got_titles": [
+      "syn-integrated-report-b-vi",
+      "syn-integrated-report-b-vi",
+      "syn-integrated-report-a-en"
+     ],
+     "keyword_hits": [
+      "35 quốc gia"
+     ],
+     "keyword_total": 1,
+     "latency_ms": 608.9
+    },
+    {
+     "id": "xl-integrated-report-b-3-en",
+     "lang": "en",
+     "format": "vi-doc",
+     "query": "Approximately how many people in total have taken part in DENSO's corporate volunteer activities?",
+     "expected_title": "syn-integrated-report-b-vi",
+     "hit": true,
+     "got_titles": [
+      "syn-integrated-report-b-vi",
+      "syn-integrated-report-b-vi",
+      "syn-integrated-report-a-en"
+     ],
+     "keyword_hits": [
+      "10,5 vạn lượt người"
+     ],
+     "keyword_total": 1,
+     "latency_ms": 665.5
+    },
+    {
+     "id": "xl-integrated-report-b-3-ja",
+     "lang": "ja",
+     "format": "vi-doc",
+     "query": "DENSOの企業ボランティア活動への参加者は、延べおよそ何人ですか？",
+     "expected_title": "syn-integrated-report-b-vi",
+     "hit": true,
+     "got_titles": [
+      "syn-integrated-report-b-vi",
+      "syn-integrated-report-a-en",
+      "syn-integrated-report-a-en"
+     ],
+     "keyword_hits": [
+      "10,5 vạn lượt người"
+     ],
+     "keyword_total": 1,
+     "latency_ms": 636.8
+    },
+    {
+     "id": "xl-integrated-report-b-3-vi",
+     "lang": "vi",
+     "format": "vi-doc",
+     "query": "Tổng số lượt người tham gia hoạt động tình nguyện của DENSO là khoảng bao nhiêu?",
+     "expected_title": "syn-integrated-report-b-vi",
+     "hit": true,
+     "got_titles": [
+      "syn-integrated-report-b-vi",
+      "syn-integrated-report-b-vi",
+      "syn-integrated-report-a-en"
+     ],
+     "keyword_hits": [
+      "10,5 vạn lượt người"
+     ],
+     "keyword_total": 1,
+     "latency_ms": 652.9
+    },
+    {
+     "id": "xl-integrated-report-b-4-en",
+     "lang": "en",
+     "format": "vi-doc",
+     "query": "How many business segments does DENSO operate as of March 31, 2025?",
+     "expected_title": "syn-integrated-report-b-vi",
+     "hit": true,
+     "got_titles": [
+      "syn-integrated-report-b-vi",
+      "syn-integrated-report-b-vi",
+      "syn-integrated-report-b-vi"
+     ],
+     "keyword_hits": [
+      "7 mảng kinh doanh"
+     ],
+     "keyword_total": 1,
+     "latency_ms": 615.0
+    },
+    {
+     "id": "xl-integrated-report-b-4-ja",
+     "lang": "ja",
+     "format": "vi-doc",
+     "query": "2025年3月31日時点で、DENSOはいくつの事業領域を展開していますか？",
+     "expected_title": "syn-integrated-report-b-vi",
+     "hit": true,
+     "got_titles": [
+      "syn-integrated-report-b-vi",
+      "syn-integrated-report-b-vi",
+      "syn-integrated-report-a-en"
+     ],
+     "keyword_hits": [
+      "7 mảng kinh doanh"
+     ],
+     "keyword_total": 1,
+     "latency_ms": 680.9
+    },
+    {
+     "id": "xl-integrated-report-b-4-vi",
+     "lang": "vi",
+     "format": "vi-doc",
+     "query": "Tại thời điểm ngày 31 tháng 3 năm 2025, DENSO triển khai bao nhiêu mảng kinh doanh?",
+     "expected_title": "syn-integrated-report-b-vi",
+     "hit": true,
+     "got_titles": [
+      "syn-integrated-report-b-vi",
+      "syn-integrated-report-b-vi",
+      "syn-integrated-report-b-vi"
+     ],
+     "keyword_hits": [
+      "7 mảng kinh doanh"
+     ],
+     "keyword_total": 1,
+     "latency_ms": 616.7
+    },
+    {
+     "id": "xl-securities-report-a-1-en",
+     "lang": "en",
+     "format": "en-doc",
+     "query": "What was the total sales result of DENSO's reportable segments in the fiscal year ended March 31, 2023, in millions of yen?",
+     "expected_title": "syn-securities-report-a-en",
+     "hit": true,
+     "got_titles": [
+      "syn-securities-report-a-en",
+      "syn-securities-report-a-en",
+      "syn-securities-report-a-en"
+     ],
+     "keyword_hits": [
+      "6,301,523"
+     ],
+     "keyword_total": 1,
+     "latency_ms": 616.0
+    },
+    {
+     "id": "xl-securities-report-a-1-ja",
+     "lang": "ja",
+     "format": "en-doc",
+     "query": "2023年3月31日に終了した連結会計年度における、DENSOの報告セグメント計の販売実績は百万円でいくらですか？",
+     "expected_title": "syn-securities-report-a-en",
+     "hit": true,
+     "got_titles": [
+      "syn-securities-report-a-en",
+      "syn-securities-report-a-en",
+      "syn-securities-report-a-en"
+     ],
+     "keyword_hits": [
+      "6,301,523"
+     ],
+     "keyword_total": 1,
+     "latency_ms": 628.7
+    },
+    {
+     "id": "xl-securities-report-a-1-vi",
+     "lang": "vi",
+     "format": "en-doc",
+     "query": "Tổng kết quả bán hàng của các phân khúc báo cáo của DENSO trong năm tài chính kết thúc ngày 31 tháng 3 năm 2023 là bao nhiêu triệu yên?",
+     "expected_title": "syn-securities-report-a-en",
+     "hit": true,
+     "got_titles": [
+      "syn-securities-report-b-vi",
+      "syn-securities-report-b-vi",
+      "syn-securities-report-a-en"
+     ],
+     "keyword_hits": [
+      "6,301,523"
+     ],
+     "keyword_total": 1,
+     "latency_ms": 582.0
+    },
+    {
+     "id": "xl-securities-report-a-2-en",
+     "lang": "en",
+     "format": "en-doc",
+     "query": "What were DENSO's sales to Toyota Motor Corporation in the fiscal year ended March 31, 2023, in millions of yen?",
+     "expected_title": "syn-securities-report-a-en",
+     "hit": true,
+     "got_titles": [
+      "syn-securities-report-a-en",
+      "syn-securities-report-a-en",
+      "syn-securities-report-a-en"
+     ],
+     "keyword_hits": [
+      "1,525,936"
+     ],
+     "keyword_total": 1,
+     "latency_ms": 623.2
+    },
+    {
+     "id": "xl-securities-report-a-2-ja",
+     "lang": "ja",
+     "format": "en-doc",
+     "query": "2023年3月31日に終了した連結会計年度における、DENSOのトヨタ自動車株式会社向け販売実績は百万円でいくらですか？",
+     "expected_title": "syn-securities-report-a-en",
+     "hit": true,
+     "got_titles": [
+      "syn-securities-report-a-en",
+      "syn-securities-report-a-en",
+      "syn-securities-report-b-vi"
+     ],
+     "keyword_hits": [
+      "1,525,936"
+     ],
+     "keyword_total": 1,
+     "latency_ms": 639.3
+    },
+    {
+     "id": "xl-securities-report-a-2-vi",
+     "lang": "vi",
+     "format": "en-doc",
+     "query": "Doanh số của DENSO bán cho Toyota Motor Corporation trong năm tài chính kết thúc ngày 31 tháng 3 năm 2023 là bao nhiêu triệu yên?",
+     "expected_title": "syn-securities-report-a-en",
+     "hit": true,
+     "got_titles": [
+      "syn-securities-report-b-vi",
+      "syn-securities-report-b-vi",
+      "syn-securities-report-a-en"
+     ],
+     "keyword_hits": [
+      "1,525,936"
+     ],
+     "keyword_total": 1,
+     "latency_ms": 593.3
+    },
+    {
+     "id": "xl-securities-report-a-3-en",
+     "lang": "en",
+     "format": "en-doc",
+     "query": "What were DENSO's cash and cash equivalents at the end of the fiscal year ended March 31, 2023?",
+     "expected_title": "syn-securities-report-a-en",
+     "hit": true,
+     "got_titles": [
+      "syn-securities-report-b-vi",
+      "syn-securities-report-a-en",
+      "syn-securities-report-a-en"
+     ],
+     "keyword_hits": [
+      "733.9 billion yen"
+     ],
+     "keyword_total": 1,
+     "latency_ms": 573.8
+    },
+    {
+     "id": "xl-securities-report-a-3-ja",
+     "lang": "ja",
+     "format": "en-doc",
+     "query": "2023年3月31日に終了した連結会計年度末における、DENSOの現金及び現金同等物はいくらですか？",
+     "expected_title": "syn-securities-report-a-en",
+     "hit": true,
+     "got_titles": [
+      "syn-securities-report-b-vi",
+      "syn-securities-report-a-en",
+      "syn-securities-report-a-en"
+     ],
+     "keyword_hits": [
+      "733.9 billion yen"
+     ],
+     "keyword_total": 1,
+     "latency_ms": 634.5
+    },
+    {
+     "id": "xl-securities-report-a-3-vi",
+     "lang": "vi",
+     "format": "en-doc",
+     "query": "Tiền và tương đương tiền của DENSO vào cuối năm tài chính kết thúc ngày 31 tháng 3 năm 2023 là bao nhiêu?",
+     "expected_title": "syn-securities-report-a-en",
+     "hit": false,
+     "got_titles": [
+      "syn-securities-report-b-vi",
+      "syn-securities-report-b-vi",
+      "syn-securities-report-b-vi"
+     ],
+     "keyword_hits": [],
+     "keyword_total": 1,
+     "latency_ms": 598.1
+    },
+    {
+     "id": "xl-securities-report-a-4-en",
+     "lang": "en",
+     "format": "en-doc",
+     "query": "What were DENSO's group-wide research and development expenses in the fiscal year ended March 31, 2023?",
+     "expected_title": "syn-securities-report-a-en",
+     "hit": true,
+     "got_titles": [
+      "syn-securities-report-a-en",
+      "syn-securities-report-a-en",
+      "syn-securities-report-a-en"
+     ],
+     "keyword_hits": [
+      "521,615 million yen"
+     ],
+     "keyword_total": 1,
+     "latency_ms": 579.7
+    },
+    {
+     "id": "xl-securities-report-a-4-ja",
+     "lang": "ja",
+     "format": "en-doc",
+     "query": "2023年3月31日に終了した連結会計年度における、DENSOグループ全体の研究開発費はいくらですか？",
+     "expected_title": "syn-securities-report-a-en",
+     "hit": true,
+     "got_titles": [
+      "syn-securities-report-a-en",
+      "syn-securities-report-a-en",
+      "syn-securities-report-a-en"
+     ],
+     "keyword_hits": [
+      "521,615 million yen"
+     ],
+     "keyword_total": 1,
+     "latency_ms": 652.0
+    },
+    {
+     "id": "xl-securities-report-a-4-vi",
+     "lang": "vi",
+     "format": "en-doc",
+     "query": "Chi phí nghiên cứu và phát triển toàn tập đoàn của DENSO trong năm tài chính kết thúc ngày 31 tháng 3 năm 2023 là bao nhiêu?",
+     "expected_title": "syn-securities-report-a-en",
+     "hit": false,
+     "got_titles": [
+      "syn-securities-report-b-vi",
+      "syn-securities-report-b-vi",
+      "syn-securities-report-b-vi"
+     ],
+     "keyword_hits": [],
+     "keyword_total": 1,
+     "latency_ms": 694.3
+    },
+    {
+     "id": "xl-securities-report-b-1-en",
+     "lang": "en",
+     "format": "vi-doc",
+     "query": "With which company did DENSO conclude a business transfer agreement for its fuel pump module business?",
+     "expected_title": "syn-securities-report-b-vi",
+     "hit": true,
+     "got_titles": [
+      "syn-securities-report-b-vi",
+      "syn-securities-report-b-vi",
+      "syn-securities-report-a-en"
+     ],
+     "keyword_hits": [
+      "Aisan Industry Co., Ltd."
+     ],
+     "keyword_total": 1,
+     "latency_ms": 667.1
+    },
+    {
+     "id": "xl-securities-report-b-1-ja",
+     "lang": "ja",
+     "format": "vi-doc",
+     "query": "DENSOは燃料ポンプモジュール事業の譲渡契約を、どの会社と締結しましたか？",
+     "expected_title": "syn-securities-report-b-vi",
+     "hit": true,
+     "got_titles": [
+      "syn-securities-report-b-vi",
+      "syn-securities-report-b-vi",
+      "syn-securities-report-a-en"
+     ],
+     "keyword_hits": [
+      "Aisan Industry Co., Ltd."
+     ],
+     "keyword_total": 1,
+     "latency_ms": 586.5
+    },
+    {
+     "id": "xl-securities-report-b-1-vi",
+     "lang": "vi",
+     "format": "vi-doc",
+     "query": "DENSO đã ký hợp đồng chuyển nhượng mảng kinh doanh mô-đun bơm nhiên liệu với công ty nào?",
+     "expected_title": "syn-securities-report-b-vi",
+     "hit": true,
+     "got_titles": [
+      "syn-securities-report-b-vi",
+      "syn-securities-report-b-vi",
+      "syn-integrated-report-b-vi"
+     ],
+     "keyword_hits": [
+      "Aisan Industry Co., Ltd."
+     ],
+     "keyword_total": 1,
+     "latency_ms": 649.7
+    },
+    {
+     "id": "xl-securities-report-b-2-en",
+     "lang": "en",
+     "format": "vi-doc",
+     "query": "What impairment loss did DENSO's European subsidiary record on its production equipment in the fiscal year ended March 31, 2022?",
+     "expected_title": "syn-securities-report-b-vi",
+     "hit": true,
+     "got_titles": [
+      "syn-securities-report-b-vi",
+      "syn-securities-report-b-vi",
+      "syn-securities-report-b-vi"
+     ],
+     "keyword_hits": [
+      "8.844 triệu yên"
+     ],
+     "keyword_total": 1,
+     "latency_ms": 641.2
+    },
+    {
+     "id": "xl-securities-report-b-2-ja",
+     "lang": "ja",
+     "format": "vi-doc",
+     "query": "2022年3月31日に終了した連結会計年度に、DENSOの欧州子会社は生産設備についていくらの減損損失を計上しましたか？",
+     "expected_title": "syn-securities-report-b-vi",
+     "hit": true,
+     "got_titles": [
+      "syn-securities-report-b-vi",
+      "syn-securities-report-b-vi",
+      "syn-securities-report-b-vi"
+     ],
+     "keyword_hits": [
+      "8.844 triệu yên"
+     ],
+     "keyword_total": 1,
+     "latency_ms": 566.6
+    },
+    {
+     "id": "xl-securities-report-b-2-vi",
+     "lang": "vi",
+     "format": "vi-doc",
+     "query": "Công ty con tại châu Âu của DENSO đã ghi nhận tổn thất suy giảm thiết bị sản xuất là bao nhiêu trong năm tài chính kết thúc ngày 31 tháng 3 năm 2022?",
+     "expected_title": "syn-securities-report-b-vi",
+     "hit": true,
+     "got_titles": [
+      "syn-securities-report-b-vi",
+      "syn-securities-report-b-vi",
+      "syn-securities-report-b-vi"
+     ],
+     "keyword_hits": [
+      "8.844 triệu yên"
+     ],
+     "keyword_total": 1,
+     "latency_ms": 624.9
+    },
+    {
+     "id": "xl-securities-report-b-3-en",
+     "lang": "en",
+     "format": "vi-doc",
+     "query": "What impairment loss did DENSO record on the resort facility it decided to close at the end of March 2022?",
+     "expected_title": "syn-securities-report-b-vi",
+     "hit": true,
+     "got_titles": [
+      "syn-securities-report-b-vi",
+      "syn-securities-report-b-vi",
+      "syn-securities-report-b-vi"
+     ],
+     "keyword_hits": [
+      "908 triệu yên"
+     ],
+     "keyword_total": 1,
+     "latency_ms": 603.3
+    },
+    {
+     "id": "xl-securities-report-b-3-ja",
+     "lang": "ja",
+     "format": "vi-doc",
+     "query": "2022年3月末に閉鎖を決定した保養施設について、DENSOはいくらの減損損失を計上しましたか？",
+     "expected_title": "syn-securities-report-b-vi",
+     "hit": true,
+     "got_titles": [
+      "syn-securities-report-b-vi",
+      "syn-securities-report-b-vi",
+      "syn-securities-report-b-vi"
+     ],
+     "keyword_hits": [
+      "908 triệu yên"
+     ],
+     "keyword_total": 1,
+     "latency_ms": 635.4
+    },
+    {
+     "id": "xl-securities-report-b-3-vi",
+     "lang": "vi",
+     "format": "vi-doc",
+     "query": "DENSO đã ghi nhận tổn thất suy giảm bao nhiêu đối với cơ sở nghỉ dưỡng quyết định đóng cửa vào cuối tháng 3 năm 2022?",
+     "expected_title": "syn-securities-report-b-vi",
+     "hit": true,
+     "got_titles": [
+      "syn-securities-report-b-vi",
+      "syn-securities-report-b-vi",
+      "syn-securities-report-b-vi"
+     ],
+     "keyword_hits": [
+      "908 triệu yên"
+     ],
+     "keyword_total": 1,
+     "latency_ms": 572.3
+    },
+    {
+     "id": "xl-securities-report-b-4-en",
+     "lang": "en",
+     "format": "vi-doc",
+     "query": "In millions of yen, what was the cash acquisition price for DENSO's business combination with 重慶超力電器有限責任公司?",
+     "expected_title": "syn-securities-report-b-vi",
+     "hit": true,
+     "got_titles": [
+      "syn-securities-report-b-vi",
+      "syn-securities-report-a-en",
+      "syn-securities-report-a-en"
+     ],
+     "keyword_hits": [],
+     "keyword_total": 1,
+     "latency_ms": 633.3
+    },
+    {
+     "id": "xl-securities-report-b-4-ja",
+     "lang": "ja",
+     "format": "vi-doc",
+     "query": "DENSOが重慶超力電器有限責任公司を企業結合した際の現金による取得原価は、百万円でいくらですか？",
+     "expected_title": "syn-securities-report-b-vi",
+     "hit": true,
+     "got_titles": [
+      "syn-securities-report-b-vi",
+      "syn-securities-report-a-en",
+      "syn-securities-report-a-en"
+     ],
+     "keyword_hits": [],
+     "keyword_total": 1,
+     "latency_ms": 632.3
+    },
+    {
+     "id": "xl-securities-report-b-4-vi",
+     "lang": "vi",
+     "format": "vi-doc",
+     "query": "Giá phí mua bằng tiền cho giao dịch hợp nhất kinh doanh của DENSO với 重慶超力電器有限責任公司 là bao nhiêu triệu yên?",
+     "expected_title": "syn-securities-report-b-vi",
+     "hit": true,
+     "got_titles": [
+      "syn-securities-report-b-vi",
+      "syn-securities-report-b-vi",
+      "syn-securities-report-b-vi"
+     ],
+     "keyword_hits": [
+      "9,289"
+     ],
+     "keyword_total": 1,
+     "latency_ms": 644.8
+    }
+   ],
+   "by_lang": {
+    "en": {
+     "hits": 34,
+     "total": 36,
+     "recall": 0.944
+    },
+    "ja": {
+     "hits": 32,
+     "total": 36,
+     "recall": 0.889
+    },
+    "vi": {
+     "hits": 31,
+     "total": 36,
+     "recall": 0.861
+    }
+   },
+   "by_format": {
+    "vi-doc": {
+     "hits": 30,
+     "total": 36,
+     "recall": 0.833
+    },
+    "ja-doc": {
+     "hits": 35,
+     "total": 36,
+     "recall": 0.972
+    },
+    "en-doc": {
+     "hits": 32,
+     "total": 36,
+     "recall": 0.889
+    }
+   },
+   "recall": 0.898,
+   "hits": 97,
+   "total": 108,
+   "avg_latency_ms": 622.5,
+   "median_latency_ms": 624.7,
+   "p95_latency_ms": 708.3,
+   "max_latency_ms": 762.5,
+   "first_query_ms": 593.4,
+   "reranked": true,
+   "rerank_errors": 0
+  }
+ }
+}

@@ -7,10 +7,10 @@ from tini.gateway.voice import matches_wake
 
 SHOULD_WAKE = [
     ("tini tini", "tini tini"),
-    ("Tini, tini!", "tini tini"),            # punctuation
-    ("tinitini", "tini tini"),               # whisper drops the space
+    ("Tini, tini!", "tini tini"),  # punctuation
+    ("tinitini", "tini tini"),  # whisper drops the space
     ("so anyway tini tini schedule it", "tini tini"),  # embedded in speech
-    ("tini tuni", "tini tini"),              # one-letter mangle → fuzzy match
+    ("tini tuni", "tini tini"),  # one-letter mangle → fuzzy match
     ("Hey Tini", "hey tini"),
     ("hey computer, what's up", "hey computer"),
     # regression from the first live session: whisper wrote the wake word in
@@ -24,7 +24,7 @@ SHOULD_NOT_WAKE = [
     ("what a nice day", "tini tini"),
     ("wake up call at nine", "tini tini"),
     ("", "tini tini"),
-    ("tini tini", ""),                        # no wake word configured
+    ("tini tini", ""),  # no wake word configured
     ("walk to work", "tini tini"),
 ]
 
@@ -34,6 +34,8 @@ def test_wakes(heard, wake):
     assert matches_wake(heard, wake)
 
 
-@pytest.mark.parametrize("heard,wake", SHOULD_NOT_WAKE, ids=[h or "empty" for h, _ in SHOULD_NOT_WAKE])
+@pytest.mark.parametrize(
+    "heard,wake", SHOULD_NOT_WAKE, ids=[h or "empty" for h, _ in SHOULD_NOT_WAKE]
+)
 def test_stays_asleep(heard, wake):
     assert not matches_wake(heard, wake)

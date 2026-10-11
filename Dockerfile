@@ -21,7 +21,7 @@ WORKDIR /app
 COPY pyproject.toml README.md ./
 COPY tini ./tini
 COPY skills ./skills
-RUN pip install --no-cache-dir '.[qdrant,ocr]'
+RUN pip install --no-cache-dir '.[qdrant,ocr,minio]'
 
 # Everything else a contributor might run from inside the container: scripts,
 # evals, docs, examples (including the Denso mock corpus).

@@ -29,9 +29,12 @@ REPO = Path(__file__).resolve().parents[2]
 
 def ignored(rel: str) -> bool:
     """True when git would refuse to track this path. -q: exit 0 = ignored."""
-    return subprocess.run(
-        ["git", "check-ignore", "-q", rel], cwd=REPO, capture_output=True, check=False
-    ).returncode == 0
+    return (
+        subprocess.run(
+            ["git", "check-ignore", "-q", rel], cwd=REPO, capture_output=True, check=False
+        ).returncode
+        == 0
+    )
 
 
 # Every runtime artifact a home can hold, for the DEFAULT home and for an
@@ -49,13 +52,16 @@ def test_no_agent_home_leaks_its_runtime_data(home, artifact):
     )
 
 
-@pytest.mark.parametrize("secret", [
-    ".env",
-    "credentials.json",            # Google OAuth client secret
-    "client_secret_123.json",      # what the Google console actually names it
-    "token.json",                  # a refresh token, worse than the key
-    ".gcp/service-account.json",
-])
+@pytest.mark.parametrize(
+    "secret",
+    [
+        ".env",
+        "credentials.json",  # Google OAuth client secret
+        "client_secret_123.json",  # what the Google console actually names it
+        "token.json",  # a refresh token, worse than the key
+        ".gcp/service-account.json",
+    ],
+)
 def test_secrets_are_ignored(secret):
     """The README tells people to drop credentials.json in the repo root, so the
     ignore rule is load-bearing rather than belt-and-braces. Sean caught this
@@ -75,10 +81,12 @@ def test_nothing_from_a_runtime_home_is_currently_tracked():
     tracked = subprocess.run(
         ["git", "ls-files"], cwd=REPO, capture_output=True, text=True, check=True
     ).stdout.splitlines()
-    leaked = [f for f in tracked
-              if f not in allowed
-              and (f.startswith((".tini", ".env"))
-                   or f.endswith(("credentials.json", "token.json")))]
+    leaked = [
+        f
+        for f in tracked
+        if f not in allowed
+        and (f.startswith((".tini", ".env")) or f.endswith(("credentials.json", "token.json")))
+    ]
     assert leaked == [], f"private files are in the index: {leaked}"
 
 
@@ -87,9 +95,13 @@ def test_the_env_template_carries_no_real_values():
     assignment must be empty or a placeholder — the file teaches which variables
     exist, never what they are set to."""
     lines = (REPO / ".env.example").read_text(encoding="utf-8").splitlines()
-    filled = [ln for ln in lines
-              if "=" in ln and not ln.lstrip().startswith("#")
-              and ln.split("=", 1)[1].strip().strip("\"'")]
+    filled = [
+        ln
+        for ln in lines
+        if "=" in ln
+        and not ln.lstrip().startswith("#")
+        and ln.split("=", 1)[1].strip().strip("\"'")
+    ]
     # TINI_PROVIDER is a non-secret default and is meant to have a value.
     unexpected = [ln for ln in filled if not ln.startswith("TINI_PROVIDER=")]
     assert unexpected == [], f"values committed in .env.example: {unexpected}"

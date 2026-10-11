@@ -11,7 +11,8 @@ import sys
 from pathlib import Path
 
 spec = importlib.util.spec_from_file_location(
-    "shootout", Path(__file__).resolve().parents[2] / "scripts" / "shootout.py")
+    "shootout", Path(__file__).resolve().parents[2] / "scripts" / "shootout.py"
+)
 shootout = importlib.util.module_from_spec(spec)
 sys.modules["shootout"] = shootout
 spec.loader.exec_module(shootout)
@@ -41,21 +42,34 @@ def test_no_tool_case():
 
 def test_multi_tool_minimum_enforced():
     """A multi-source case can require more than one retrieval call."""
-    case = {"expect_tool": "search_web", "expect_in_args": {"query": "policy"},
-            "expect_min_tool_calls": 3}
+    case = {
+        "expect_tool": "search_web",
+        "expect_in_args": {"query": "policy"},
+        "expect_min_tool_calls": 3,
+    }
     only_one = calls(("search_web", {"query": "policy"}))
     ok, why = shootout.check_case(case, only_one)
     assert not ok and "wanted >= 3" in why
-    full = calls(("search_web", {"query": "policy"}),
-                 ("search_web", {"query": "retention policy"}),
-                 ("search_web", {"query": "security policy"}))
+    full = calls(
+        ("search_web", {"query": "policy"}),
+        ("search_web", {"query": "retention policy"}),
+        ("search_web", {"query": "security policy"}),
+    )
     assert shootout.check_case(case, full)[0]
 
 
 def test_markdown_report_math():
-    results = [{"provider": "kimi", "model": "kimi-k3", "passed": 6, "total": 7,
-                "cost_usd": 0.1234, "avg_latency_s": 9.5,
-                "cases": [{"tokens_in": 100, "tokens_out": 50, "passed": True}]}]
+    results = [
+        {
+            "provider": "kimi",
+            "model": "kimi-k3",
+            "passed": 6,
+            "total": 7,
+            "cost_usd": 0.1234,
+            "avg_latency_s": 9.5,
+            "cases": [{"tokens_in": 100, "tokens_out": 50, "passed": True}],
+        }
+    ]
     table = shootout.markdown(results)
     assert "| kimi:kimi-k3 | 6/7 | $0.1234 | 9.5s | 100/50 |" in table
     assert "re-run" in table  # the reproducibility line is part of the contract

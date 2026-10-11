@@ -68,7 +68,9 @@ def _best_say_voice() -> str:
     robotic default — and auto-upgrades the moment you download a better voice in
     System Settings ▸ Accessibility ▸ Spoken Content ▸ System Voice."""
     try:
-        out = subprocess.run(["say", "-v", "?"], capture_output=True, text=True, timeout=5, check=False).stdout
+        out = subprocess.run(
+            ["say", "-v", "?"], capture_output=True, text=True, timeout=5, check=False
+        ).stdout
     except Exception:
         return "Daniel"
     # each line: "Name (variant)      en_US    # sample" — split name from the locale column
@@ -93,11 +95,11 @@ def _best_say_voice() -> str:
 # which sounds ridiculous. Strip them (plus leftover markdown bullets) before speaking.
 _EMOJI = re.compile(
     "[\U0001f300-\U0001faff"  # symbols, pictographs, emoticons, transport, supplemental
-    "\U00002600-\U000027bf"    # misc symbols + dingbats
-    "\U0001f1e6-\U0001f1ff"    # regional-indicator flag letters
-    "\U00002190-\U000021ff"    # arrows
-    "\U00002b00-\U00002bff"    # stars, misc symbols-and-arrows
-    "\U0000fe00-\U0000fe0f"    # variation selectors
+    "\U00002600-\U000027bf"  # misc symbols + dingbats
+    "\U0001f1e6-\U0001f1ff"  # regional-indicator flag letters
+    "\U00002190-\U000021ff"  # arrows
+    "\U00002b00-\U00002bff"  # stars, misc symbols-and-arrows
+    "\U0000fe00-\U0000fe0f"  # variation selectors
     "\U0000200d\U000020e3\U0000fe0f]+"  # ZWJ + keycap/variation joiners
 )
 
@@ -107,8 +109,8 @@ def _speakable(text: str) -> str:
     if not text:
         return ""
     text = _EMOJI.sub("", text)
-    text = re.sub(r"[*_`#>]", "", text)      # markdown emphasis/heading/quote/code marks
-    text = re.sub(r"[ \t]{2,}", " ", text)   # collapse gaps left by removed glyphs
+    text = re.sub(r"[*_`#>]", "", text)  # markdown emphasis/heading/quote/code marks
+    text = re.sub(r"[ \t]{2,}", " ", text)  # collapse gaps left by removed glyphs
     return "\n".join(ln.strip() for ln in text.splitlines()).strip()
 
 
@@ -245,7 +247,7 @@ def wake_loop(tini: Tini, mouth: Mouth, wake_word: str) -> None:
     import sounddevice as sd
 
     scout = Ears(model_size="tiny")  # cheap, always on
-    ears = Ears()                    # accurate, only after wake
+    ears = Ears()  # accurate, only after wake
     ack = os.getenv("TINI_WAKE_ACK", "Yes?")
     followup = float(os.getenv("TINI_FOLLOWUP_SECONDS", "8"))  # stay open, Siri-style
     block = SAMPLE_RATE // 10
@@ -259,7 +261,9 @@ def wake_loop(tini: Tini, mouth: Mouth, wake_word: str) -> None:
         sys.stdout.write(f"\r\x1b[2m{msg[:72]:<72}\x1b[0m")
         sys.stdout.flush()
 
-    with sd.InputStream(samplerate=SAMPLE_RATE, channels=1, dtype="float32", blocksize=block) as stream:
+    with sd.InputStream(
+        samplerate=SAMPLE_RATE, channels=1, dtype="float32", blocksize=block
+    ) as stream:
 
         def drain() -> None:
             while stream.read_available >= block:
@@ -314,7 +318,7 @@ def main() -> None:
         raise SystemExit("Voice extra not installed: pip install -e '.[voice]'")
 
     tini = Tini()
-    tini.session.session_id = "voice"   # its own conversation thread in the inbox
+    tini.session.session_id = "voice"  # its own conversation thread in the inbox
     mouth = Mouth()
 
     # Hands-free by default: always-listening for "tini tini". The default packs

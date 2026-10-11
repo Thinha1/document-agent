@@ -50,7 +50,7 @@ def discover() -> dict[str, str]:
         try:
             module = importlib.import_module(binder)
         except Exception:  # noqa: S112 — one broken optional workflow must not
-            continue       # empty the command list, and with it the chat box
+            continue  # empty the command list, and with it the chat box
         if callable(getattr(module, f"run_{name}", None)):
             found[name] = f"{binder}:run_{name}"
     return found
@@ -70,9 +70,11 @@ def describe() -> str:
         lines.append(f"`/{name}` — {summary}" if summary else f"`/{name}`")
     lines += [
         "",
-        ("`triage` is the ROUTER — it also runs itself on every message when "
-         "graph workflows are on, so calling it by name lets you inspect one "
-         "message choosing a door."),
+        (
+            "`triage` is the ROUTER — it also runs itself on every message when "
+            "graph workflows are on, so calling it by name lets you inspect one "
+            "message choosing a door."
+        ),
     ]
     return "\n".join(lines)
 

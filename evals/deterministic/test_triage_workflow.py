@@ -28,6 +28,7 @@ class Boom:
 
     def __init__(self):
         from types import SimpleNamespace
+
         self.messages = SimpleNamespace(create=self._create)
 
     def _create(self, **kwargs):
@@ -35,13 +36,16 @@ class Boom:
 
 
 def classify(reply_text: str):
-    return classify_message(ScriptedClient([response([text_block(reply_text)])]),
-                            "small-model", "hello")
+    return classify_message(
+        ScriptedClient([response([text_block(reply_text)])]), "small-model", "hello"
+    )
 
 
 def test_classifier_parses_routes_and_fails_open_on_garbage():
     assert classify('{"route": "quick", "reason": "just a greeting"}') == (
-        "quick", "just a greeting")
+        "quick",
+        "just a greeting",
+    )
     assert classify('{"route": "full", "reason": "needs retrieval"}')[0] == "full"
     # every malformed shape falls open to full — capability over latency
     assert classify("no json here at all")[0] == "full"
@@ -51,9 +55,11 @@ def test_classifier_parses_routes_and_fails_open_on_garbage():
 
 def test_flag_off_is_byte_for_byte_the_old_world(tmp_path):
     gate = response([text_block('{"retrieve": false, "query": "", "reason": "test"}')])
-    app = make_tini(tmp_path / "home",
-                    client=ScriptedClient([gate, response([text_block("Hi!")])]),
-                    graph_workflows=False)
+    app = make_tini(
+        tmp_path / "home",
+        client=ScriptedClient([gate, response([text_block("Hi!")])]),
+        graph_workflows=False,
+    )
     events = []
     result = app.respond("hello", observer=lambda k, ev: events.append(k))
     assert result.reply == "Hi!"
@@ -65,10 +71,14 @@ def test_flag_off_is_byte_for_byte_the_old_world(tmp_path):
 def test_quick_turn_answers_on_the_small_model_and_skips_the_gate(tmp_path):
     script = [
         response([text_block('{"route": "quick", "reason": "just thanks"}')]),  # triage
-        response([text_block("You're welcome!")]),                              # quick reply
+        response([text_block("You're welcome!")]),  # quick reply
     ]
-    app = make_tini(tmp_path / "home", client=ScriptedClient(script),
-                    graph_workflows=True, small_model="small-model")
+    app = make_tini(
+        tmp_path / "home",
+        client=ScriptedClient(script),
+        graph_workflows=True,
+        small_model="small-model",
+    )
     events: list[tuple[str, dict]] = []
     result = app.respond("thanks!", observer=lambda k, ev: events.append((k, ev)))
 
@@ -82,7 +92,7 @@ def test_quick_turn_answers_on_the_small_model_and_skips_the_gate(tmp_path):
     assert meta["graph"]["route"] == "quick"
     assert meta["graph"]["reason"] == "just thanks"
     assert meta["gate"] is None
-    assert meta["model"] == "small-model"          # honest per-path model
+    assert meta["model"] == "small-model"  # honest per-path model
 
 
 def test_full_turn_runs_the_real_loop_with_both_funnel_stages(tmp_path):
@@ -91,14 +101,13 @@ def test_full_turn_runs_the_real_loop_with_both_funnel_stages(tmp_path):
         response([text_block('{"retrieve": false, "query": "", "reason": "n"}')]),  # gate
         response([text_block("The runbook says to restart the worker.")]),
     ]
-    app = make_tini(tmp_path / "home", client=ScriptedClient(script),
-                    graph_workflows=True)
+    app = make_tini(tmp_path / "home", client=ScriptedClient(script), graph_workflows=True)
     events: list[str] = []
     result = app.respond("How do I restart the worker?", observer=lambda k, ev: events.append(k))
 
     assert result.reply == "The runbook says to restart the worker."
     assert result.tool_calls == []
-    assert "route" in events and "gate" in events   # both funnel stages recorded
+    assert "route" in events and "gate" in events  # both funnel stages recorded
     meta = last_meta(app)
     assert meta["graph"]["route"] == "full"
     assert meta["gate"] is not None
@@ -108,12 +117,11 @@ def test_full_turn_runs_the_real_loop_with_both_funnel_stages(tmp_path):
 
 def test_broken_classifier_fails_open_to_the_full_loop(tmp_path):
     script = [
-        response([text_block("not json — classifier had a bad day")]),               # triage
-        response([text_block('{"retrieve": false, "query": "", "reason": "n"}')]),   # gate
-        response([text_block("Still here.")]),                                        # loop
+        response([text_block("not json — classifier had a bad day")]),  # triage
+        response([text_block('{"retrieve": false, "query": "", "reason": "n"}')]),  # gate
+        response([text_block("Still here.")]),  # loop
     ]
-    app = make_tini(tmp_path / "home", client=ScriptedClient(script),
-                    graph_workflows=True)
+    app = make_tini(tmp_path / "home", client=ScriptedClient(script), graph_workflows=True)
     assert app.respond("hello?").reply == "Still here."
 
 
@@ -123,16 +131,16 @@ def test_broken_graph_engine_fails_open_to_the_plain_loop(tmp_path, monkeypatch)
 
     def explode(**kwargs):
         raise RuntimeError("graph machinery on fire")
+
     monkeypatch.setattr(triage, "build_triage_graph", explode)
     script = [
-        response([text_block('{"retrieve": false, "query": "", "reason": "n"}')]),   # gate
+        response([text_block('{"retrieve": false, "query": "", "reason": "n"}')]),  # gate
         response([text_block("Saved by the loop.")]),
     ]
-    app = make_tini(tmp_path / "home", client=ScriptedClient(script),
-                    graph_workflows=True)
+    app = make_tini(tmp_path / "home", client=ScriptedClient(script), graph_workflows=True)
     events: list[str] = []
     result = app.respond("hello", observer=lambda k, ev: events.append(k))
     assert result.reply == "Saved by the loop."
-    assert "graph_end" in events                     # the failure is on tape
+    assert "graph_end" in events  # the failure is on tape
     meta = last_meta(app)
-    assert meta["graph"] is None                     # no route happened — honest meta
+    assert meta["graph"] is None  # no route happened — honest meta

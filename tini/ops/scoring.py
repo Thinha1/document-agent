@@ -53,7 +53,7 @@ def case_for_message(message: str, cases: list[dict] | None = None) -> dict | No
     match), so a race on a KNOWN task gets a Completion score. Returns None for a
     free-form prompt — the arena still shows speed/cost/tokens, just no score."""
     msg = (message or "").strip()
-    for case in (cases if cases is not None else load_cases()):
+    for case in cases if cases is not None else load_cases():
         if (case.get("input") or "").strip() == msg:
             return case
     return None

@@ -45,22 +45,28 @@ def _memory_snapshot(conn: sqlite3.Connection) -> str:
 def _observer(kind: str, event: dict) -> None:
     """Show the loop's internals live — the video's 'transparent harness' beat."""
     if kind == "tool":
-        console.print(f"  [dim]tool · {event['tool']}({event['args']}) → {event['output'][:80]}[/dim]")
+        console.print(
+            f"  [dim]tool · {event['tool']}({event['args']}) → {event['output'][:80]}[/dim]"
+        )
     elif kind == "gate":
-        console.print(f"  [dim]gate · {event['decision']} — {event.get('reason','')}[/dim]")
+        console.print(f"  [dim]gate · {event['decision']} — {event.get('reason', '')}[/dim]")
     elif kind == "consolidation":
-        console.print(f"  [dim]memory · consolidated {event['new_facts']} fact(s) from recent chats[/dim]")
+        console.print(
+            f"  [dim]memory · consolidated {event['new_facts']} fact(s) from recent chats[/dim]"
+        )
 
 
 def main() -> None:
     tini = Tini()
-    tini.session.session_id = "terminal"   # its own conversation thread in the inbox
-    console.print(Panel.fit(
-        "[bold]Tini[/bold] — local, yours, transparent.\n"
-        f"home: {tini.settings.home.resolve()}   model: {tini.settings.model}\n"
-        "Commands: /memory · /quit",
-        border_style="cyan",
-    ))
+    tini.session.session_id = "terminal"  # its own conversation thread in the inbox
+    console.print(
+        Panel.fit(
+            "[bold]Tini[/bold] — local, yours, transparent.\n"
+            f"home: {tini.settings.home.resolve()}   model: {tini.settings.model}\n"
+            "Commands: /memory · /quit",
+            border_style="cyan",
+        )
+    )
     while True:
         try:
             user_message = console.input("[bold cyan]you ›[/bold cyan] ").strip()

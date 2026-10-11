@@ -32,8 +32,9 @@ from tini.ops import judge as judge_mod
 from tini.ops.pricing import cutoff_for, price_for
 
 
-def compare_stream(message: str, specs: list, emit, judge: bool = False,
-                   judge_spec: str = "") -> None:
+def compare_stream(
+    message: str, specs: list, emit, judge: bool = False, judge_spec: str = ""
+) -> None:
     """Race the models and stream each one's harness LIVE — gate decision and
     tool calls, per model — so every column plays out like the chat dock instead
     of a static 'racing…'. Each contestant runs the REAL loop (tools included) in
@@ -54,7 +55,7 @@ def compare_stream(message: str, specs: list, emit, judge: bool = False,
         return
 
     lock = threading.Lock()
-    collected: list = []   # per-model results, saved to the compare history at the end
+    collected: list = []  # per-model results, saved to the compare history at the end
     # If this prompt is a known battery case, every column gets a deterministic
     # Completion score (did the right tool fire, with the right args, enough
     # times). Free-form prompts still race — they just don't get a score.
@@ -68,8 +69,10 @@ def compare_stream(message: str, specs: list, emit, judge: bool = False,
 
     def run(spec):
         provider, _, model = spec.partition(":")
-        send("start", {"spec": spec, "provider": provider, "model": model,
-                       "cutoff": cutoff_for(model)})
+        send(
+            "start",
+            {"spec": spec, "provider": provider, "model": model, "cutoff": cutoff_for(model)},
+        )
         home = Path(tempfile.mkdtemp(prefix=f"compare-{provider}-"))
         gate: dict = {}
 
@@ -81,7 +84,10 @@ def compare_stream(message: str, specs: list, emit, judge: bool = False,
         def obs(kind, ev):
             if kind == "gate":
                 gate.update(decision=ev.get("decision"), reason=ev.get("reason"))
-                send("gate", {"spec": spec, "decision": ev.get("decision"), "reason": ev.get("reason")})
+                send(
+                    "gate",
+                    {"spec": spec, "decision": ev.get("decision"), "reason": ev.get("reason")},
+                )
             elif kind == "tool":
                 send("tool", {"spec": spec, "tool": ev.get("tool")})
 
@@ -118,18 +124,33 @@ def compare_stream(message: str, specs: list, emit, judge: bool = False,
             # Quality (referee grade) is NOT done here — it runs as one controlled
             # pass AFTER every column finishes (see below), so the referee doesn't
             # get a burst of concurrent calls and skip some.
-            send("result", {"spec": spec, "provider": provider, "model": settings.model,
-                            "reply": result.reply, "gate": (gate or None),
-                            "iterations": result.iterations, "latency_ms": ms,
-                            "tools": [{"tool": c["tool"]} for c in result.tool_calls],
-                            "tokens_in": tin, "tokens_out": tout, "cost_usd": cost,
-                            "cutoff": cutoff_for(settings.model),
-                            "completion": completion, "quality": None})
+            send(
+                "result",
+                {
+                    "spec": spec,
+                    "provider": provider,
+                    "model": settings.model,
+                    "reply": result.reply,
+                    "gate": (gate or None),
+                    "iterations": result.iterations,
+                    "latency_ms": ms,
+                    "tools": [{"tool": c["tool"]} for c in result.tool_calls],
+                    "tokens_in": tin,
+                    "tokens_out": tout,
+                    "cost_usd": cost,
+                    "cutoff": cutoff_for(settings.model),
+                    "completion": completion,
+                    "quality": None,
+                },
+            )
         except (Exception, SystemExit) as exc:
             # SystemExit (not an Exception subclass) is what get_client raises for
             # a missing/misconfigured key. Catch it too, or a keyless provider
             # would vanish from the race silently instead of showing WHY it failed.
-            send("result", {"spec": spec, "provider": provider, "model": model, "error": str(exc)[:200]})
+            send(
+                "result",
+                {"spec": spec, "provider": provider, "model": model, "error": str(exc)[:200]},
+            )
 
     with ThreadPoolExecutor(max_workers=min(len(specs), 6)) as ex:
         list(ex.map(run, specs))
@@ -147,9 +168,14 @@ def compare_stream(message: str, specs: list, emit, judge: bool = False,
         def grade(r):
             if r.get("error") or not (r.get("reply") or "").strip():
                 return
-            q = judge_mod.judge_reply(message, r["reply"], jp or None, jm or None,
-                                      tools=[t.get("tool") for t in (r.get("tools") or [])])
-            r["quality"] = q                       # fold into what gets persisted
+            q = judge_mod.judge_reply(
+                message,
+                r["reply"],
+                jp or None,
+                jm or None,
+                tools=[t.get("tool") for t in (r.get("tools") or [])],
+            )
+            r["quality"] = q  # fold into what gets persisted
             send("grade", {"spec": r.get("spec"), "quality": q})
 
         with ThreadPoolExecutor(max_workers=2) as jex:
@@ -159,7 +185,7 @@ def compare_stream(message: str, specs: list, emit, judge: bool = False,
     try:
         compare_history.append_run(load_settings().home, message, collected)
     except Exception:
-        pass   # a history-write hiccup must never fail the race
+        pass  # a history-write hiccup must never fail the race
     emit("done", {})
 
 
@@ -182,8 +208,9 @@ def history_response(runs: list[dict]) -> dict:
             if r.get("error"):
                 continue
             pin, pout = price_for(r.get("provider", ""), r.get("model", ""))
-            r["cost_usd"] = round((r.get("tokens_in") or 0) / 1e6 * pin
-                                  + (r.get("tokens_out") or 0) / 1e6 * pout, 4)
+            r["cost_usd"] = round(
+                (r.get("tokens_in") or 0) / 1e6 * pin + (r.get("tokens_out") or 0) / 1e6 * pout, 4
+            )
     agg = compare_history.aggregate(runs)
     for row in agg:
         row["rate_in"], row["rate_out"] = price_for(row["provider"], row["model"])
@@ -202,7 +229,7 @@ def compare_regrade(payload: dict) -> dict:
         return {"runs": [], "aggregate": []}
     jp, _, jm = (payload.get("judge_model") or "").partition(":")
     only_missing = payload.get("only_missing", True)
-    spec = payload.get("spec")   # grade just ONE card (the per-card button)
+    spec = payload.get("spec")  # grade just ONE card (the per-card button)
     last = runs[-1]
     for r in last.get("results", []):
         if r.get("error") or not (r.get("reply") or "").strip():
@@ -211,8 +238,9 @@ def compare_regrade(payload: dict) -> dict:
             continue
         if spec is None and only_missing and r.get("quality") is not None:
             continue
-        q = judge_mod.judge_reply(last.get("message", ""), r["reply"], jp or None, jm or None,
-                                  tools=r.get("tools"))   # history stores tools as [names]
+        q = judge_mod.judge_reply(
+            last.get("message", ""), r["reply"], jp or None, jm or None, tools=r.get("tools")
+        )  # history stores tools as [names]
         if q is not None:
             r["quality"] = q
     compare_history.save_runs(home, runs)

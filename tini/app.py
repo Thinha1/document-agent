@@ -65,7 +65,8 @@ class Tini:
         def _capture(kind, ev):
             if kind == "llm":
                 usage = ev.get("usage") or {}
-                total = captured.setdefault("usage", {"in": 0, "out": 0, "calls": 0})
+                total = captured.setdefault("usage", {"in": 0, "out": 0, "calls": 0, "cache": 0})
+                total["cache"] += int(usage.get("cache", 0) or 0)
                 total["in"] += int(usage.get("in", 0) or 0)
                 total["out"] += int(usage.get("out", 0) or 0)
                 total["calls"] += 1
@@ -147,13 +148,22 @@ class Tini:
         """The classic turn: assemble working memory, run THE loop. Extracted
         verbatim so the graph's full_agent node calls the SAME code as the
         flag-off default — loop-as-a-node can never drift from loop-as-default."""
-        system = self.session.build_system(user_message, notify=notify)
+        system = self.session.build_system()
+        context = self.session.build_context(user_message, notify=notify)
         # Working memory is a bounded window: only the last N turns (2 rows
         # each) enter the prompt, so context/cost/latency stay flat no matter
         # how long the conversation runs. Older turns live in state.db and
         # come back via the retrieval gate + episodic memory when relevant.
         window = self.settings.history_turns * 2
-        messages = self.session.history[-window:] + [{"role": "user", "content": user_message}]
+        # Volatile context (clock, retrieved memory, skills) goes on THIS turn's
+        # user message, after the history, so the system prompt + history stay an
+        # identical prefix from turn to turn and the provider's prompt cache hits.
+        # History stores the raw user_message (add_exchange), never this wrapper.
+        content = (
+            "[Context for this turn, not written by the user]\n"
+            f"{context}\n\n[User message]\n{user_message}"
+        )
+        messages = self.session.history[-window:] + [{"role": "user", "content": content}]
 
         return run_loop(
             client=self.client,

@@ -28,7 +28,9 @@ def test_expect_tool_must_fire():
 
 def test_expect_in_args_substring():
     case = {"expect_tool": "search_web", "expect_in_args": {"query": "runbook"}}
-    assert scoring.check_case(case, [{"tool": "search_web", "args": {"query": "worker runbook"}}])[0]
+    assert scoring.check_case(case, [{"tool": "search_web", "args": {"query": "worker runbook"}}])[
+        0
+    ]
     ok, why = scoring.check_case(case, [{"tool": "search_web", "args": {"query": "lunch"}}])
     assert not ok and "runbook" in why
 
@@ -42,13 +44,12 @@ def test_min_tool_calls_floor():
 
 def test_case_for_message_matches_trimmed_input():
     cases = [{"id": "a", "input": "Find the worker restart runbook"}]
-    assert scoring.case_for_message("  Find the worker restart runbook ",
-                                    cases)["id"] == "a"
+    assert scoring.case_for_message("  Find the worker restart runbook ", cases)["id"] == "a"
     assert scoring.case_for_message("something else entirely", cases) is None
 
 
 def test_real_dataset_loads_and_every_case_is_scoreable():
     cases = scoring.load_cases()
     assert len(cases) >= 6
-    for c in cases:                       # every seeded case must have the fields the scorer reads
+    for c in cases:  # every seeded case must have the fields the scorer reads
         assert "id" in c and "input" in c and "expect_tool" in c

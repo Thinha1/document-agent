@@ -40,7 +40,14 @@ from tini.integrations import (
     list_providers,
     test_integration,
 )
-from tini.ops import browser_agent, commands, compare_history, document_api, document_eval
+from tini.ops import (
+    browser_agent,
+    commands,
+    compare_history,
+    document_api,
+    document_eval,
+    generation_api,
+)
 from tini.ops.arena import (
     compare_clear,
     compare_delete_run,
@@ -570,6 +577,7 @@ def _documents_section(settings) -> dict:
             **document_api.documents_payload(settings),
             "question_sets": document_eval.list_question_sets(settings),
             "rerank": document_eval.rerank_info(settings),
+            "generation": generation_api.info(settings),
         }
     except Exception as exc:
         return {"error": f"{type(exc).__name__}: {exc}", "workspace": settings.document_workspace}
@@ -1226,6 +1234,36 @@ class Handler(BaseHTTPRequestHandler):
             except Exception as exc:
                 emit("done", {"error": f"{type(exc).__name__}: {exc}"})
             return
+        # /api/documents/generation/stream runs the generation eval and emits each
+        # question as it finishes. It costs real model calls, so it only ever runs
+        # from an explicit click; closing the page or pressing Cancel stops the queue.
+        if self.path == "/api/documents/generation/stream":
+            payload = self._read_json(length)
+            if payload is None:
+                return
+            self.send_response(200)
+            self.send_header("Content-Type", "text/event-stream")
+            self.send_header("Cache-Control", "no-cache")
+            self.end_headers()
+            stop_generation = threading.Event()
+            write_lock = threading.Lock()  # two worker threads report rows
+
+            def emit_generation(kind, ev):
+                try:
+                    with write_lock:
+                        self.wfile.write(
+                            f"data: {json.dumps({'kind': kind, **ev}, default=str)}\n\n".encode()
+                        )
+                        self.wfile.flush()
+                except (BrokenPipeError, ConnectionResetError, OSError):
+                    stop_generation.set()  # the page went away: stop queuing questions
+
+            try:
+                out = generation_api.run(payload, emit_generation, load_settings(), stop_generation)
+            except Exception as exc:
+                out = {"error": f"{type(exc).__name__}: {exc}"}
+            emit_generation("done", out)
+            return
         # /api/memory-arena/stream — same shape as the model race above, one dial
         # over: every contestant is the same agent on the same model, and only
         # the semantic store changes.
@@ -1304,7 +1342,12 @@ class Handler(BaseHTTPRequestHandler):
             "/api/pin": pin_action,
             "/api/documents/search": document_api.search,
             "/api/documents/action": document_api.action,
+            "/api/documents/catalog": document_api.catalog_update,
+            "/api/documents/catalog/refresh": document_api.catalog_refresh,
             "/api/documents/eval": document_eval.run_eval,
+            "/api/documents/generation/plan": generation_api.plan,
+            "/api/documents/generation/runs": generation_api.list_runs,
+            "/api/documents/generation/load": generation_api.load_run,
             "/api/documents/eval/import": document_eval.import_set,
             "/api/connections": None,
             "/api/connections/test": None,

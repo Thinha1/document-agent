@@ -304,7 +304,7 @@ function modelArenaView(d){
     const spec = `${p.provider}:${p.model}`, on = compareState.picked.has(spec);
     return `<label class="cmp-pick ${on?"on":""}"><input type="checkbox" ${on?"checked":""}
       onchange="toggleCompareModel('${esc(spec)}')"> <span class="mm-prov">${esc(p.provider)}</span> ${esc(p.model)}</label>`;
-  }).join("") : `<div class="meta">No models pinned yet — star some in <a class="reveal" onclick="location.hash='#models'">Models</a>.</div>`;
+  }).join("") : `<div class="meta">No models pinned yet — add them in <a class="reveal" onclick="location.hash='#settings/providers'">Settings</a>.</div>`;
   const n = compareState.picked ? compareState.picked.size : 0;
 
   // One column per raced model, in order. Each shows "racing…" until its result

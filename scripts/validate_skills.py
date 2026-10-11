@@ -37,7 +37,9 @@ def main() -> None:
         if len(skill.description.split()) < 5:
             problems.append(f"{rel}: description too short to match anything — say when to use it")
         if len(skill.body.splitlines()) > MAX_BODY_LINES:
-            problems.append(f"{rel}: body over {MAX_BODY_LINES} lines — skills load into the prompt, keep them tight")
+            problems.append(
+                f"{rel}: body over {MAX_BODY_LINES} lines — skills load into the prompt, keep them tight"
+            )
 
     if problems:
         print("skill validation FAILED:")

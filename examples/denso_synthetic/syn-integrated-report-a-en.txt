@@ -1,0 +1,426 @@
+Rising needs for traffic accident prevention, food safety, and automation associated with labor
+shortages, etc.)
+4 Structural changes and destabilization of the international community
+Risks
+• Increased threats to DENSO’s business operations (military and cyber
+attacks, etc.)
+• Divisions between countries
+and regions require a review of business models (regulatory compliance and
+supply chains)
+In the international community, conflicts and bloc formation are advancing in various fields against a backdrop of differences in political systems,
+and changes in the environment surrounding DENSO and an increase in business risks are expected. To ensure stable business operations even under such circumstances,
+we will strengthen governance and risk management that can flexibly respond to changes and risks.
+Opportunities • Expansion of new markets, businesses, and collaborative part-
+ners will progress toward solving issues
+Business Environment Recognition
+Keywords for Social Change at 2030
+Maximize the value of the environment and peace of mind, and create empathy
+Future social changes, such as rapid changes in values and behavior,
+are a great challenge opportunity for DENSO, which has continued to refine its technologies and experience in the mobility field.
+Aiming for a society free from environmental burdens and traffic accidents,
+we will actively promote the creation of a better mobility society toward the realization of
+“a society where an environment that is kind to the earth and richer spreads” and
+“a society where everyone can move safely, comfortably, and freely.”
+In addition, by leveraging technologies cultivated in semiconductors, software,
+other automotive products and systems, and manufacturing,
+we will contribute to building a society where all people can live with peace of mind and safety,
+not only in the mobility field, and continue to create new value.
+Strengthening the corporate foundation that supports value creation
+To flexibly respond to increasingly complex and diverse social issues and enhance corporate value,
+it is necessary to strengthen governance, including reviewing the organizational management structure and risk management to minimize risks.
+In addition, human resource development that enhances corporate value is also important.
+Through strengthening the corporate foundation, we will support the creation of faster and higher-quality value.
+Priority initiatives for DENSO
+As global population growth, aging, and urbanization progress, global warming and traffic accidents have become major social issues. In addition, due to the progress of
+digitalization and intelligentization of society, geopolitical risks, and other factors, people’s values are diversifying, and social issues are becoming more complex. To solve emerging social issues such as alleviating traffic congestion, decarbonization,
+realization of a circular society, and optimization of energy balance, there is demand for the implementation of new mobility solutions that collaborate with social infrastructure, such as electrification, autonomous driving, and connectivity, by utilizing the technological evolution of IoT and AI,
+and for expanding and applying technologies cultivated in the mobility field to broader areas.
+
+Going forward, we will continue to accurately capture the impact on society and the risks and opportunities that arise in carrying out business activities in response to various social changes,
+and adapt to them while taking on the challenge of solving social issues.
+Future Social Outlook
+Politics
+• Worldwide energy supply-demand tightness and a shift from low-carbon to decarbonization
+Global warming is urgent; international coordination for climate change mitigation is essential ①
+Use of renewable energy and hydrogen advances ①
+Regulations on power generation derived from fossil fuels and internal combustion engines ①
+• Enactment and expansion of laws regulating negative impacts on the environment and human rights throughout the supply chain ①②
+• Intensification of division and conflict due to differences in political systems (trade/technology/human rights, etc.) ④
+• Expansion of geopolitical risks ①②③④
+Economy
+• The world is becoming multipolar, including stagnation in advanced economies and the rise of the Global South ②③④
+• Acceleration of protectionism/nationalism due to widening inequality ③④
+• Building of economic blocs favoring one’s own country and continuation of regional optimization ④
+• Expansion of ESG investment and acceleration of ESG information disclosure rule-making accompanying it ①②
+Society
+• The world population exceeds 8.5 billion; global population growth threatens the sustainability of society ①②③④
+• The entire planet
+is aging; preparations for labor force decline and extension of healthy life expectancy ②③④
+• Urbanization in emerging countries,
+urban regeneration through smart and compact cities, and increase in logistics volume ③④
+• Consumer behavior
+shifts to ethical and experience-based consumption and the sharing economy ①②
+• Progress of labor substitution by AI and robots,
+changes in views on work and disposable time ②
+Technology
+• Advances in IoT-related technologies (communications, devices, etc.) are merging digital and physical ②
+• Use of big data improves productivity and integrates value chains ①②③
+• AI and quantum computers enter the application phase, and are commercialized in many fields such as manufacturing, finance, and services ②③
+• Contactless and unmanned operations accelerate across all industries ①②
+Environment Peace of Mind
+Corporate Foundation
+Social Changes in 2030 and DENSO’s Priority Initiatives
+We review future social forecasts through PEST analysis and narrow them down as keywords for social change in 2030. Along these keywords,
+we analyze risks and opportunities for DENSO and derive priority initiatives. Going forward, while appropriately grasping changes occurring in the concept of CASE and in the mobility
+society, we will continue to assess whether they affect DENSO’s priority initiatives.
+26 27
+DENSO Integrated Report 2025
+Growth Strategy
+CONTENTS At a Glance MANAGEMENT
+MESSAGE
+DENSO’s
+Value Creation Story Growth Strategy Capital Strategy Business Segment Overview Corporate
+Governance
+Corporate
+Data
+Priority Issues (Materiality)
+DENSO has selected priority issues (materiality) to achieve its 2030 Long-term Policy, and is accelerating sustainability management
+toward solving these issues. From various social issues, including the social forecasts envisioned in its business environment recognition and the SDGs, DENSO has identified three areas—“Environment,” “Peace of Mind,” and “Corporate Foundation”—as fields of high importance where DENSO can particularly contribute to realizing a sustainable society. Through business activities,
+DENSO will achieve the goals in each field and thereby work to realize its 2030 Long-term Policy and solve social issues.
+Materiality
+From among the various issues existing in society, in the three domains—“Environment,” “Peace of Mind,” and “Empathy”—declared under DENSO’s 2030 Long-term Policy, DENSO selected priority issues (materiality) in fiscal 2018. In recent years, as countries have been moving toward rules for disclosure not only of financial impacts but also of non-financial information, interest in corporate materiality has been increasing. In light of these trends, 2018
+In light of changes in social issues since then, we are currently updating our materiality. The updated materiality will be positioned as the premise of the next Medium-Term Management Plan, and initiatives will be promoted as company-wide issues (Materiality review process P. 30).
+
+Priority initiatives (Materiality) Vision KPI
+FY2024 FY2025 Related SDGs
+Target Results Overview of initiatives Target
+
+Prevention of Global Warming◎
+Contribute to creating an earth-friendly, sustainable society by reducing environmental impact and realizing highly efficient mobility.
+• Reduce CO2 emissions from plants to zero.
+• Contribute to vehicle electrification and reduce CO2 as much as possible.
+• Contribute to carbon neutrality throughout society through technologies that utilize hydrogen, a clean energy source.
+• Reduce environmentally hazardous substances, emissions and waste, and contribute to the sustainable preservation of the global environment.
+• Total CO2 emissions from plants (compared with FY2020)
+※ Including use of credits
+75% reduction 76% reduction • Introduction of energy-saving technologies (received Energy Conservation Grand Prize)
+• Expanded introduction of renewable energy 100% reduction
+
+Prevention of Air Pollution / Reduction of Environmentally Hazardous Substances◎
+Effective Use of Resources◎
+• Dissemination of products in the electrification field
+Electrification field revenue 988.0 billion yen 1,010.0 billion yen
+• Expand sales of electrification products such as inverters, motor generators, and thermal management products
+• Start of inverter production at DENSO Fukushima (global 4-pole, 8-site structure)
+1,200.0 billion yen
+Water Resource Conservation
+
+Traffic Accident Reduction◎
+• Aim to disseminate safety products to realize "zero traffic accident fatalities."
+• Respond to the need for safe air environments and provide comfortable spaces.
+• Support workers by providing technologies that contribute to solving issues associated with the declining labor population.
+• Provide customers with trustworthy, satisfying, safe, secure, high-quality products.
+• Dissemination of safety products
+
+ADAS revenue 490.0 billion yen 503.0 billion yen • Expand sales of ADAS products such as GSP3 520.0 billion yen
+Provision of Free and Comfortable Mobility◎
+Provision of Safe and Secure Products◎
+Response to Declining Birthrate and Aging Population◎
+
+Compliance
+• Each employee acts fairly and with integrity based on high ethical standards, as well as complying with laws and regulations in each country/region.
+• Number of serious legal violations
+Changed to number of serious compliance violations from FY2025*1
+0 cases 0 cases • Dissemination of top messages / compliance tests / small group meetings in the workplace to foster compliance awareness 0 cases
+
+Strengthening Information Security◎
+• Prepare for information security risks in a "connected society," deliver safe and highly reliable products to customers, and make every effort to protect information assets.
+• Number of serious incidents 0 cases 0 cases
+• Thorough enforcement of confidentiality management rules
+• Implementation of security education including emergency response
+• Introduction of cutting-edge security technologies premised on zero trust
+0 cases
+
+Promotion of Human Resource Success
+• Promote "human development," "organizational development," and "environment development" so that each and every employee can fully demonstrate their abilities and work healthily, energetically, and with peace of mind.
+• Conduct business activities that respect the human rights of all stakeholders, including employees and the supply chain.
+• Together with suppliers, promote business activities that take into consideration environmental issues, human rights issues, compliance, etc.
+• Non-Japanese among overseas base heads 32% 32% • Development and appointment of future leader candidates
+• Global selection training 35%
+• Female managers
+
+FY2024 set by region
+Japan: 2.3%
+Asia: 29.0%, etc.
+Japan: 2.2%
+Asia: 29.4%, etc.
+• Implementation of mentoring tailored to characteristics of manager candidates
+• Integration of general positions and career-track positions (Japan) Global: 8.4%
+
+Health / Occupational Health and Safety
+• Employee health score*2 (Japan)
+For regions outside Japan, KPIs to be set by region from FY2025
+45% 48%
+• Japan: Promote internal awareness through individual notifications, explanatory videos on health score, and deployment of workplace-specific aggregation tools
+Overseas: Set KPIs based on issues in each region
+Japan: 49%
+Asia: Asia version health score 40%, etc.
+• Number of serious accidents 0 cases 0 cases
+• Review of effectiveness of preventive measures (verification/on-site confirmation)
+• Identification and improvement of issues and sharing of good practices through safety communication / cross on-site confirmation activities*3, etc.
+0 cases
+
+Work Style Reform / Improvement of Work Engagement
+• Positive response rate for employee engagement (compared with previous fiscal year)
+Set by region
+Japan: +2%
+Asia/China: +1%
+etc.
+Japan: +2%
+Asia: ±0%
+China: +2%, etc.
+• Japan: Career development support (superiors/subordinates), implementation of organizational development workshops by internal and external trainers
+• Overseas: Introduction of flexible work styles not constrained by time or place, review of evaluation and compensation systems with clear distinction
+Japan: +2%
+Asia/China: +1%, etc.
+
+Protection of Human Rights / Sustainable Procurement
+• Human rights training, etc.
+Set by region
+Japan: Training attendance rate
+100%,
+Asia: Introduction of training for new employees, etc.
+Japan: Training attendance rate
+100%,
+Asia: Completed introduction of training for new employees, etc.
+• Implementation of training and workplace discussions tailored to issues in each region
+Japan: Harassment
+Japan: Training attendance rate 100%,
+Asia: Implementation of training for managers and new employees
+
+Governance
+Based on social trends, changes in the external environment, DENSO's corporate culture, etc., we will evolve into a more effective governance structure as necessary, and support the achievement of the above materiality targets.
+
+◎ Goals to contribute through products and services
+Environment
+Safety and Security
+Corporate Foundation
+Materiality and KPIs
+
+KPIs are set for each materiality, incorporated into company targets, and followed up and deliberated at the Sustainability Committee (from FY2025) and the Management Council and Board of Directors. For some KPIs, the evaluation of achievement is used as an indicator for calculating executive compensation. P.91–92
+*1. Expanded to cover not only laws and regulations but also compliance with social norms and corporate ethics
+*2. Health score: Percentage of people who achieve at least six of BMI and seven health behaviors
+*3. On-site patrols by third parties such as heads of other divisions
+
+To promote initiatives across the entire DENSO Group, from FY2024 the scope was expanded for female managers, health score, employee engagement, and human rights.
+
+28
+DENSO Integrated Report 2025 29
+Growth Strategy
+For details on "Materiality and KPIs," please see here.
+https://www.denso.com/jp/ja/about-us/sustainability/sdgs/
+CONTENTS At a Glance MANAGEMENT
+MESSAGE
+DENSO’s
+Value Creation Story Growth Strategy Capital Strategy Business Segment Overview Corporate
+Governance
+Corporate
+Data
+2025 Mid-Term Plan, Targets and Results
+To realize the 2030 Long-Term Policy, “We want to deliver a future where smiles spread to the Earth, to society, and to all people,” we formulated the “2025 Mid-
+Term Plan” in FY2022. With “Environment and Safety and Peace of Mind” as our axis, we depicted the vision we aim for in 2025 and set priority themes to achieve it. Furthermore,
+as the “Environment and Safety and Peace of Mind Strategy,” we set targets under each axis to maximize the value we provide to society through our business activities, and
+management policies and corporate value improvement strategies for achieving them are explained by management to stakeholders.
+Aiming to be a leading company that provides “safety and peace of mind” to society
+ADAS product sales expansion /
+promoting widespread adoption
+
+Launch of new ADAS products into the market
+Accident scene coverage rate
+56%
+
+Through
+collaboration with people,
+providing unique safety and peace-of-mind value
+Acci-
+dent scene coverage rate
+100%
+
+■ Traffic accident fatalities
+toward
+zero
+
+Fully automated harvesting robot “Artemy®”:
+Started receiving orders in
+Europe
+
+Through partner collaboration,
+establishment of a commercialization policy
+
+In the energy, FA, and food and agriculture fields,
+start of new businesses
+■ Support for workers
+FY2024 Results 2025 Mid-Term Plan Targets FY2035 Outlook
+Safety and Peace of Mind
+FY2035 Outlook
+ADAS business growth through HMI collaboration
+Non-automotive fields
+in
+commercialization of safety and peace-of-mind value
+
+2025 Mid-Term Plan target
+¥520.0 billion FY2024 results
+¥503.0 billion
+■
+Safety-related sales revenue
+
+The Environment and Safety and Peace-of-Mind Strategy and the Vision We Aim For
+Becoming a “carbon-neutral manufacturer” ahead of the rest of the world and contributing to the building of society
+76% reduction in plant CO2 emissions
+(compared with FY2020)
+Carbon neutral
+(
+including the use of credits)
+Without the use of
+credits, fully
+carbon neutral ■ Monozukuri (manufacturing)
+Expansion of the
+global supply system
+for electrification-related products
+
+Demonstration experiments
+aimed at
+promoting the use of hydrogen
+
+Expansion of sales of electrification-related
+products (inverters and battery ECUs)
+
+Establishing
+a market launch prospect for
+the energy business
+Carbon
+neutrality through mobility products
+and
+energy use
+■ Mobility products
+and energy use
+
+FY2024 Results 2025 Mid-Term Plan Targets FY2035 Outlook
+Environment
+FY2035 Outlook
+Growth in electrification and
+non-automotive businesses
+leading to
+further
+revenue expansion
+
+2025 Mid-Term Plan target
+¥1,200.0 billion FY2024 results
+¥1,010.0 billion
+■ Environment-related sales revenue
+
+Dialogue with internal and external stakeholders
+Value chain
+Stakeholders
+Customers, suppliers, local residents, customers
+Employees, investors, etc.
+Development, procurement, manufacturing, sales, use, disposal
+• Passenger car manufacturers
+• Commercial vehicle manufacturers
+• Parts manufacturers
+• Materials manufacturers
+• Around business sites
+local governments and neighborhood associations
+• ESG departments of institutional investors
+•
+Employees
+(1,500 people)
+Comments from stakeholders
+Customer: The importance of respecting human rights across the entire supply chain is increasing and is becoming a business risk.
+Since we plan to request that suppliers also strengthen their activities, we would like DENSO
+to also raise the priority of activities and work to minimize risks.
+Institutional investor: The selected themes are convincing. Going forward, please clarify and communicate how the materiality leads to improvements in corporate
+value, as well as medium- to long-term targets.
+Toward the Review of Materiality
+In light of changes in social issues and the environment surrounding the business, DENSO is updating the materiality established in 2018.
+After comprehensively extracting social issues of high interest to the international community and stakeholders, we identified opportunities and risks from the two perspectives of “the impact of DENSO’s business activities on society”
+and “importance to DENSO,” and conducted a quantitative evaluation that also factored in the time axis.
+
+In examining the materiality proposals, we incorporated the opinions and expectations for DENSO received through dialogue with key stakeholders representing the value chain,
+including customers, suppliers, investors, employees, and local communities, and finalized them. After that, they were discussed at the management level
+and approved by the Board of Directors. Currently, targets are being set with the materiality positioned as the premise of the next medium-term management plan, and each department and
+region is formulating activity plans.
+Going forward,
+we will review the materiality every year based on changes in the situation surrounding sustainability, and twice a year,
+at sustainability meetings, we will check the progress of activities toward achieving each materiality.
+Ensuring comprehensiveness
+Extraction of social issues
+Referring to the SDGs, World Economic Forum (Davos) global risks, sustainability disclosure frameworks and laws and regulations, and ESG rating agency evaluation items,
+we extracted economic, environmental, and social issues. A total of 116 areas were set as evaluation targets.
+Reflecting DENSO’s uniqueness
+Extraction of the company’s key strategies and issues
+In light of the increasing complexity of the business environment, we listed DENSO’s initiatives, including themes that should be promoted company-wide and themes for which crisis response capabilities should be upgraded,
+and added a total of 22 areas as candidates for evaluation.
+Evaluation
+Implementation of quantitative evaluation
+For each evaluation target, we identified opportunities and risks for DENSO and established evaluation criteria from the two perspectives of impact on society and importance to DENSO.
+For impact on society, we scored severity (scale, scope, and remediability) and likelihood; for importance for the company, we scored financial impact and likelihood,
+and set the materiality proposals.
+Confirming expectations from society
+Dialogue with internal and external stakeholders
+We held dialogues with representatives of value chain stakeholders and received opinions on the materiality proposals and expectations for DENSO.
+As a result, we changed the quantitative evaluation for three themes.
+Finalization Management-level discussion and approval
+The materiality proposals revised in consideration of stakeholder opinions were discussed and approved by the Management Council and the Board of Directors.
+Materiality Review Process
+Setting the materiality proposals
+Impact of DENSO’s business activities on society
+Importance to DENSO
+Materiality proposals
+: Areas of social issues
+30
+DENSO Integrated Report 2025 31
+Growth Strategy
+CONTENTS At a Glance MANAGEMENT
+MESSAGE
+DENSO’s
+Value Creation Story Growth Strategy Capital Strategy Business Segment Overview Corporate
+Governance
+Corporate
+Data
+Initiatives for Realizing the Vision Set Forth in the 2025 Medium-Term Policy
+I. Achieving Sustainable Management
+Establishing an Unshakable, Solid Management Foundation Financial Capital, Risk Management P.41–47, 98–99
+Initiatives Results through FY2024 Future Issues and Initiative Policies
+Safety & Quality
+Building a Rock-Solid Safety and Quality Foundation
+• Advancement and establishment of rules and systematization, and the use of tools and digital technologies to move away from dependence on people
+• Further reduction of quality risks, including initial response
+• Response to new quality issues accompanying product evolution, such as the expansion of SDVs
+Crisis Management
+Raising the Level of Risk Management
+• Clarification of rules for responding when an emergency occurs
+• Introduction of predictive management for all risk items
+• Deployment, penetration, and establishment of the new risk management process across the entire Group
+• Strengthening the company-wide structure for economic security management
+Earnings
+Establishing a Robust Earnings Base through Business Portfolio Transformation
+• Concentrated investment of resources and sales expansion in focus areas (electrification and advanced safety), and promotion of the divestiture of internal combustion products
+• Leading, in collaboration with industry groups, the systematization of price pass-through that turns fluctuations in raw material and component costs and labor costs into a positive cycle
+• Discontinuous business growth in non-automotive businesses through partner collaboration and other means
+• Establishment of a price pass-through scheme for new cost fluctuation factors such as tariffs
+II. High Aspirations and Proper Work
+Transforming the way we work through digital technologies, aiming to achieve world-first and world-leading results Intellectual Capital, Manufacturing Capital P.53–60
+Initiatives Results through FY2024 Future Issues and Initiative Policies
+Business Process Transformation
+• Development of digital infrastructure: introduction of one digital device per person and Microsoft 365 accounts at manufacturing sites, use of AI in daily operations, etc.
+• Transformation to business processes based on the premise of using digital and AI technologies
+Production Site Transformation
+• Digitalization of production improvement processes
+• Announcement of plans to build a next-generation plant enabling 24-hour unmanned operation through automation (scheduled to begin operations in 2028)
+• Establishment of attractive ways of working for future manufacturing
+III. Business Portfolio Transformation
+Transforming the business structure by completing growth and the finalization of businesses together with industry and partners Capital Strategy, Overview by Business P.40–82
+Initiatives Results through FY2024 Future Issues and Initiative Policies
+Expansion of growth areas and
+finalization of businesses to be scaled down

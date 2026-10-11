@@ -34,7 +34,9 @@ from pathlib import Path
 
 from tini.config import Settings, load_settings
 from tini.db import connect
+from tini.documents import catalog
 from tini.documents.embeddings import make_embedding_provider
+from tini.documents.multilingual import EnglishRewriter, MultilingualIndex
 from tini.documents.rerank import RerankingIndex
 from tini.documents.store import make_document_index
 
@@ -69,12 +71,54 @@ def _percentile(values: list[float], pct: float) -> float:
 
 
 def rerank_info(settings: Settings) -> dict:
-    """What the dashboard needs to offer the rerank toggle. Never the key."""
+    """What the dashboard needs to offer the rerank toggle. Never the key.
+
+    A self-hosted provider (tei) needs no key and sends nothing off this machine
+    (`local`); a hosted one is only usable with its key."""
     provider = settings.rerank_provider
+    local = provider == "tei"
     return {
-        "configured": provider not in ("", "none") and bool(settings.rerank_api_key),
+        "configured": local or (provider not in ("", "none") and bool(settings.rerank_api_key)),
         "provider": provider,
+        "local": local,
         "candidates": settings.rerank_candidates,
+    }
+
+
+def _answer_in_chunks(rows: list[dict]) -> dict:
+    scored = [r for r in rows if r.get("keyword_total")]
+    found = sum(1 for r in scored if len(r["keyword_hits"]) == r["keyword_total"])
+    return {
+        "found": found,
+        "total": len(scored),
+        "rate": round(found / len(scored), 3) if scored else None,
+    }
+
+
+def _unwrapped(index):
+    """The backend under any rerank/translation wrappers."""
+    while hasattr(index, "inner"):
+        index = index.inner
+    return index
+
+
+def _find(index, kind):
+    """The wrapper of the given class in the stack, if any."""
+    while index is not None:
+        if isinstance(index, kind):
+            return index
+        index = getattr(index, "inner", None)
+    return None
+
+
+def _hybrid_config(index) -> dict | None:
+    inner = _unwrapped(index)
+    if not hasattr(inner, "has_lexical"):
+        return None
+    return {
+        "enabled": bool(inner.hybrid and inner.has_lexical),
+        "fusion": inner.fusion,
+        "lexical_weight": inner.lexical_weight,
     }
 
 
@@ -94,6 +138,9 @@ def _pipeline_config(settings: Settings, index, workspace: str, k: int) -> dict:
             "collection": settings.qdrant_collection
             if settings.document_index == "qdrant"
             else None,
+            # Whether the keyword ranking is actually being fused in: needs the
+            # setting AND a collection that carries keyword vectors.
+            "hybrid": _hybrid_config(index),
         },
         "chunking": {
             "max_tokens": settings.document_chunk_max_tokens,
@@ -106,7 +153,9 @@ def _pipeline_config(settings: Settings, index, workspace: str, k: int) -> dict:
             "provider": settings.rerank_provider,
             "model": settings.rerank_model or None,
             "candidates": settings.rerank_candidates,
+            "translate_to_english": list(settings.rerank_translate),
         },
+        "translate": {"languages": list(settings.query_languages)},
         "search_k": k,
         "workspace": workspace,
         "corpus": [
@@ -274,7 +323,7 @@ def _default_answer_fn(settings: Settings) -> AnswerFn:
 
     def answer(question: str, hits: list) -> str:
         excerpts = "\n\n".join(
-            f"[{n}] {hit.title}#chunk-{hit.ordinal}\n{hit.text[:1500]}"
+            f"[{n}] {hit.title}#chunk-{hit.ordinal}{', ' + hit.page_label if hit.page_label else ''}\n{hit.text[:1500]}"
             for n, hit in enumerate(hits, 1)
         )
         response = client.messages.create(
@@ -306,7 +355,7 @@ def run_eval(
     if rerank is False:
         settings = _replace(settings, rerank_provider="none")
     elif rerank is True and not rerank_info(settings)["configured"]:
-        return {"error": "Reranking is not configured (set TINI_RERANK_PROVIDER and its API key)."}
+        return {"error": "Reranking is not configured (set TINI_RERANK_PROVIDER, and its API key if it is a hosted one)."}
     try:
         cases = _load_cases(name, settings)
     except ValueError as exc:
@@ -331,7 +380,28 @@ def run_eval(
             index = make_document_index(settings, conn, make_embedding_provider(settings))
         except ValueError as exc:
             return {"error": str(exc)}
+        # A question set scored against a workspace that holds none of its
+        # documents "misses" every case, which reads as a broken retriever.
+        documents = index.list_documents(workspace, limit=1000)
+        present = {d.title for d in documents}
+        # Documents the catalog marks superseded/excluded are hidden from search
+        # (VisibleIndex). A question about one is EXPIRED: it is not scored (it
+        # could only miss, which would read as a retrieval failure) and instead
+        # checked the other way round — the hidden document must not come back.
+        # The question sets stay untouched, so the same file scores normally on a
+        # machine where that document is current.
+        hidden_uris = catalog.hidden_uris(conn, workspace)
+        hidden_titles = sorted({d.title for d in documents if d.source_uri in hidden_uris})
+        if not present:
+            return {"error": f"Workspace '{workspace}' has no indexed documents, so there is nothing to score."}
+        wanted = {str(c.get("expected_title") or "") for c in cases}
+        if not present & wanted:
+            return {
+                "error": f"None of the documents this question set asks about are in workspace "
+                f"'{workspace}' (it holds {len(present)} others). Pick the workspace the set was written for."
+            }
         rows = []
+        expired_rows: list[dict] = []
         by_lang: dict[str, dict[str, int]] = {}
         by_format: dict[str, dict[str, int]] = {}
         latencies: list[float] = []
@@ -348,6 +418,17 @@ def run_eval(
             t0 = time.perf_counter()
             results = index.search(query, top_k=k, workspace_id=workspace)
             latency_ms = (time.perf_counter() - t0) * 1000
+            if expected_title in hidden_titles:
+                expired_rows.append(
+                    {
+                        "id": case.get("id", ""),
+                        "lang": str(case.get("lang") or "en"),
+                        "query": query,
+                        "expected_title": expected_title,
+                        "leaked": any(hit.title == expected_title for hit in results),
+                    }
+                )
+                continue
             total_latency_ms += latency_ms
             latencies.append(latency_ms)
             titles = [hit.title for hit in results]
@@ -417,6 +498,15 @@ def run_eval(
             f: {**t, "recall": round(t["hits"] / t["total"], 3)} for f, t in by_format.items()
         },
         "recall": round(hits / total, 3) if total else 0.0,
+        # The stricter measure: the expected answer text is in the returned
+        # chunks (right document, wrong part of it does not count). This is where
+        # reranking shows up; the title hit above barely moves.
+        "answer_in_chunks": _answer_in_chunks(rows),
+        "expired": {
+            "documents": hidden_titles,
+            "cases": expired_rows,
+            "leaked": sum(1 for r in expired_rows if r["leaked"]),
+        },
         "hits": hits,
         "total": total,
         "avg_latency_ms": round(total_latency_ms / total, 1) if total else 0.0,
@@ -429,6 +519,20 @@ def run_eval(
     }
     if isinstance(index, RerankingIndex) and index.last_error:
         result["rerank_last_error"] = index.last_error
+    if isinstance(index, RerankingIndex) and isinstance(index.rewrite_query, EnglishRewriter):
+        helper = index.rewrite_query.helper
+        result["rerank_query_translated"] = index.rewritten
+        result["rerank_translate_errors"] = helper.errors
+        result["rerank_translate_skipped"] = helper.skipped
+        if helper.last_error:
+            result["rerank_translate_last_error"] = helper.last_error
+    multilingual = _find(index, MultilingualIndex)
+    if multilingual is not None:
+        result["translated"] = multilingual.translated
+        result["translate_errors"] = multilingual.errors
+        result["translate_skipped"] = multilingual.skipped
+        if multilingual.last_error:
+            result["translate_last_error"] = multilingual.last_error
     if use_llm:
         result["model"] = settings.model
         result["answer_keyword_rate"] = (

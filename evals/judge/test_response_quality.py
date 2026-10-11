@@ -14,7 +14,9 @@ import pytest
 
 from evals.helpers import HAS_KEY, make_tini
 
-pytestmark = pytest.mark.skipif(not HAS_KEY, reason="LLM-as-judge needs the active provider's API key")
+pytestmark = pytest.mark.skipif(
+    not HAS_KEY, reason="LLM-as-judge needs the active provider's API key"
+)
 
 
 @pytest.fixture(scope="module")

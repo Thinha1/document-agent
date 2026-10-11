@@ -1,0 +1,1758 @@
+{
+ "label": "rerank-off-2026-09-25",
+ "created": "2026-09-25T07:42:01",
+ "runs": {
+  "denso_qa.jsonl": {
+   "run_at": "2026-09-25T07:41:59",
+   "config": {
+    "embedding": {
+     "provider": "openai_compatible",
+     "model": "bge-m3",
+     "dimensions": 1024
+    },
+    "index": {
+     "backend": "qdrant",
+     "collection": "tini_documents_bge3"
+    },
+    "chunking": {
+     "max_tokens": 512,
+     "min_tokens": 120,
+     "overlap_tokens": 48
+    },
+    "ocr": {
+     "provider": "deepseek",
+     "model": "deepseek-v4-flash-vision-exp"
+    },
+    "rerank": {
+     "enabled": false,
+     "provider": "none",
+     "model": null,
+     "candidates": 20
+    },
+    "search_k": 3,
+    "workspace": "denso",
+    "corpus": [
+     {
+      "title": "annual-report-doc-2025-viewing-ja",
+      "chunks": 338
+     },
+     {
+      "title": "compliance-doc-employee-behavior-guideline-en",
+      "chunks": 18
+     },
+     {
+      "title": "denso-ten_qa_manual",
+      "chunks": 27
+     },
+     {
+      "title": "edinet_securities_report_candidate",
+      "chunks": 395
+     },
+     {
+      "title": "humanrights-doc-human-rights-policy-en",
+      "chunks": 2
+     },
+     {
+      "title": "management-doc-corporate-governance-2025-en",
+      "chunks": 39
+     },
+     {
+      "title": "management-doc-corporate-governance-policy-2021-en",
+      "chunks": 2
+     },
+     {
+      "title": "supply-chain-doc-sustainability-guidelines-en",
+      "chunks": 9
+     }
+    ]
+   },
+   "question_set": "denso_qa.jsonl",
+   "workspace": "denso",
+   "k": 3,
+   "use_llm": false,
+   "cases": [
+    {
+     "id": "philosophy-mission",
+     "lang": "en",
+     "format": "text-pdf",
+     "query": "What is DENSO's mission under the DENSO Philosophy?",
+     "expected_title": "compliance-doc-employee-behavior-guideline-en",
+     "hit": true,
+     "got_titles": [
+      "supply-chain-doc-sustainability-guidelines-en",
+      "compliance-doc-employee-behavior-guideline-en",
+      "management-doc-corporate-governance-2025-en"
+     ],
+     "keyword_hits": [
+      "Contributing to a better world",
+      "value"
+     ],
+     "keyword_total": 2,
+     "latency_ms": 53.2
+    },
+    {
+     "id": "code-of-conduct-scope",
+     "lang": "en",
+     "format": "text-pdf",
+     "query": "Who does the DENSO Group Code of Conduct apply to?",
+     "expected_title": "compliance-doc-employee-behavior-guideline-en",
+     "hit": true,
+     "got_titles": [
+      "compliance-doc-employee-behavior-guideline-en",
+      "compliance-doc-employee-behavior-guideline-en",
+      "management-doc-corporate-governance-2025-en"
+     ],
+     "keyword_hits": [
+      "executives"
+     ],
+     "keyword_total": 4,
+     "latency_ms": 28.2
+    },
+    {
+     "id": "manager-duties",
+     "lang": "en",
+     "format": "text-pdf",
+     "query": "What must managers do when implementing the Code of Conduct?",
+     "expected_title": "compliance-doc-employee-behavior-guideline-en",
+     "hit": true,
+     "got_titles": [
+      "compliance-doc-employee-behavior-guideline-en",
+      "compliance-doc-employee-behavior-guideline-en",
+      "compliance-doc-employee-behavior-guideline-en"
+     ],
+     "keyword_hits": [
+      "subordinates",
+      "Take the lead"
+     ],
+     "keyword_total": 2,
+     "latency_ms": 27.8
+    },
+    {
+     "id": "human-rights-respect",
+     "lang": "en",
+     "format": "text-pdf",
+     "query": "What does the Code of Conduct say about respecting colleagues and human rights?",
+     "expected_title": "compliance-doc-employee-behavior-guideline-en",
+     "hit": true,
+     "got_titles": [
+      "compliance-doc-employee-behavior-guideline-en",
+      "compliance-doc-employee-behavior-guideline-en",
+      "compliance-doc-employee-behavior-guideline-en"
+     ],
+     "keyword_hits": [
+      "human rights",
+      "discriminatory",
+      "harassment"
+     ],
+     "keyword_total": 3,
+     "latency_ms": 45.4
+    },
+    {
+     "id": "health-safety",
+     "lang": "en",
+     "format": "text-pdf",
+     "query": "What are employees expected to do to protect their mental and physical health?",
+     "expected_title": "compliance-doc-employee-behavior-guideline-en",
+     "hit": true,
+     "got_titles": [
+      "compliance-doc-employee-behavior-guideline-en",
+      "edinet_securities_report_candidate",
+      "supply-chain-doc-sustainability-guidelines-en"
+     ],
+     "keyword_hits": [
+      "mental and physical health",
+      "safe working"
+     ],
+     "keyword_total": 2,
+     "latency_ms": 27.2
+    },
+    {
+     "id": "customer-trust",
+     "lang": "en",
+     "format": "text-pdf",
+     "query": "How should employees earn the trust of customers?",
+     "expected_title": "compliance-doc-employee-behavior-guideline-en",
+     "hit": true,
+     "got_titles": [
+      "compliance-doc-employee-behavior-guideline-en",
+      "compliance-doc-employee-behavior-guideline-en",
+      "compliance-doc-employee-behavior-guideline-en"
+     ],
+     "keyword_hits": [
+      "customers"
+     ],
+     "keyword_total": 2,
+     "latency_ms": 28.4
+    },
+    {
+     "id": "competition-law",
+     "lang": "en",
+     "format": "text-pdf",
+     "query": "What does the Code of Conduct say about competition laws and antimonopoly laws?",
+     "expected_title": "compliance-doc-employee-behavior-guideline-en",
+     "hit": true,
+     "got_titles": [
+      "compliance-doc-employee-behavior-guideline-en",
+      "compliance-doc-employee-behavior-guideline-en",
+      "compliance-doc-employee-behavior-guideline-en"
+     ],
+     "keyword_hits": [
+      "competition laws",
+      "fair competition"
+     ],
+     "keyword_total": 2,
+     "latency_ms": 36.5
+    },
+    {
+     "id": "supplier-relationships",
+     "lang": "en",
+     "format": "text-pdf",
+     "query": "How should employees deal fairly with suppliers and affiliated distributors?",
+     "expected_title": "compliance-doc-employee-behavior-guideline-en",
+     "hit": true,
+     "got_titles": [
+      "compliance-doc-employee-behavior-guideline-en",
+      "compliance-doc-employee-behavior-guideline-en",
+      "compliance-doc-employee-behavior-guideline-en"
+     ],
+     "keyword_hits": [
+      "suppliers",
+      "fair",
+      "partnerships"
+     ],
+     "keyword_total": 3,
+     "latency_ms": 36.9
+    },
+    {
+     "id": "reporting-violations",
+     "lang": "en",
+     "format": "text-pdf",
+     "query": "What should an employee do if they witness a violation of the Code of Conduct?",
+     "expected_title": "compliance-doc-employee-behavior-guideline-en",
+     "hit": true,
+     "got_titles": [
+      "compliance-doc-employee-behavior-guideline-en",
+      "compliance-doc-employee-behavior-guideline-en",
+      "humanrights-doc-human-rights-policy-en"
+     ],
+     "keyword_hits": [
+      "report",
+      "consult",
+      "supervisor"
+     ],
+     "keyword_total": 3,
+     "latency_ms": 35.3
+    },
+    {
+     "id": "shareholder-rights",
+     "lang": "en",
+     "format": "text-pdf",
+     "query": "How does DENSO secure the rights and equal treatment of shareholders?",
+     "expected_title": "management-doc-corporate-governance-policy-2021-en",
+     "hit": true,
+     "got_titles": [
+      "management-doc-corporate-governance-policy-2021-en",
+      "management-doc-corporate-governance-2025-en",
+      "management-doc-corporate-governance-2025-en"
+     ],
+     "keyword_hits": [
+      "shareholders",
+      "voting rights"
+     ],
+     "keyword_total": 2,
+     "latency_ms": 45.1
+    },
+    {
+     "id": "stakeholder-cooperation",
+     "lang": "en",
+     "format": "text-pdf",
+     "query": "How does DENSO cooperate with stakeholders other than shareholders?",
+     "expected_title": "management-doc-corporate-governance-policy-2021-en",
+     "hit": true,
+     "got_titles": [
+      "management-doc-corporate-governance-policy-2021-en",
+      "management-doc-corporate-governance-2025-en",
+      "management-doc-corporate-governance-policy-2021-en"
+     ],
+     "keyword_hits": [
+      "stakeholders",
+      "trust"
+     ],
+     "keyword_total": 2,
+     "latency_ms": 31.3
+    },
+    {
+     "id": "board-officer-separation",
+     "lang": "en",
+     "format": "text-pdf",
+     "query": "How does DENSO separate the roles of the Board of Directors and Senior Executive Officers?",
+     "expected_title": "management-doc-corporate-governance-policy-2021-en",
+     "hit": true,
+     "got_titles": [
+      "management-doc-corporate-governance-2025-en",
+      "management-doc-corporate-governance-policy-2021-en",
+      "annual-report-doc-2025-viewing-ja"
+     ],
+     "keyword_hits": [
+      "Board",
+      "Senior Executive Officers",
+      "corporate officer system"
+     ],
+     "keyword_total": 3,
+     "latency_ms": 36.7
+    },
+    {
+     "id": "outside-directors",
+     "lang": "en",
+     "format": "text-pdf",
+     "query": "What is the role of outside directors in DENSO's governance?",
+     "expected_title": "management-doc-corporate-governance-policy-2021-en",
+     "hit": false,
+     "got_titles": [
+      "management-doc-corporate-governance-2025-en",
+      "management-doc-corporate-governance-2025-en",
+      "edinet_securities_report_candidate"
+     ],
+     "keyword_hits": [],
+     "keyword_total": 3,
+     "latency_ms": 30.2
+    },
+    {
+     "id": "supplier-sustainability-safety",
+     "lang": "en",
+     "format": "scanned-pdf",
+     "query": "What does DENSO's Supplier Sustainability Guidelines say about product safety and quality?",
+     "expected_title": "supply-chain-doc-sustainability-guidelines-en",
+     "hit": true,
+     "got_titles": [
+      "supply-chain-doc-sustainability-guidelines-en",
+      "supply-chain-doc-sustainability-guidelines-en",
+      "supply-chain-doc-sustainability-guidelines-en"
+     ],
+     "keyword_hits": [
+      "Safety and Quality",
+      "Products and Services"
+     ],
+     "keyword_total": 2,
+     "latency_ms": 31.3
+    },
+    {
+     "id": "supplier-sustainability-scope",
+     "lang": "en",
+     "format": "scanned-pdf",
+     "query": "What topics do the DENSO Group Supplier Sustainability Guidelines cover?",
+     "expected_title": "supply-chain-doc-sustainability-guidelines-en",
+     "hit": true,
+     "got_titles": [
+      "supply-chain-doc-sustainability-guidelines-en",
+      "supply-chain-doc-sustainability-guidelines-en",
+      "supply-chain-doc-sustainability-guidelines-en"
+     ],
+     "keyword_hits": [
+      "Human Rights",
+      "Environment",
+      "Legal Compliance"
+     ],
+     "keyword_total": 3,
+     "latency_ms": 29.7
+    },
+    {
+     "id": "human-rights-policy-mission",
+     "lang": "en",
+     "format": "text-pdf",
+     "query": "What corporate mission drives the DENSO Group Human Rights Policy?",
+     "expected_title": "humanrights-doc-human-rights-policy-en",
+     "hit": true,
+     "got_titles": [
+      "humanrights-doc-human-rights-policy-en",
+      "compliance-doc-employee-behavior-guideline-en",
+      "supply-chain-doc-sustainability-guidelines-en"
+     ],
+     "keyword_hits": [
+      "contributing to a better world",
+      "stakeholders"
+     ],
+     "keyword_total": 2,
+     "latency_ms": 27.0
+    },
+    {
+     "id": "governance-2025-diversity",
+     "lang": "en",
+     "format": "text-pdf",
+     "query": "How does DENSO's 2025 Corporate Governance Report address diversity of core personnel?",
+     "expected_title": "management-doc-corporate-governance-2025-en",
+     "hit": true,
+     "got_titles": [
+      "annual-report-doc-2025-viewing-ja",
+      "annual-report-doc-2025-viewing-ja",
+      "management-doc-corporate-governance-2025-en"
+     ],
+     "keyword_hits": [
+      "diversity"
+     ],
+     "keyword_total": 2,
+     "latency_ms": 38.9
+    },
+    {
+     "id": "qa-manual-external-provider",
+     "lang": "en",
+     "format": "text-pdf",
+     "query": "What standard is DENSO TEN's External Provider Quality Assurance Manual based on?",
+     "expected_title": "denso-ten_qa_manual",
+     "hit": true,
+     "got_titles": [
+      "denso-ten_qa_manual",
+      "denso-ten_qa_manual",
+      "denso-ten_qa_manual"
+     ],
+     "keyword_hits": [
+      "IATF 16949",
+      "External Provider"
+     ],
+     "keyword_total": 2,
+     "latency_ms": 30.5
+    },
+    {
+     "id": "qa-manual-e3",
+     "lang": "en",
+     "format": "text-pdf",
+     "query": "What does DENSO TEN's e3 external provider management activity focus on?",
+     "expected_title": "denso-ten_qa_manual",
+     "hit": true,
+     "got_titles": [
+      "denso-ten_qa_manual",
+      "denso-ten_qa_manual",
+      "denso-ten_qa_manual"
+     ],
+     "keyword_hits": [
+      "educate",
+      "enforce",
+      "escalate"
+     ],
+     "keyword_total": 3,
+     "latency_ms": 35.8
+    },
+    {
+     "id": "philosophy-individual-spirit",
+     "lang": "en",
+     "format": "text-pdf",
+     "query": "What are the Individual Spirit points in the DENSO Philosophy?",
+     "expected_title": "compliance-doc-employee-behavior-guideline-en",
+     "hit": true,
+     "got_titles": [
+      "compliance-doc-employee-behavior-guideline-en",
+      "supply-chain-doc-sustainability-guidelines-en",
+      "management-doc-corporate-governance-2025-en"
+     ],
+     "keyword_hits": [
+      "creative in thought",
+      "cooperative and pioneering",
+      "trustworthy"
+     ],
+     "keyword_total": 3,
+     "latency_ms": 27.7
+    },
+    {
+     "id": "philosophy-management-principles",
+     "lang": "en",
+     "format": "text-pdf",
+     "query": "What are DENSO's Management Principles?",
+     "expected_title": "compliance-doc-employee-behavior-guideline-en",
+     "hit": true,
+     "got_titles": [
+      "supply-chain-doc-sustainability-guidelines-en",
+      "management-doc-corporate-governance-2025-en",
+      "compliance-doc-employee-behavior-guideline-en"
+     ],
+     "keyword_hits": [
+      "Customer satisfaction",
+      "Global growth",
+      "Environmental preservation"
+     ],
+     "keyword_total": 3,
+     "latency_ms": 24.0
+    },
+    {
+     "id": "code-gifts",
+     "lang": "en",
+     "format": "text-pdf",
+     "query": "What should employees consider before accepting a gift from a supplier?",
+     "expected_title": "compliance-doc-employee-behavior-guideline-en",
+     "hit": true,
+     "got_titles": [
+      "compliance-doc-employee-behavior-guideline-en",
+      "compliance-doc-employee-behavior-guideline-en",
+      "compliance-doc-employee-behavior-guideline-en"
+     ],
+     "keyword_hits": [
+      "gift",
+      "business courtesy"
+     ],
+     "keyword_total": 2,
+     "latency_ms": 40.9
+    },
+    {
+     "id": "code-antibribery",
+     "lang": "en",
+     "format": "text-pdf",
+     "query": "Which laws must employees never violate under the Code of Conduct?",
+     "expected_title": "compliance-doc-employee-behavior-guideline-en",
+     "hit": true,
+     "got_titles": [
+      "compliance-doc-employee-behavior-guideline-en",
+      "compliance-doc-employee-behavior-guideline-en",
+      "humanrights-doc-human-rights-policy-en"
+     ],
+     "keyword_hits": [],
+     "keyword_total": 2,
+     "latency_ms": 43.6
+    },
+    {
+     "id": "supplier-forced-labor",
+     "lang": "en",
+     "format": "scanned-pdf",
+     "query": "Do the supplier guidelines allow forced labor or child labor?",
+     "expected_title": "supply-chain-doc-sustainability-guidelines-en",
+     "hit": true,
+     "got_titles": [
+      "supply-chain-doc-sustainability-guidelines-en",
+      "supply-chain-doc-sustainability-guidelines-en",
+      "supply-chain-doc-sustainability-guidelines-en"
+     ],
+     "keyword_hits": [
+      "forced labor",
+      "child labor"
+     ],
+     "keyword_total": 2,
+     "latency_ms": 32.1
+    },
+    {
+     "id": "supplier-conflict-minerals",
+     "lang": "en",
+     "format": "scanned-pdf",
+     "query": "How do the supplier guidelines address conflict minerals?",
+     "expected_title": "supply-chain-doc-sustainability-guidelines-en",
+     "hit": true,
+     "got_titles": [
+      "compliance-doc-employee-behavior-guideline-en",
+      "supply-chain-doc-sustainability-guidelines-en",
+      "compliance-doc-employee-behavior-guideline-en"
+     ],
+     "keyword_hits": [
+      "human rights"
+     ],
+     "keyword_total": 2,
+     "latency_ms": 26.1
+    },
+    {
+     "id": "supplier-biodiversity",
+     "lang": "en",
+     "format": "scanned-pdf",
+     "query": "What do the supplier guidelines say about biodiversity?",
+     "expected_title": "supply-chain-doc-sustainability-guidelines-en",
+     "hit": true,
+     "got_titles": [
+      "supply-chain-doc-sustainability-guidelines-en",
+      "annual-report-doc-2025-viewing-ja",
+      "supply-chain-doc-sustainability-guidelines-en"
+     ],
+     "keyword_hits": [
+      "biodiversity"
+     ],
+     "keyword_total": 1,
+     "latency_ms": 27.5
+    },
+    {
+     "id": "supplier-ghg",
+     "lang": "en",
+     "format": "scanned-pdf",
+     "query": "What is expected of suppliers regarding greenhouse gas emissions?",
+     "expected_title": "supply-chain-doc-sustainability-guidelines-en",
+     "hit": false,
+     "got_titles": [
+      "denso-ten_qa_manual",
+      "edinet_securities_report_candidate",
+      "annual-report-doc-2025-viewing-ja"
+     ],
+     "keyword_hits": [],
+     "keyword_total": 2,
+     "latency_ms": 27.4
+    },
+    {
+     "id": "supplier-export-controls",
+     "lang": "en",
+     "format": "scanned-pdf",
+     "query": "What do the supplier guidelines require on export controls?",
+     "expected_title": "supply-chain-doc-sustainability-guidelines-en",
+     "hit": true,
+     "got_titles": [
+      "supply-chain-doc-sustainability-guidelines-en",
+      "denso-ten_qa_manual",
+      "denso-ten_qa_manual"
+     ],
+     "keyword_hits": [
+      "export controls"
+     ],
+     "keyword_total": 1,
+     "latency_ms": 26.4
+    },
+    {
+     "id": "supplier-ip",
+     "lang": "en",
+     "format": "scanned-pdf",
+     "query": "How should suppliers treat intellectual property and counterfeit products?",
+     "expected_title": "supply-chain-doc-sustainability-guidelines-en",
+     "hit": true,
+     "got_titles": [
+      "compliance-doc-employee-behavior-guideline-en",
+      "supply-chain-doc-sustainability-guidelines-en",
+      "compliance-doc-employee-behavior-guideline-en"
+     ],
+     "keyword_hits": [
+      "intellectual property",
+      "counterfeit"
+     ],
+     "keyword_total": 2,
+     "latency_ms": 25.8
+    },
+    {
+     "id": "hr-international-norms",
+     "lang": "en",
+     "format": "text-pdf",
+     "query": "Which international human rights norms does the DENSO Group Human Rights Policy support?",
+     "expected_title": "humanrights-doc-human-rights-policy-en",
+     "hit": true,
+     "got_titles": [
+      "humanrights-doc-human-rights-policy-en",
+      "supply-chain-doc-sustainability-guidelines-en",
+      "compliance-doc-employee-behavior-guideline-en"
+     ],
+     "keyword_hits": [
+      "United Nations",
+      "International Labor Organization"
+     ],
+     "keyword_total": 2,
+     "latency_ms": 30.9
+    },
+    {
+     "id": "hr-scope",
+     "lang": "en",
+     "format": "text-pdf",
+     "query": "Who does the DENSO Group Human Rights Policy apply to?",
+     "expected_title": "humanrights-doc-human-rights-policy-en",
+     "hit": true,
+     "got_titles": [
+      "humanrights-doc-human-rights-policy-en",
+      "humanrights-doc-human-rights-policy-en",
+      "supply-chain-doc-sustainability-guidelines-en"
+     ],
+     "keyword_hits": [
+      "all employees",
+      "executive officers"
+     ],
+     "keyword_total": 2,
+     "latency_ms": 27.8
+    },
+    {
+     "id": "hr-conflict-of-laws",
+     "lang": "en",
+     "format": "text-pdf",
+     "query": "What does DENSO do when local law conflicts with international human rights standards?",
+     "expected_title": "humanrights-doc-human-rights-policy-en",
+     "hit": true,
+     "got_titles": [
+      "humanrights-doc-human-rights-policy-en",
+      "humanrights-doc-human-rights-policy-en",
+      "edinet_securities_report_candidate"
+     ],
+     "keyword_hits": [
+      "internationally recognized",
+      "maximum extent"
+     ],
+     "keyword_total": 2,
+     "latency_ms": 37.6
+    },
+    {
+     "id": "qa-core-tools",
+     "lang": "en",
+     "format": "text-pdf",
+     "query": "Which core quality tools does the DENSO TEN manual require of external providers?",
+     "expected_title": "denso-ten_qa_manual",
+     "hit": true,
+     "got_titles": [
+      "denso-ten_qa_manual",
+      "denso-ten_qa_manual",
+      "denso-ten_qa_manual"
+     ],
+     "keyword_hits": [
+      "SPC",
+      "FMEA",
+      "MSA",
+      "APQP",
+      "PPAP"
+     ],
+     "keyword_total": 5,
+     "latency_ms": 33.1
+    },
+    {
+     "id": "qa-traceability-change",
+     "lang": "en",
+     "format": "text-pdf",
+     "query": "What does the DENSO TEN manual cover on traceability and change control?",
+     "expected_title": "denso-ten_qa_manual",
+     "hit": true,
+     "got_titles": [
+      "denso-ten_qa_manual",
+      "denso-ten_qa_manual",
+      "denso-ten_qa_manual"
+     ],
+     "keyword_hits": [],
+     "keyword_total": 2,
+     "latency_ms": 28.3
+    },
+    {
+     "id": "qa-ppap",
+     "lang": "en",
+     "format": "text-pdf",
+     "query": "What is the Production Part Approval Process in the DENSO TEN manual?",
+     "expected_title": "denso-ten_qa_manual",
+     "hit": true,
+     "got_titles": [
+      "denso-ten_qa_manual",
+      "denso-ten_qa_manual",
+      "denso-ten_qa_manual"
+     ],
+     "keyword_hits": [
+      "Production Part Approval"
+     ],
+     "keyword_total": 1,
+     "latency_ms": 32.3
+    },
+    {
+     "id": "gov2025-nomination",
+     "lang": "en",
+     "format": "text-pdf",
+     "query": "Who chairs the Executive Nomination and Remuneration Council?",
+     "expected_title": "management-doc-corporate-governance-2025-en",
+     "hit": true,
+     "got_titles": [
+      "management-doc-corporate-governance-2025-en",
+      "management-doc-corporate-governance-2025-en",
+      "edinet_securities_report_candidate"
+     ],
+     "keyword_hits": [
+      "independent outside Board member",
+      "Remuneration"
+     ],
+     "keyword_total": 2,
+     "latency_ms": 28.3
+    },
+    {
+     "id": "gov2025-cross-shareholding",
+     "lang": "en",
+     "format": "text-pdf",
+     "query": "How does DENSO handle cross-shareholdings?",
+     "expected_title": "management-doc-corporate-governance-2025-en",
+     "hit": true,
+     "got_titles": [
+      "management-doc-corporate-governance-2025-en",
+      "management-doc-corporate-governance-2025-en",
+      "management-doc-corporate-governance-policy-2021-en"
+     ],
+     "keyword_hits": [
+      "cross-shareholdings"
+     ],
+     "keyword_total": 1,
+     "latency_ms": 25.7
+    },
+    {
+     "id": "gov2025-long-term-policy",
+     "lang": "en",
+     "format": "text-pdf",
+     "query": "What is the Long-term Policy in DENSO's governance framework?",
+     "expected_title": "management-doc-corporate-governance-2025-en",
+     "hit": true,
+     "got_titles": [
+      "management-doc-corporate-governance-policy-2021-en",
+      "management-doc-corporate-governance-2025-en",
+      "management-doc-corporate-governance-2025-en"
+     ],
+     "keyword_hits": [
+      "management compass",
+      "five to 10 years"
+     ],
+     "keyword_total": 2,
+     "latency_ms": 33.8
+    }
+   ],
+   "by_lang": {
+    "en": {
+     "hits": 36,
+     "total": 38,
+     "recall": 0.947
+    }
+   },
+   "by_format": {
+    "text-pdf": {
+     "hits": 29,
+     "total": 30,
+     "recall": 0.967
+    },
+    "scanned-pdf": {
+     "hits": 7,
+     "total": 8,
+     "recall": 0.875
+    }
+   },
+   "recall": 0.947,
+   "hits": 36,
+   "total": 38,
+   "avg_latency_ms": 32.5,
+   "median_latency_ms": 30.5,
+   "p95_latency_ms": 45.4,
+   "max_latency_ms": 53.2,
+   "first_query_ms": 53.2,
+   "reranked": false,
+   "rerank_errors": 0
+  },
+  "denso_qa_multilingual.jsonl": {
+   "run_at": "2026-09-25T07:42:01",
+   "config": {
+    "embedding": {
+     "provider": "openai_compatible",
+     "model": "bge-m3",
+     "dimensions": 1024
+    },
+    "index": {
+     "backend": "qdrant",
+     "collection": "tini_documents_bge3"
+    },
+    "chunking": {
+     "max_tokens": 512,
+     "min_tokens": 120,
+     "overlap_tokens": 48
+    },
+    "ocr": {
+     "provider": "deepseek",
+     "model": "deepseek-v4-flash-vision-exp"
+    },
+    "rerank": {
+     "enabled": false,
+     "provider": "none",
+     "model": null,
+     "candidates": 20
+    },
+    "search_k": 3,
+    "workspace": "denso",
+    "corpus": [
+     {
+      "title": "annual-report-doc-2025-viewing-ja",
+      "chunks": 338
+     },
+     {
+      "title": "compliance-doc-employee-behavior-guideline-en",
+      "chunks": 18
+     },
+     {
+      "title": "denso-ten_qa_manual",
+      "chunks": 27
+     },
+     {
+      "title": "edinet_securities_report_candidate",
+      "chunks": 395
+     },
+     {
+      "title": "humanrights-doc-human-rights-policy-en",
+      "chunks": 2
+     },
+     {
+      "title": "management-doc-corporate-governance-2025-en",
+      "chunks": 39
+     },
+     {
+      "title": "management-doc-corporate-governance-policy-2021-en",
+      "chunks": 2
+     },
+     {
+      "title": "supply-chain-doc-sustainability-guidelines-en",
+      "chunks": 9
+     }
+    ]
+   },
+   "question_set": "denso_qa_multilingual.jsonl",
+   "workspace": "denso",
+   "k": 3,
+   "use_llm": false,
+   "cases": [
+    {
+     "id": "ja-founded",
+     "lang": "ja",
+     "format": "table-heavy-pdf",
+     "query": "デンソーはいつ、どの会社から分離独立して設立されましたか？",
+     "expected_title": "edinet_securities_report_candidate",
+     "hit": true,
+     "got_titles": [
+      "annual-report-doc-2025-viewing-ja",
+      "annual-report-doc-2025-viewing-ja",
+      "edinet_securities_report_candidate"
+     ],
+     "keyword_hits": [],
+     "keyword_total": 2,
+     "latency_ms": 52.3
+    },
+    {
+     "id": "ja-deming",
+     "lang": "ja",
+     "format": "table-heavy-pdf",
+     "query": "デンソーがデミング賞を受賞したのはいつですか？",
+     "expected_title": "edinet_securities_report_candidate",
+     "hit": false,
+     "got_titles": [
+      "annual-report-doc-2025-viewing-ja",
+      "annual-report-doc-2025-viewing-ja",
+      "annual-report-doc-2025-viewing-ja"
+     ],
+     "keyword_hits": [],
+     "keyword_total": 2,
+     "latency_ms": 31.6
+    },
+    {
+     "id": "ja-fujitsu-ten",
+     "lang": "ja",
+     "format": "table-heavy-pdf",
+     "query": "富士通テンを買収したのはいつですか？",
+     "expected_title": "edinet_securities_report_candidate",
+     "hit": true,
+     "got_titles": [
+      "edinet_securities_report_candidate",
+      "edinet_securities_report_candidate",
+      "annual-report-doc-2025-viewing-ja"
+     ],
+     "keyword_hits": [
+      "2017年11月",
+      "富士通テン"
+     ],
+     "keyword_total": 2,
+     "latency_ms": 29.5
+    },
+    {
+     "id": "ja-zero-emission",
+     "lang": "ja",
+     "format": "table-heavy-pdf",
+     "query": "ゼロエミッションを達成したのはいつですか？",
+     "expected_title": "edinet_securities_report_candidate",
+     "hit": true,
+     "got_titles": [
+      "annual-report-doc-2025-viewing-ja",
+      "edinet_securities_report_candidate",
+      "annual-report-doc-2025-viewing-ja"
+     ],
+     "keyword_hits": [
+      "2002年11月",
+      "ゼロエミッション"
+     ],
+     "keyword_total": 2,
+     "latency_ms": 30.9
+    },
+    {
+     "id": "ja-group-size",
+     "lang": "ja",
+     "format": "table-heavy-pdf",
+     "query": "デンソーの連結会社は子会社と関連会社を何社含みますか？",
+     "expected_title": "edinet_securities_report_candidate",
+     "hit": true,
+     "got_titles": [
+      "edinet_securities_report_candidate",
+      "edinet_securities_report_candidate",
+      "annual-report-doc-2025-viewing-ja"
+     ],
+     "keyword_hits": [
+      "子会社190社",
+      "関連会社83社"
+     ],
+     "keyword_total": 2,
+     "latency_ms": 31.9
+    },
+    {
+     "id": "ja-employees",
+     "lang": "ja",
+     "format": "table-heavy-pdf",
+     "query": "連結ベースの従業員数の合計は何人ですか？",
+     "expected_title": "edinet_securities_report_candidate",
+     "hit": true,
+     "got_titles": [
+      "edinet_securities_report_candidate",
+      "annual-report-doc-2025-viewing-ja",
+      "annual-report-doc-2025-viewing-ja"
+     ],
+     "keyword_hits": [
+      "164,572"
+     ],
+     "keyword_total": 1,
+     "latency_ms": 26.4
+    },
+    {
+     "id": "ja-avg-salary",
+     "lang": "ja",
+     "format": "table-heavy-pdf",
+     "query": "提出会社の従業員の平均年間給与はいくらですか？",
+     "expected_title": "edinet_securities_report_candidate",
+     "hit": true,
+     "got_titles": [
+      "edinet_securities_report_candidate",
+      "edinet_securities_report_candidate",
+      "edinet_securities_report_candidate"
+     ],
+     "keyword_hits": [
+      "8,113,982"
+     ],
+     "keyword_total": 1,
+     "latency_ms": 27.7
+    },
+    {
+     "id": "ja-women-managers",
+     "lang": "ja",
+     "format": "table-heavy-pdf",
+     "query": "管理職に占める女性労働者の割合はどれくらいですか？",
+     "expected_title": "edinet_securities_report_candidate",
+     "hit": true,
+     "got_titles": [
+      "edinet_securities_report_candidate",
+      "annual-report-doc-2025-viewing-ja",
+      "annual-report-doc-2025-viewing-ja"
+     ],
+     "keyword_hits": [
+      "1.8％",
+      "139人"
+     ],
+     "keyword_total": 2,
+     "latency_ms": 32.9
+    },
+    {
+     "id": "ja-thermal-products",
+     "lang": "ja",
+     "format": "table-heavy-pdf",
+     "query": "サーマルシステムの主要製品は何ですか？",
+     "expected_title": "edinet_securities_report_candidate",
+     "hit": true,
+     "got_titles": [
+      "edinet_securities_report_candidate",
+      "annual-report-doc-2025-viewing-ja",
+      "edinet_securities_report_candidate"
+     ],
+     "keyword_hits": [
+      "ＨＶＡＣ",
+      "コンプレッサ"
+     ],
+     "keyword_total": 2,
+     "latency_ms": 25.4
+    },
+    {
+     "id": "ja-auto-id",
+     "lang": "ja",
+     "format": "table-heavy-pdf",
+     "query": "AUTO-ID関連の製品にはどのようなものがありますか？",
+     "expected_title": "edinet_securities_report_candidate",
+     "hit": true,
+     "got_titles": [
+      "edinet_securities_report_candidate",
+      "annual-report-doc-2025-viewing-ja",
+      "annual-report-doc-2025-viewing-ja"
+     ],
+     "keyword_hits": [
+      "バーコードハンディスキャナ",
+      "ＱＲコード"
+     ],
+     "keyword_total": 2,
+     "latency_ms": 34.4
+    },
+    {
+     "id": "ja-production",
+     "lang": "ja",
+     "format": "table-heavy-pdf",
+     "query": "日本セグメントの生産実績はいくらですか？",
+     "expected_title": "edinet_securities_report_candidate",
+     "hit": true,
+     "got_titles": [
+      "edinet_securities_report_candidate",
+      "edinet_securities_report_candidate",
+      "edinet_securities_report_candidate"
+     ],
+     "keyword_hits": [
+      "2,609,060"
+     ],
+     "keyword_total": 1,
+     "latency_ms": 24.4
+    },
+    {
+     "id": "ja-x-supplier-forced-labor",
+     "lang": "ja",
+     "format": "scanned-pdf",
+     "query": "サプライヤーは強制労働や児童労働を使用してもよいですか？",
+     "expected_title": "supply-chain-doc-sustainability-guidelines-en",
+     "hit": true,
+     "got_titles": [
+      "supply-chain-doc-sustainability-guidelines-en",
+      "annual-report-doc-2025-viewing-ja",
+      "annual-report-doc-2025-viewing-ja"
+     ],
+     "keyword_hits": [
+      "forced labor",
+      "child labor"
+     ],
+     "keyword_total": 2,
+     "latency_ms": 35.1
+    },
+    {
+     "id": "ja-x-mission",
+     "lang": "ja",
+     "format": "text-pdf",
+     "query": "DENSOの使命（ミッション）は何ですか？",
+     "expected_title": "compliance-doc-employee-behavior-guideline-en",
+     "hit": true,
+     "got_titles": [
+      "supply-chain-doc-sustainability-guidelines-en",
+      "compliance-doc-employee-behavior-guideline-en",
+      "annual-report-doc-2025-viewing-ja"
+     ],
+     "keyword_hits": [
+      "better world"
+     ],
+     "keyword_total": 1,
+     "latency_ms": 26.0
+    },
+    {
+     "id": "ja-x-hr-scope",
+     "lang": "ja",
+     "format": "text-pdf",
+     "query": "人権方針は誰に適用されますか？",
+     "expected_title": "humanrights-doc-human-rights-policy-en",
+     "hit": false,
+     "got_titles": [
+      "edinet_securities_report_candidate",
+      "annual-report-doc-2025-viewing-ja",
+      "annual-report-doc-2025-viewing-ja"
+     ],
+     "keyword_hits": [],
+     "keyword_total": 1,
+     "latency_ms": 25.3
+    },
+    {
+     "id": "ja-x-qa-core-tools",
+     "lang": "ja",
+     "format": "text-pdf",
+     "query": "DENSO TENの品質保証マニュアルが求めるコアツールは何ですか？",
+     "expected_title": "denso-ten_qa_manual",
+     "hit": true,
+     "got_titles": [
+      "denso-ten_qa_manual",
+      "denso-ten_qa_manual",
+      "denso-ten_qa_manual"
+     ],
+     "keyword_hits": [
+      "FMEA",
+      "APQP"
+     ],
+     "keyword_total": 2,
+     "latency_ms": 34.8
+    },
+    {
+     "id": "vi-mission",
+     "lang": "vi",
+     "format": "text-pdf",
+     "query": "Sứ mệnh của DENSO trong Triết lý DENSO là gì?",
+     "expected_title": "compliance-doc-employee-behavior-guideline-en",
+     "hit": true,
+     "got_titles": [
+      "compliance-doc-employee-behavior-guideline-en",
+      "supply-chain-doc-sustainability-guidelines-en",
+      "management-doc-corporate-governance-2025-en"
+     ],
+     "keyword_hits": [
+      "better world"
+     ],
+     "keyword_total": 1,
+     "latency_ms": 30.5
+    },
+    {
+     "id": "vi-code-scope",
+     "lang": "vi",
+     "format": "text-pdf",
+     "query": "Bộ quy tắc ứng xử của DENSO áp dụng cho những ai?",
+     "expected_title": "compliance-doc-employee-behavior-guideline-en",
+     "hit": true,
+     "got_titles": [
+      "management-doc-corporate-governance-2025-en",
+      "humanrights-doc-human-rights-policy-en",
+      "compliance-doc-employee-behavior-guideline-en"
+     ],
+     "keyword_hits": [
+      "executives"
+     ],
+     "keyword_total": 1,
+     "latency_ms": 27.2
+    },
+    {
+     "id": "vi-shareholder",
+     "lang": "vi",
+     "format": "text-pdf",
+     "query": "DENSO đảm bảo quyền và sự đối xử bình đẳng của cổ đông như thế nào?",
+     "expected_title": "management-doc-corporate-governance-policy-2021-en",
+     "hit": true,
+     "got_titles": [
+      "management-doc-corporate-governance-policy-2021-en",
+      "management-doc-corporate-governance-2025-en",
+      "annual-report-doc-2025-viewing-ja"
+     ],
+     "keyword_hits": [
+      "shareholders",
+      "voting rights"
+     ],
+     "keyword_total": 2,
+     "latency_ms": 32.0
+    },
+    {
+     "id": "vi-supplier-child-labor",
+     "lang": "vi",
+     "format": "scanned-pdf",
+     "query": "Nhà cung cấp có được sử dụng lao động cưỡng bức hoặc lao động trẻ em không?",
+     "expected_title": "supply-chain-doc-sustainability-guidelines-en",
+     "hit": true,
+     "got_titles": [
+      "supply-chain-doc-sustainability-guidelines-en",
+      "annual-report-doc-2025-viewing-ja",
+      "annual-report-doc-2025-viewing-ja"
+     ],
+     "keyword_hits": [
+      "forced labor",
+      "child labor"
+     ],
+     "keyword_total": 2,
+     "latency_ms": 31.4
+    },
+    {
+     "id": "vi-hr-scope",
+     "lang": "vi",
+     "format": "text-pdf",
+     "query": "Chính sách nhân quyền của DENSO áp dụng cho những ai?",
+     "expected_title": "humanrights-doc-human-rights-policy-en",
+     "hit": true,
+     "got_titles": [
+      "humanrights-doc-human-rights-policy-en",
+      "humanrights-doc-human-rights-policy-en",
+      "supply-chain-doc-sustainability-guidelines-en"
+     ],
+     "keyword_hits": [
+      "all employees"
+     ],
+     "keyword_total": 1,
+     "latency_ms": 29.8
+    },
+    {
+     "id": "vi-qa-standard",
+     "lang": "vi",
+     "format": "text-pdf",
+     "query": "Sổ tay đảm bảo chất lượng của DENSO TEN dựa trên tiêu chuẩn nào?",
+     "expected_title": "denso-ten_qa_manual",
+     "hit": true,
+     "got_titles": [
+      "denso-ten_qa_manual",
+      "denso-ten_qa_manual",
+      "denso-ten_qa_manual"
+     ],
+     "keyword_hits": [],
+     "keyword_total": 1,
+     "latency_ms": 35.0
+    },
+    {
+     "id": "vi-nomination",
+     "lang": "vi",
+     "format": "text-pdf",
+     "query": "Ai chủ trì Hội đồng Đề cử và Thù lao Điều hành của DENSO?",
+     "expected_title": "management-doc-corporate-governance-2025-en",
+     "hit": false,
+     "got_titles": [
+      "edinet_securities_report_candidate",
+      "edinet_securities_report_candidate",
+      "edinet_securities_report_candidate"
+     ],
+     "keyword_hits": [],
+     "keyword_total": 1,
+     "latency_ms": 31.1
+    },
+    {
+     "id": "vi-cross-shareholding",
+     "lang": "vi",
+     "format": "text-pdf",
+     "query": "DENSO xử lý việc nắm giữ cổ phần chéo như thế nào?",
+     "expected_title": "management-doc-corporate-governance-2025-en",
+     "hit": true,
+     "got_titles": [
+      "management-doc-corporate-governance-2025-en",
+      "management-doc-corporate-governance-policy-2021-en",
+      "management-doc-corporate-governance-2025-en"
+     ],
+     "keyword_hits": [
+      "cross-shareholdings"
+     ],
+     "keyword_total": 1,
+     "latency_ms": 35.0
+    },
+    {
+     "id": "vi-x-employees",
+     "lang": "vi",
+     "format": "table-heavy-pdf",
+     "query": "Tổng số nhân viên hợp nhất của DENSO là bao nhiêu?",
+     "expected_title": "edinet_securities_report_candidate",
+     "hit": true,
+     "got_titles": [
+      "edinet_securities_report_candidate",
+      "annual-report-doc-2025-viewing-ja",
+      "edinet_securities_report_candidate"
+     ],
+     "keyword_hits": [
+      "164,572"
+     ],
+     "keyword_total": 1,
+     "latency_ms": 25.5
+    },
+    {
+     "id": "vi-x-founded",
+     "lang": "vi",
+     "format": "table-heavy-pdf",
+     "query": "DENSO được thành lập năm nào và tách ra từ công ty nào?",
+     "expected_title": "edinet_securities_report_candidate",
+     "hit": true,
+     "got_titles": [
+      "annual-report-doc-2025-viewing-ja",
+      "annual-report-doc-2025-viewing-ja",
+      "edinet_securities_report_candidate"
+     ],
+     "keyword_hits": [],
+     "keyword_total": 2,
+     "latency_ms": 31.2
+    },
+    {
+     "id": "vi-x-deming",
+     "lang": "vi",
+     "format": "table-heavy-pdf",
+     "query": "Khi nào DENSO nhận giải Deming?",
+     "expected_title": "edinet_securities_report_candidate",
+     "hit": false,
+     "got_titles": [
+      "annual-report-doc-2025-viewing-ja",
+      "annual-report-doc-2025-viewing-ja",
+      "annual-report-doc-2025-viewing-ja"
+     ],
+     "keyword_hits": [],
+     "keyword_total": 1,
+     "latency_ms": 25.8
+    },
+    {
+     "id": "vi-x-women",
+     "lang": "vi",
+     "format": "table-heavy-pdf",
+     "query": "Tỷ lệ nữ giới trong vị trí quản lý của DENSO là bao nhiêu?",
+     "expected_title": "edinet_securities_report_candidate",
+     "hit": false,
+     "got_titles": [
+      "annual-report-doc-2025-viewing-ja",
+      "annual-report-doc-2025-viewing-ja",
+      "annual-report-doc-2025-viewing-ja"
+     ],
+     "keyword_hits": [],
+     "keyword_total": 1,
+     "latency_ms": 33.7
+    },
+    {
+     "id": "en-x-employees",
+     "lang": "en",
+     "format": "table-heavy-pdf",
+     "query": "How many employees does the DENSO group have in total?",
+     "expected_title": "edinet_securities_report_candidate",
+     "hit": true,
+     "got_titles": [
+      "annual-report-doc-2025-viewing-ja",
+      "edinet_securities_report_candidate",
+      "annual-report-doc-2025-viewing-ja"
+     ],
+     "keyword_hits": [
+      "164,572"
+     ],
+     "keyword_total": 1,
+     "latency_ms": 25.8
+    },
+    {
+     "id": "en-x-founded",
+     "lang": "en",
+     "format": "table-heavy-pdf",
+     "query": "When was DENSO founded and from which company was it spun off?",
+     "expected_title": "edinet_securities_report_candidate",
+     "hit": true,
+     "got_titles": [
+      "annual-report-doc-2025-viewing-ja",
+      "edinet_securities_report_candidate",
+      "annual-report-doc-2025-viewing-ja"
+     ],
+     "keyword_hits": [],
+     "keyword_total": 2,
+     "latency_ms": 32.2
+    },
+    {
+     "id": "en-x-fujitsu-ten",
+     "lang": "en",
+     "format": "table-heavy-pdf",
+     "query": "When did DENSO acquire Fujitsu Ten?",
+     "expected_title": "edinet_securities_report_candidate",
+     "hit": true,
+     "got_titles": [
+      "edinet_securities_report_candidate",
+      "annual-report-doc-2025-viewing-ja",
+      "annual-report-doc-2025-viewing-ja"
+     ],
+     "keyword_hits": [
+      "2017年11月"
+     ],
+     "keyword_total": 1,
+     "latency_ms": 31.5
+    },
+    {
+     "id": "en-x-women",
+     "lang": "en",
+     "format": "table-heavy-pdf",
+     "query": "What share of managers at DENSO are women?",
+     "expected_title": "edinet_securities_report_candidate",
+     "hit": false,
+     "got_titles": [
+      "annual-report-doc-2025-viewing-ja",
+      "annual-report-doc-2025-viewing-ja",
+      "annual-report-doc-2025-viewing-ja"
+     ],
+     "keyword_hits": [],
+     "keyword_total": 1,
+     "latency_ms": 26.0
+    },
+    {
+     "id": "ir-capital",
+     "lang": "ja",
+     "format": "table-heavy-pdf",
+     "query": "デンソーの資本金はいくらですか？",
+     "expected_title": "annual-report-doc-2025-viewing-ja",
+     "hit": true,
+     "got_titles": [
+      "annual-report-doc-2025-viewing-ja",
+      "edinet_securities_report_candidate",
+      "edinet_securities_report_candidate"
+     ],
+     "keyword_hits": [
+      "1,875億円"
+     ],
+     "keyword_total": 1,
+     "latency_ms": 26.8
+    },
+    {
+     "id": "ir-employees",
+     "lang": "ja",
+     "format": "table-heavy-pdf",
+     "query": "2025年3月期のデンソーの連結従業員数は何名ですか？",
+     "expected_title": "annual-report-doc-2025-viewing-ja",
+     "hit": true,
+     "got_titles": [
+      "edinet_securities_report_candidate",
+      "annual-report-doc-2025-viewing-ja",
+      "annual-report-doc-2025-viewing-ja"
+     ],
+     "keyword_hits": [
+      "158,056"
+     ],
+     "keyword_total": 1,
+     "latency_ms": 31.5
+    },
+    {
+     "id": "ir-x-employees",
+     "lang": "en",
+     "format": "table-heavy-pdf",
+     "query": "How many consolidated employees did DENSO have as of fiscal year 2025?",
+     "expected_title": "annual-report-doc-2025-viewing-ja",
+     "hit": true,
+     "got_titles": [
+      "edinet_securities_report_candidate",
+      "annual-report-doc-2025-viewing-ja",
+      "annual-report-doc-2025-viewing-ja"
+     ],
+     "keyword_hits": [
+      "158,056"
+     ],
+     "keyword_total": 1,
+     "latency_ms": 43.3
+    },
+    {
+     "id": "ir-x-employees-vi",
+     "lang": "vi",
+     "format": "table-heavy-pdf",
+     "query": "Tính đến năm tài chính 2025, DENSO có bao nhiêu nhân viên hợp nhất?",
+     "expected_title": "annual-report-doc-2025-viewing-ja",
+     "hit": true,
+     "got_titles": [
+      "edinet_securities_report_candidate",
+      "annual-report-doc-2025-viewing-ja",
+      "annual-report-doc-2025-viewing-ja"
+     ],
+     "keyword_hits": [
+      "158,056"
+     ],
+     "keyword_total": 1,
+     "latency_ms": 37.6
+    },
+    {
+     "id": "ir-largest-shareholder",
+     "lang": "ja",
+     "format": "table-heavy-pdf",
+     "query": "デンソーの筆頭株主はどこで、持株比率は何%ですか？",
+     "expected_title": "annual-report-doc-2025-viewing-ja",
+     "hit": true,
+     "got_titles": [
+      "annual-report-doc-2025-viewing-ja",
+      "edinet_securities_report_candidate",
+      "edinet_securities_report_candidate"
+     ],
+     "keyword_hits": [
+      "トヨタ自動車",
+      "21.25"
+     ],
+     "keyword_total": 2,
+     "latency_ms": 46.5
+    },
+    {
+     "id": "ir-stock-code",
+     "lang": "ja",
+     "format": "table-heavy-pdf",
+     "query": "デンソーの証券コードは何番ですか？",
+     "expected_title": "annual-report-doc-2025-viewing-ja",
+     "hit": true,
+     "got_titles": [
+      "edinet_securities_report_candidate",
+      "annual-report-doc-2025-viewing-ja",
+      "edinet_securities_report_candidate"
+     ],
+     "keyword_hits": [
+      "6902"
+     ],
+     "keyword_total": 1,
+     "latency_ms": 29.3
+    },
+    {
+     "id": "ir-revenue-fy2024",
+     "lang": "ja",
+     "format": "table-heavy-pdf",
+     "query": "2024年度の売上収益の総計はいくらでしたか？",
+     "expected_title": "annual-report-doc-2025-viewing-ja",
+     "hit": true,
+     "got_titles": [
+      "annual-report-doc-2025-viewing-ja",
+      "annual-report-doc-2025-viewing-ja",
+      "annual-report-doc-2025-viewing-ja"
+     ],
+     "keyword_hits": [],
+     "keyword_total": 1,
+     "latency_ms": 32.1
+    },
+    {
+     "id": "ir-x-revenue-fy2024",
+     "lang": "en",
+     "format": "table-heavy-pdf",
+     "query": "What was DENSO's total revenue for fiscal year 2024?",
+     "expected_title": "annual-report-doc-2025-viewing-ja",
+     "hit": true,
+     "got_titles": [
+      "edinet_securities_report_candidate",
+      "annual-report-doc-2025-viewing-ja",
+      "edinet_securities_report_candidate"
+     ],
+     "keyword_hits": [],
+     "keyword_total": 1,
+     "latency_ms": 26.5
+    },
+    {
+     "id": "ir-adas-sales",
+     "lang": "ja",
+     "format": "text-pdf",
+     "query": "2024年度のADAS事業の売上はいくらで、過去最高でしたか？",
+     "expected_title": "annual-report-doc-2025-viewing-ja",
+     "hit": true,
+     "got_titles": [
+      "annual-report-doc-2025-viewing-ja",
+      "annual-report-doc-2025-viewing-ja",
+      "annual-report-doc-2025-viewing-ja"
+     ],
+     "keyword_hits": [
+      "2.0兆円"
+     ],
+     "keyword_total": 1,
+     "latency_ms": 33.0
+    },
+    {
+     "id": "ir-ceo",
+     "lang": "ja",
+     "format": "text-pdf",
+     "query": "デンソーの代表取締役社長（CEO）は誰ですか？",
+     "expected_title": "annual-report-doc-2025-viewing-ja",
+     "hit": true,
+     "got_titles": [
+      "edinet_securities_report_candidate",
+      "annual-report-doc-2025-viewing-ja",
+      "annual-report-doc-2025-viewing-ja"
+     ],
+     "keyword_hits": [],
+     "keyword_total": 1,
+     "latency_ms": 26.8
+    },
+    {
+     "id": "ir-cfo",
+     "lang": "ja",
+     "format": "text-pdf",
+     "query": "デンソーのCFOは誰ですか？",
+     "expected_title": "annual-report-doc-2025-viewing-ja",
+     "hit": true,
+     "got_titles": [
+      "annual-report-doc-2025-viewing-ja",
+      "edinet_securities_report_candidate",
+      "annual-report-doc-2025-viewing-ja"
+     ],
+     "keyword_hits": [],
+     "keyword_total": 1,
+     "latency_ms": 28.1
+    },
+    {
+     "id": "ir-chro",
+     "lang": "ja",
+     "format": "text-pdf",
+     "query": "デンソーのCHROは誰ですか？",
+     "expected_title": "annual-report-doc-2025-viewing-ja",
+     "hit": true,
+     "got_titles": [
+      "annual-report-doc-2025-viewing-ja",
+      "edinet_securities_report_candidate",
+      "annual-report-doc-2025-viewing-ja"
+     ],
+     "keyword_hits": [],
+     "keyword_total": 1,
+     "latency_ms": 29.5
+    },
+    {
+     "id": "ir-tcfd",
+     "lang": "ja",
+     "format": "text-pdf",
+     "query": "デンソーがTCFD（気候関連財務情報開示タスクフォース）への賛同を表明したのは何年ですか？",
+     "expected_title": "annual-report-doc-2025-viewing-ja",
+     "hit": true,
+     "got_titles": [
+      "annual-report-doc-2025-viewing-ja",
+      "annual-report-doc-2025-viewing-ja",
+      "annual-report-doc-2025-viewing-ja"
+     ],
+     "keyword_hits": [
+      "2019年",
+      "TCFD"
+     ],
+     "keyword_total": 2,
+     "latency_ms": 62.2
+    },
+    {
+     "id": "ir-share-sale",
+     "lang": "ja",
+     "format": "text-pdf",
+     "query": "2024年度の政策保有株式の売却金額はいくらで、過去最高でしたか？",
+     "expected_title": "annual-report-doc-2025-viewing-ja",
+     "hit": true,
+     "got_titles": [
+      "annual-report-doc-2025-viewing-ja",
+      "annual-report-doc-2025-viewing-ja",
+      "annual-report-doc-2025-viewing-ja"
+     ],
+     "keyword_hits": [
+      "4,385億円"
+     ],
+     "keyword_total": 1,
+     "latency_ms": 38.4
+    },
+    {
+     "id": "ir-75th-anniversary",
+     "lang": "ja",
+     "format": "text-pdf",
+     "query": "デンソーが創立75周年を迎えたのは何年ですか？",
+     "expected_title": "annual-report-doc-2025-viewing-ja",
+     "hit": true,
+     "got_titles": [
+      "annual-report-doc-2025-viewing-ja",
+      "annual-report-doc-2025-viewing-ja",
+      "annual-report-doc-2025-viewing-ja"
+     ],
+     "keyword_hits": [],
+     "keyword_total": 2,
+     "latency_ms": 27.6
+    },
+    {
+     "id": "ir-outside-directors-dialogue",
+     "lang": "ja",
+     "format": "text-pdf",
+     "query": "社外取締役鼎談に参加した社外取締役の氏名を教えてください。",
+     "expected_title": "annual-report-doc-2025-viewing-ja",
+     "hit": false,
+     "got_titles": [
+      "edinet_securities_report_candidate",
+      "edinet_securities_report_candidate",
+      "edinet_securities_report_candidate"
+     ],
+     "keyword_hits": [],
+     "keyword_total": 2,
+     "latency_ms": 31.8
+    }
+   ],
+   "by_lang": {
+    "ja": {
+     "hits": 25,
+     "total": 28,
+     "recall": 0.893
+    },
+    "vi": {
+     "hits": 10,
+     "total": 13,
+     "recall": 0.769
+    },
+    "en": {
+     "hits": 5,
+     "total": 6,
+     "recall": 0.833
+    }
+   },
+   "by_format": {
+    "table-heavy-pdf": {
+     "hits": 23,
+     "total": 27,
+     "recall": 0.852
+    },
+    "scanned-pdf": {
+     "hits": 2,
+     "total": 2,
+     "recall": 1.0
+    },
+    "text-pdf": {
+     "hits": 15,
+     "total": 18,
+     "recall": 0.833
+    }
+   },
+   "recall": 0.851,
+   "hits": 40,
+   "total": 47,
+   "avg_latency_ms": 32.0,
+   "median_latency_ms": 31.2,
+   "p95_latency_ms": 46.5,
+   "max_latency_ms": 62.2,
+   "first_query_ms": 52.3,
+   "reranked": false,
+   "rerank_errors": 0
+  }
+ }
+}

@@ -13,10 +13,10 @@ from tini.config import load_settings
 from tini.runtime.session import Session
 
 
-def test_system_prompt_includes_current_time():
+def test_turn_context_includes_current_time():
     settings = load_settings()
     settings.ensure_home()
-    system = Session(settings, memory=None).build_system("what should I do in 30 minutes?")
+    system = Session(settings, memory=None).build_context("what should I do in 30 minutes?")
     # a HH:MM clock must be present — not just a date — so the model never has
     # to ask the user for the time (the live bug).
     assert re.search(r"\b\d{2}:\d{2}\b", system), "system prompt is missing a HH:MM time"
@@ -39,5 +39,5 @@ def test_system_prompt_includes_own_model_identity():
     settings = load_settings()
     settings.ensure_home()
     settings.provider, settings.model = "kimi", "kimi-k3"
-    system = Session(settings, memory=None).build_system("what model are you?")
+    system = Session(settings, memory=None).build_system()
     assert "kimi-k3" in system and "'kimi' provider" in system

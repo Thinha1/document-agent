@@ -33,35 +33,73 @@ def build_elements() -> list[dict]:
     # Title and identity.
     a(S.text(60, 36, "Tini — one turn through the whole system", size=S.FS_TITLE))
     a(S.underline(64, 112, 920, color=S.PAL["orange"][1]))
-    a(S.text(64, 132, "Harness  ·  Loop  ·  Memory  ·  Eval / LLM Ops",
-             size=S.FS_HEADER, color=S.PAL["grey"][1]))
+    a(
+        S.text(
+            64,
+            132,
+            "Harness  ·  Loop  ·  Memory  ·  Eval / LLM Ops",
+            size=S.FS_HEADER,
+            color=S.PAL["grey"][1],
+        )
+    )
     a(S.socials_block(2050, 40))
 
     # ------------------------------------------------------------------ Harness
     a(S.boundary(40, 190, 2440, 470, "HARNESS — tini/app.py", color="red"))
 
     a(S.pill_header(80, 250, 330, "1  GATEWAYS", color="grey"))
-    a(S.labeled_box(80, 320, 330, 210,
-                    "text in / text out\n\nCLI · Dashboard · Voice\nTelegram · Discord\n\ntini/gateway/ + ops/dashboard.py",
-                    color="grey", size=S.FS_BODY))
+    a(
+        S.labeled_box(
+            80,
+            320,
+            330,
+            210,
+            "text in / text out\n\nCLI · Dashboard · Voice\nTelegram · Discord\n\ntini/gateway/ + ops/dashboard.py",
+            color="grey",
+            size=S.FS_BODY,
+        )
+    )
 
-    a(S.labeled_box(490, 355, 230, 130,
-                    "Tini.respond()\n\nassemble · run\npersist · trace",
-                    color="red", size=S.FS_BODY))
+    a(
+        S.labeled_box(
+            490,
+            355,
+            230,
+            130,
+            "Tini.respond()\n\nassemble · run\npersist · trace",
+            color="red",
+            size=S.FS_BODY,
+        )
+    )
     a(S.labeled_arrow(410, 420, 490, 420, "user text"))
 
     a(S.pill_header(800, 250, 350, "2  WORKING MEMORY", color="green"))
-    a(S.labeled_box(800, 320, 350, 210,
-                    "runtime/session.py\n\nSOUL.md\nmatched SKILL.md\ngated long-term memory\nlast N chat turns",
-                    color="green", size=S.FS_BODY))
+    a(
+        S.labeled_box(
+            800,
+            320,
+            350,
+            210,
+            "runtime/session.py\n\nSOUL.md\nmatched SKILL.md\ngated long-term memory\nlast N chat turns",
+            color="green",
+            size=S.FS_BODY,
+        )
+    )
     a(S.labeled_arrow(720, 420, 800, 420, "build_system"))
 
     a(S.boundary(1230, 235, 850, 370, "3  THE LOOP — loop/agent.py", color="orange"))
-    a(S.ellipse(1290, 350, 260, 130,
-                "LLM\nmodels.py adapter\n2 wire formats", color="pink"))
-    a(S.labeled_box(1690, 295, 330, 230,
-                    "ToolRegistry\n\nbuilt in: search_web\nextensions: MCP\nread-only retrieval surface",
-                    color="orange", size=S.FS_BODY))
+    a(S.ellipse(1290, 350, 260, 130, "LLM\nmodels.py adapter\n2 wire formats", color="pink"))
+    a(
+        S.labeled_box(
+            1690,
+            295,
+            330,
+            230,
+            "ToolRegistry\n\nbuilt in: search_web\nextensions: MCP\nread-only retrieval surface",
+            color="orange",
+            size=S.FS_BODY,
+        )
+    )
     a(S.labeled_arrow(1550, 365, 1690, 365, "tool calls", color=S.PAL["orange"][1]))
     a(S.labeled_arrow(1690, 475, 1550, 475, "results", color=S.PAL["orange"][1]))
     a(S.annotate(1320, 535, "stop: no tool call  OR  max_iterations"))
@@ -74,75 +112,154 @@ def build_elements() -> list[dict]:
     # ------------------------------------------------------------------- Memory
     a(S.boundary(40, 710, 1490, 580, "MEMORY — tini/memory/", color="green"))
 
-    a(S.labeled_box(80, 800, 330, 150,
-                    "PROCEDURAL\nSKILL.md files\nkeyword matched — how to act",
-                    color="green", size=S.FS_BODY))
-    a(S.labeled_arrow(245, 800, 930, 530, "matched into prompt",
-                      color=S.PAL["green"][1]))
+    a(
+        S.labeled_box(
+            80,
+            800,
+            330,
+            150,
+            "PROCEDURAL\nSKILL.md files\nkeyword matched — how to act",
+            color="green",
+            size=S.FS_BODY,
+        )
+    )
+    a(S.labeled_arrow(245, 800, 930, 530, "matched into prompt", color=S.PAL["green"][1]))
 
-    a(S.diamond(470, 790, 280, 170,
-                "RETRIEVAL GATE\nneed memory?", color="green"))
-    a(S.labeled_arrow(930, 530, 610, 790, "message first",
-                      color=S.PAL["green"][1]))
+    a(S.diamond(470, 790, 280, 170, "RETRIEVAL GATE\nneed memory?", color="green"))
+    a(S.labeled_arrow(930, 530, 610, 790, "message first", color=S.PAL["green"][1]))
 
-    a(S.labeled_box(830, 755, 280, 130,
-                    "SEMANTIC\nfacts · user profile\nSQLite FTS5 / Supabase",
-                    color="green", size=S.FS_BODY))
-    a(S.labeled_box(830, 925, 280, 130,
-                    "EPISODIC\ndated events · past chats\nSQLite / Notion",
-                    color="green", size=S.FS_BODY))
+    a(
+        S.labeled_box(
+            830,
+            755,
+            280,
+            130,
+            "SEMANTIC\nfacts · user profile\nSQLite FTS5 / Supabase",
+            color="green",
+            size=S.FS_BODY,
+        )
+    )
+    a(
+        S.labeled_box(
+            830,
+            925,
+            280,
+            130,
+            "EPISODIC\ndated events · past chats\nSQLite / Notion",
+            color="green",
+            size=S.FS_BODY,
+        )
+    )
     a(S.labeled_arrow(750, 845, 830, 820, "retrieve"))
     a(S.labeled_arrow(750, 900, 830, 990, "retrieve"))
 
-    a(S.labeled_box(1170, 755, 300, 180,
-                    "state.db — source of truth\n\nchat_log · facts · episodes\ncalendar · notes\n\n.tini/MEMORY.md = mirror",
-                    color="grey", size=S.FS_BODY))
+    a(
+        S.labeled_box(
+            1170,
+            755,
+            300,
+            180,
+            "state.db — source of truth\n\nchat_log · facts · episodes\ncalendar · notes\n\n.tini/MEMORY.md = mirror",
+            color="grey",
+            size=S.FS_BODY,
+        )
+    )
     a(S.arrow(2290, 470, 1320, 755, color=S.PAL["grey"][1]))
     a(S.annotate(1180, 710, "reply → chat_log"))
 
-    a(S.diamond(500, 1060, 280, 160,
-                "CONSOLIDATE\nafter N exchanges", color="green"))
+    a(S.diamond(500, 1060, 280, 160, "CONSOLIDATE\nafter N exchanges", color="green"))
     a(S.labeled_arrow(1170, 900, 780, 1140, "unconsolidated chat"))
     a(S.labeled_arrow(780, 1110, 830, 870, "facts"))
     a(S.labeled_arrow(780, 1170, 830, 1010, "episode"))
-    a(S.red_note(80, 1225,
-                 "Failure invariant: gate fails open; consolidation failure never marks chat as consolidated."))
+    a(
+        S.red_note(
+            80,
+            1225,
+            "Failure invariant: gate fails open; consolidation failure never marks chat as consolidated.",
+        )
+    )
 
     # -------------------------------------------------------------- Eval / Ops
     a(S.boundary(1590, 710, 890, 580, "EVAL / LLM OPS — tini/ops/ + evals/", color="blue"))
 
-    a(S.labeled_box(1640, 800, 330, 150,
-                    "ONE EVENT STREAM\nobserver callbacks\nturn · gate · LLM · tool · reply",
-                    color="blue", size=S.FS_BODY))
-    a(S.labeled_arrow(1480, 605, 1750, 800, "every runtime event",
-                      color=S.PAL["blue"][1]))
+    a(
+        S.labeled_box(
+            1640,
+            800,
+            330,
+            150,
+            "ONE EVENT STREAM\nobserver callbacks\nturn · gate · LLM · tool · reply",
+            color="blue",
+            size=S.FS_BODY,
+        )
+    )
+    a(S.labeled_arrow(1480, 605, 1750, 800, "every runtime event", color=S.PAL["blue"][1]))
 
-    a(S.labeled_box(2050, 775, 360, 180,
-                    "OBSERVE\nDashboard — live UI\nTracer — JSONL always\nOTel — optional export\ncost · latency · errors",
-                    color="blue", size=S.FS_BODY))
-    a(S.labeled_arrow(1970, 875, 2050, 875, "fan out",
-                      color=S.PAL["blue"][1]))
+    a(
+        S.labeled_box(
+            2050,
+            775,
+            360,
+            180,
+            "OBSERVE\nDashboard — live UI\nTracer — JSONL always\nOTel — optional export\ncost · latency · errors",
+            color="blue",
+            size=S.FS_BODY,
+        )
+    )
+    a(S.labeled_arrow(1970, 875, 2050, 875, "fan out", color=S.PAL["blue"][1]))
 
-    a(S.labeled_box(1640, 1000, 270, 105,
-                    "DETERMINISTIC\n0 / 1 behavior\nevals/deterministic/",
-                    color="blue", size=S.FS_BODY))
-    a(S.labeled_box(1640, 1140, 270, 105,
-                    "LLM-AS-JUDGE\nscored quality\nevals/judge/",
-                    color="blue", size=S.FS_BODY))
+    a(
+        S.labeled_box(
+            1640,
+            1000,
+            270,
+            105,
+            "DETERMINISTIC\n0 / 1 behavior\nevals/deterministic/",
+            color="blue",
+            size=S.FS_BODY,
+        )
+    )
+    a(
+        S.labeled_box(
+            1640,
+            1140,
+            270,
+            105,
+            "LLM-AS-JUDGE\nscored quality\nevals/judge/",
+            color="blue",
+            size=S.FS_BODY,
+        )
+    )
     a(S.diamond(2020, 1040, 190, 150, "RELEASE\nGATE", color="blue"))
-    a(S.labeled_arrow(1910, 1050, 2020, 1080, "must pass",
-                      color=S.PAL["blue"][1]))
-    a(S.labeled_arrow(1910, 1190, 2020, 1150, "threshold",
-                      color=S.PAL["blue"][1]))
-    a(S.labeled_box(2280, 1055, 140, 120, "RELEASE\nnew prompt /\nmodel / tool",
-                    color="blue", size=S.FS_BODY))
-    a(S.labeled_arrow(2210, 1115, 2280, 1115, "pass",
-                      color=S.PAL["blue"][1]))
-    a(S.annotate(1980, 1220,
-                 "offline feedback changes prompt / model / config / tools — then re-run the gate"))
+    a(S.labeled_arrow(1910, 1050, 2020, 1080, "must pass", color=S.PAL["blue"][1]))
+    a(S.labeled_arrow(1910, 1190, 2020, 1150, "threshold", color=S.PAL["blue"][1]))
+    a(
+        S.labeled_box(
+            2280,
+            1055,
+            140,
+            120,
+            "RELEASE\nnew prompt /\nmodel / tool",
+            color="blue",
+            size=S.FS_BODY,
+        )
+    )
+    a(S.labeled_arrow(2210, 1115, 2280, 1115, "pass", color=S.PAL["blue"][1]))
+    a(
+        S.annotate(
+            1980,
+            1220,
+            "offline feedback changes prompt / model / config / tools — then re-run the gate",
+        )
+    )
 
-    a(S.source_label(60, 1330,
-                     "source: tini/app.py, runtime/session.py, loop/agent.py, memory/*, tools/*, ops/* — 2026-07-27"))
+    a(
+        S.source_label(
+            60,
+            1330,
+            "source: tini/app.py, runtime/session.py, loop/agent.py, memory/*, tools/*, ops/* — 2026-07-27",
+        )
+    )
     a(S.watermark(2200, 1330))
     return e
 
@@ -158,9 +275,7 @@ def _svg_text(el: dict) -> str:
     spans = []
     for i, line in enumerate(lines):
         dy = 0 if i == 0 else size * el.get("lineHeight", 1.25)
-        spans.append(
-            f'<tspan x="{x:.1f}" dy="{dy:.1f}">{html.escape(line)}</tspan>'
-        )
+        spans.append(f'<tspan x="{x:.1f}" dy="{dy:.1f}">{html.escape(line)}</tspan>')
     return (
         f'<text x="{x:.1f}" y="{y:.1f}" text-anchor="{anchor}" '
         f'font-family="Excalifont, Comic Sans MS, cursive" font-size="{size}" '
@@ -168,8 +283,7 @@ def _svg_text(el: dict) -> str:
     )
 
 
-def write_svg_proxy(elements: list[dict], path: Path, w: int = 2520,
-                    h: int = 1390) -> None:
+def write_svg_proxy(elements: list[dict], path: Path, w: int = 2520, h: int = 1390) -> None:
     """Render a layout-faithful SVG used only for visual QA and PNG export.
 
     w/h default to this board's canvas; other builders pass their own so a

@@ -102,12 +102,14 @@ def test_runner_serializes_concurrent_turns():
 
 def test_real_tini_persists_two_telegram_turns_from_worker(tmp_path):
     home = tmp_path / "home"
-    client = ScriptedClient([
-        response([text_block('{"retrieve": false, "query": "", "reason": "test"}')]),
-        response([text_block("hello one")]),
-        response([text_block('{"retrieve": false, "query": "", "reason": "test"}')]),
-        response([text_block("hello two")]),
-    ])
+    client = ScriptedClient(
+        [
+            response([text_block('{"retrieve": false, "query": "", "reason": "test"}')]),
+            response([text_block("hello one")]),
+            response([text_block('{"retrieve": false, "query": "", "reason": "test"}')]),
+            response([text_block("hello two")]),
+        ]
+    )
     runner = GatewayAgentRunner(
         lambda: make_tini(home, client=client, episodic_store="sqlite"),
         session_id="telegram",
@@ -123,9 +125,7 @@ def test_real_tini_persists_two_telegram_turns_from_worker(tmp_path):
     runner.close()
 
     conn = sqlite3.connect(home / "state.db")
-    rows = conn.execute(
-        "SELECT source, role, content FROM chat_log ORDER BY id"
-    ).fetchall()
+    rows = conn.execute("SELECT source, role, content FROM chat_log ORDER BY id").fetchall()
     conn.close()
     assert rows == [
         ("telegram", "user", "one"),
@@ -162,7 +162,9 @@ def test_gateway_turn_replies_safely_marks_error_and_recovers(monkeypatch):
 
     async def turns():
         failed = await run_gateway_turn(runner, "first", send, logger=logs.append)
-        assert runner.error_status == "message handling failed (RuntimeError) — see dashboard terminal"
+        assert (
+            runner.error_status == "message handling failed (RuntimeError) — see dashboard terminal"
+        )
         succeeded = await run_gateway_turn(runner, "second", send, logger=logs.append)
         return failed, succeeded
 
@@ -274,12 +276,16 @@ def test_telegram_handler_uses_runner_and_returns_safe_error(monkeypatch):
     builder = SimpleNamespace(token=lambda token: builder, build=lambda: app)
     application = SimpleNamespace(builder=lambda: builder)
     monkeypatch.setitem(sys.modules, "telegram", SimpleNamespace(Update=object))
-    monkeypatch.setitem(sys.modules, "telegram.ext", SimpleNamespace(
-        Application=application,
-        ContextTypes=SimpleNamespace(DEFAULT_TYPE=object),
-        MessageHandler=MessageHandler,
-        filters=SimpleNamespace(TEXT=Filter(), COMMAND=Filter()),
-    ))
+    monkeypatch.setitem(
+        sys.modules,
+        "telegram.ext",
+        SimpleNamespace(
+            Application=application,
+            ContextTypes=SimpleNamespace(DEFAULT_TYPE=object),
+            MessageHandler=MessageHandler,
+            filters=SimpleNamespace(TEXT=Filter(), COMMAND=Filter()),
+        ),
+    )
 
     class Agent:
         session = SimpleNamespace(session_id="")
@@ -338,8 +344,9 @@ def test_discord_handler_uses_runner_and_delivers_reply(monkeypatch):
             callbacks[callback.__name__] = callback
             return callback
 
-    monkeypatch.setitem(sys.modules, "discord", SimpleNamespace(Intents=Intents, Client=Client,
-                                                                  Message=object))
+    monkeypatch.setitem(
+        sys.modules, "discord", SimpleNamespace(Intents=Intents, Client=Client, Message=object)
+    )
 
     class Agent:
         session = SimpleNamespace(session_id="")

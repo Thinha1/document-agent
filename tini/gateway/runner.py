@@ -23,7 +23,8 @@ def safe_exception(exc: Exception) -> str:
     message = str(exc) or "no details"
     secret_names = ("_API_KEY", "_TOKEN", "_SECRET", "_PASSWORD")
     secrets = {
-        value for name, value in os.environ.items()
+        value
+        for name, value in os.environ.items()
         if value and len(value) >= 4 and name.upper().endswith(secret_names)
     }
     for secret in sorted(secrets, key=len, reverse=True):
@@ -34,8 +35,14 @@ def safe_exception(exc: Exception) -> str:
 class GatewayAgentRunner:
     """Run every turn for one gateway on one dedicated worker thread."""
 
-    def __init__(self, agent_factory: Callable[[], Any], *, session_id: str,
-                 source: str, observer: Callable[[str, dict], None] | None = None) -> None:
+    def __init__(
+        self,
+        agent_factory: Callable[[], Any],
+        *,
+        session_id: str,
+        source: str,
+        observer: Callable[[str, dict], None] | None = None,
+    ) -> None:
         self.source = source
         self._session_id = session_id
         self._observer = observer
@@ -54,9 +61,7 @@ class GatewayAgentRunner:
     def record_error(self, exc: Exception, *, action: str) -> str:
         detail = safe_exception(exc)
         with self._state_lock:
-            self._last_error = (
-                f"{action} failed ({type(exc).__name__}) — see dashboard terminal"
-            )
+            self._last_error = f"{action} failed ({type(exc).__name__}) — see dashboard terminal"
         return detail
 
     def clear_error(self) -> None:
@@ -68,9 +73,7 @@ class GatewayAgentRunner:
             if self._agent is None:
                 self._agent = self._agent_factory()
                 self._agent.session.session_id = self._session_id
-            result = self._agent.respond(
-                text, observer=self._observer, source=self.source
-            )
+            result = self._agent.respond(text, observer=self._observer, source=self.source)
         except Exception as exc:
             self.record_error(exc, action="message handling")
             raise

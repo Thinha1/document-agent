@@ -51,6 +51,17 @@ class SearchHit:
     text: str
     ordinal: int
     score: float
+    page_start: int | None = None
+    page_end: int | None = None
+
+    @property
+    def page_label(self) -> str:
+        """`p.7` or `pp.7-8` for a PDF chunk, empty when the source has no pages."""
+        if self.page_start is None:
+            return ""
+        if self.page_end is None or self.page_end == self.page_start:
+            return f"p.{self.page_start}"
+        return f"pp.{self.page_start}-{self.page_end}"
 
 
 @dataclass(frozen=True)

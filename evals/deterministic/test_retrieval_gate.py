@@ -55,9 +55,9 @@ def test_prose_around_the_json_is_tolerated():
     """Small models like to explain themselves. Slicing from the first { to the
     last } is deliberate — a chatty model must not cost the user their memory."""
     retrieve, query, _ = gate(
-        'Sure! Here is my decision:\n'
+        "Sure! Here is my decision:\n"
         '{"retrieve": true, "query": "Alex", "reason": "personal"}\n'
-        'Let me know if you need anything else.'
+        "Let me know if you need anything else."
     )
     assert retrieve is True
     assert query == "Alex"
@@ -112,10 +112,13 @@ def test_an_api_error_fails_open_and_names_the_error_type():
     assert "gate failed open" in reason and "TimeoutError" in reason
 
 
-@pytest.mark.parametrize("missing", [
-    '{"reason": "no retrieve key"}',
-    '{}',
-])
+@pytest.mark.parametrize(
+    "missing",
+    [
+        '{"reason": "no retrieve key"}',
+        "{}",
+    ],
+)
 def test_a_json_reply_missing_the_decision_reads_as_no(missing):
     """Distinct from failing open on purpose: this IS valid JSON, so the gate
     trusts it. bool(None) is False. Pinned so the difference between 'the model

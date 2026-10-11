@@ -43,8 +43,13 @@ def bundled_skill_dirs() -> list[Path]:
 
 
 class Memory:
-    def __init__(self, conn: sqlite3.Connection, settings: Settings, client: anthropic.Anthropic,
-                 episode_store=None):
+    def __init__(
+        self,
+        conn: sqlite3.Connection,
+        settings: Settings,
+        client: anthropic.Anthropic,
+        episode_store=None,
+    ):
         # episode_store: inject an already-built store (the dashboard caches ONE
         # NotionEpisodeStore process-wide — its constructor hits the network,
         # so building one per Memory would re-query Notion on every poll).
@@ -52,7 +57,9 @@ class Memory:
         self.settings = settings
         self.client = client
         self.facts = self._make_fact_store(conn, settings)
-        self.episodes = episode_store if episode_store is not None else self._make_episode_store(conn, settings)
+        self.episodes = (
+            episode_store if episode_store is not None else self._make_episode_store(conn, settings)
+        )
         self.skills = SkillLoader([*bundled_skill_dirs(), settings.home / "skills"])
 
     @staticmethod
@@ -106,9 +113,16 @@ class Memory:
         return "\n\n".join(f"### {s.name}\n{s.body}" for s in matched)
 
     # ---- write paths
-    def log_chat(self, user_message: str, reply: str, session_id: str = "default",
-                 source: str = "cli", meta: dict | None = None) -> None:
+    def log_chat(
+        self,
+        user_message: str,
+        reply: str,
+        session_id: str = "default",
+        source: str = "cli",
+        meta: dict | None = None,
+    ) -> None:
         import json as _json
+
         self.conn.execute(
             "INSERT INTO chat_log (role, content, session_id, source) VALUES ('user', ?, ?, ?)",
             (user_message, session_id, source),
@@ -154,13 +168,15 @@ class Memory:
                 "SELECT content FROM chat_log WHERE session_id = ? AND role = 'user' ORDER BY id LIMIT 1",
                 (r["session_id"],),
             ).fetchone()
-            out.append({
-                "id": r["session_id"],
-                "title": (first["content"][:60] if first else "(empty)"),
-                "messages": r["messages"],
-                "started_at": r["started_at"],
-                "last_at": r["last_at"],
-            })
+            out.append(
+                {
+                    "id": r["session_id"],
+                    "title": (first["content"][:60] if first else "(empty)"),
+                    "messages": r["messages"],
+                    "started_at": r["started_at"],
+                    "last_at": r["last_at"],
+                }
+            )
         return out
 
     def export_markdown(self) -> None:
@@ -177,9 +193,11 @@ class Memory:
         lines = [
             "# Tini memory",
             "",
-            ("_A human-readable mirror of what Tini remembers. The source of truth is "
-            "`state.db` (the `facts` and `episodes` tables, keyword-searchable via FTS5); "
-            "this file is regenerated after every turn._"),
+            (
+                "_A human-readable mirror of what Tini remembers. The source of truth is "
+                "`state.db` (the `facts` and `episodes` tables, keyword-searchable via FTS5); "
+                "this file is regenerated after every turn._"
+            ),
             "",
             f"## Facts — semantic memory ({len(facts)})",
             "",

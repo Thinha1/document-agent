@@ -21,6 +21,7 @@ from tini.documents.models import (
     IngestReport,
     SearchHit,
 )
+from tini.documents.pages import pages_from_metadata
 from tini.memory.semantic.store import _fts_query
 
 
@@ -39,11 +40,28 @@ def make_document_index(
         index = SqliteDocumentIndex(conn, embedder)
     else:
         raise ValueError(f"Unsupported document index backend: {backend}")
+    from tini.documents.visibility import VisibleIndex
+
+    # Innermost, so translation and reranking only ever see visible chunks.
+    index = VisibleIndex(index, conn)
+    if settings.query_languages:
+        from tini.documents.multilingual import SHARED_CACHE, MultilingualIndex, make_translator
+
+        index = MultilingualIndex(
+            index, make_translator(settings), settings.query_languages, cache=SHARED_CACHE
+        )
     from tini.documents.rerank import RerankingIndex, make_reranker
 
     reranker = make_reranker(settings)
     if reranker is not None:
-        index = RerankingIndex(index, reranker, settings.rerank_candidates)
+        rewrite = None
+        if settings.rerank_translate:
+            from tini.documents.multilingual import SHARED_CACHE, EnglishRewriter, make_translator
+
+            rewrite = EnglishRewriter(
+                make_translator(settings), settings.rerank_translate, cache=SHARED_CACHE
+            )
+        index = RerankingIndex(index, reranker, settings.rerank_candidates, rewrite)
     return index
 
 
@@ -197,7 +215,7 @@ class SqliteDocumentIndex:
             return []
         rows = self.conn.execute(
             """SELECT c.id AS chunk_id, c.document_id, c.title, d.source_uri,
-                      c.text, c.ordinal, bm25(document_chunks_fts) AS rank
+                      c.text, c.ordinal, c.metadata, bm25(document_chunks_fts) AS rank
                FROM document_chunks_fts
                JOIN document_chunks c ON c.rowid = document_chunks_fts.rowid
                JOIN documents d ON d.id = c.document_id
@@ -215,6 +233,8 @@ class SqliteDocumentIndex:
                 text=row["text"],
                 ordinal=row["ordinal"],
                 score=-float(row["rank"]),
+                page_start=pages_from_metadata(row["metadata"])[0],
+                page_end=pages_from_metadata(row["metadata"])[1],
             )
             for row in rows
         ]
@@ -229,7 +249,7 @@ class SqliteDocumentIndex:
             return []
         rows = self.conn.execute(
             """SELECT c.id AS chunk_id, c.document_id, c.title, d.source_uri,
-                      c.text, c.ordinal, e.vector
+                      c.text, c.ordinal, c.metadata, e.vector
                FROM document_chunk_embeddings e
                JOIN document_chunks c ON c.id=e.chunk_id
                JOIN documents d ON d.id=c.document_id
@@ -253,6 +273,8 @@ class SqliteDocumentIndex:
                     text=row["text"],
                     ordinal=row["ordinal"],
                     score=0.0,
+                    page_start=pages_from_metadata(row["metadata"])[0],
+                    page_end=pages_from_metadata(row["metadata"])[1],
                 ),
             )
             for row in rows
@@ -287,6 +309,16 @@ class SqliteDocumentIndex:
             )
             for row in rows
         ]
+
+    def opening_text(
+        self, document_id: str, workspace_id: str = DEFAULT_WORKSPACE, chars: int = 3000
+    ) -> str:
+        rows = self.conn.execute(
+            """SELECT text FROM document_chunks WHERE document_id=? AND workspace_id=?
+               ORDER BY ordinal LIMIT 4""",
+            (document_id, workspace_id),
+        ).fetchall()
+        return "\n".join(row["text"] for row in rows)[:chars]
 
     def delete_document(self, document_id: str, workspace_id: str = DEFAULT_WORKSPACE) -> bool:
         with self.conn:

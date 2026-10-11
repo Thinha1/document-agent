@@ -15,8 +15,9 @@ from tini.loop.agent import run_loop
 from tini.tools.registry import ToolRegistry
 
 
-def tool_node(name: str, fn: Callable[..., object], in_keys: Iterable[str],
-              out_key: str, **node_kwargs) -> Node:
+def tool_node(
+    name: str, fn: Callable[..., object], in_keys: Iterable[str], out_key: str, **node_kwargs
+) -> Node:
     """A plain function as a node: reads `in_keys` from state, writes `out_key`.
     For DB lookups, file reads, pure computation — anything deterministic."""
     keys = list(in_keys)
@@ -27,36 +28,60 @@ def tool_node(name: str, fn: Callable[..., object], in_keys: Iterable[str],
     return Node(name=name, fn=run, kind="tool", **node_kwargs)
 
 
-def llm_node(name: str, prompt_template: str, out_key: str, *,
-             client, model: str, max_tokens: int = 600, **node_kwargs) -> Node:
+def llm_node(
+    name: str,
+    prompt_template: str,
+    out_key: str,
+    *,
+    client,
+    model: str,
+    max_tokens: int = 600,
+    **node_kwargs,
+) -> Node:
     """ONE model call, no tools: the prompt template is formatted from state,
     the reply text lands in `out_key`. For classify / score / rewrite steps.
     Control flow never lives here — a router reads what this node wrote."""
 
     def run(state: dict) -> dict:
-        prompt = prompt_template.format(**{k: v for k, v in state.items()
-                                           if not k.startswith("_")})
-        response = client.messages.create(model=model, max_tokens=max_tokens,
-                                          messages=[{"role": "user", "content": prompt}])
+        prompt = prompt_template.format(**{k: v for k, v in state.items() if not k.startswith("_")})
+        response = client.messages.create(
+            model=model, max_tokens=max_tokens, messages=[{"role": "user", "content": prompt}]
+        )
         text = "".join(b.text for b in response.content if b.type == "text")
         return {out_key: text}
 
     return Node(name=name, fn=run, kind="llm", **node_kwargs)
 
 
-def agent_node(name: str, out_key: str, *, client, model: str, system: str,
-               tools: ToolRegistry, max_iterations: int = 10, max_tokens: int = 2048,
-               message_key: str = "message", **node_kwargs) -> Node:
+def agent_node(
+    name: str,
+    out_key: str,
+    *,
+    client,
+    model: str,
+    system: str,
+    tools: ToolRegistry,
+    max_iterations: int = 10,
+    max_tokens: int = 2048,
+    message_key: str = "message",
+    **node_kwargs,
+) -> Node:
     """A full run_loop turn as one node — the sub-agent story. Same loop, same
     tracing (its llm/tool events pass through tagged with node=), just a scoped
     tool registry and its own working memory. run_loop itself is untouched."""
 
     def run(state: dict) -> dict:
         messages = [{"role": "user", "content": state[message_key]}]
-        result = run_loop(client=client, model=model, system=system,
-                          messages=messages, tools=tools,
-                          max_iterations=max_iterations, max_tokens=max_tokens,
-                          observer=state.get("_notify"))
+        result = run_loop(
+            client=client,
+            model=model,
+            system=system,
+            messages=messages,
+            tools=tools,
+            max_iterations=max_iterations,
+            max_tokens=max_tokens,
+            observer=state.get("_notify"),
+        )
         return {out_key: result}
 
     return Node(name=name, fn=run, kind="agent", **node_kwargs)

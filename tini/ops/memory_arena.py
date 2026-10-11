@@ -67,14 +67,38 @@ CONTROL = "control"
 # whenever it rests on these, so a run can send exactly those probes to the
 # judge instead of grading every probe with a model it doesn't need.
 _REFUSALS = (
-    "don't know", "do not know", "not sure", "no information", "no record",
-    "never told", "never mentioned", "never gave", "never shared",
-    "didn't tell", "did not tell", "didn't mention", "did not mention",
-    "didn't give", "did not give", "haven't told", "have not told",
-    "haven't given", "have not given", "haven't mentioned",
-    "you haven't", "you have not", "not in my memory",
-    "don't have", "do not have", "nothing about", "no details", "wasn't specified",
-    "not specified", "unable to find", "couldn't find", "could not find",
+    "don't know",
+    "do not know",
+    "not sure",
+    "no information",
+    "no record",
+    "never told",
+    "never mentioned",
+    "never gave",
+    "never shared",
+    "didn't tell",
+    "did not tell",
+    "didn't mention",
+    "did not mention",
+    "didn't give",
+    "did not give",
+    "haven't told",
+    "have not told",
+    "haven't given",
+    "have not given",
+    "haven't mentioned",
+    "you haven't",
+    "you have not",
+    "not in my memory",
+    "don't have",
+    "do not have",
+    "nothing about",
+    "no details",
+    "wasn't specified",
+    "not specified",
+    "unable to find",
+    "couldn't find",
+    "could not find",
 )
 # This list will never be complete — models decline in more ways than anyone can
 # enumerate, and a missed phrasing scores an honest refusal as INVENTED, which is
@@ -114,8 +138,9 @@ def arena_models() -> list[dict]:
             pin, pout = pricing.price_for(prov, mod)
         except Exception:
             pin = pout = 0.0
-        out.append({"spec": spec, "provider": prov, "model": mod,
-                    "price_in": pin, "price_out": pout})
+        out.append(
+            {"spec": spec, "provider": prov, "model": mod, "price_in": pin, "price_out": pout}
+        )
     return sorted(out, key=lambda m: (m["price_in"] + m["price_out"], m["spec"]))
 
 
@@ -136,10 +161,16 @@ def probe_sets() -> list[dict]:
         except (OSError, ValueError):
             continue
         for key, spec in tracks.items():
-            sets.append({"id": f"{f['path']}::{key}", "path": f["path"], "track": key,
-                         "label": spec.get("label") or f"{f['name']} / {key}",
-                         "facts": len(spec.get("seed") or []),
-                         "probes": len(spec.get("probes") or [])})
+            sets.append(
+                {
+                    "id": f"{f['path']}::{key}",
+                    "path": f["path"],
+                    "track": key,
+                    "label": spec.get("label") or f"{f['name']} / {key}",
+                    "facts": len(spec.get("seed") or []),
+                    "probes": len(spec.get("probes") or []),
+                }
+            )
     return sets
 
 
@@ -215,15 +246,21 @@ def adjudicate_refusal(question: str, answer: str) -> bool | None:
 
     try:
         client, model = _judge.judge_client()
-        with _judge._JUDGE_SEM:   # same cap as the model arena: don't stampede the referee
+        with _judge._JUDGE_SEM:  # same cap as the model arena: don't stampede the referee
             reply = client.messages.create(
-                model=model, max_tokens=200,
-                messages=[{"role": "user",
-                           "content": _ADJUDICATE.format(question=question, answer=answer)}])
+                model=model,
+                max_tokens=200,
+                messages=[
+                    {
+                        "role": "user",
+                        "content": _ADJUDICATE.format(question=question, answer=answer),
+                    }
+                ],
+            )
         text = "".join(b.text for b in reply.content if b.type == "text")
         if "{" not in text:
             return None
-        return bool(json.loads(text[text.index("{"): text.rindex("}") + 1])["declined"])
+        return bool(json.loads(text[text.index("{") : text.rindex("}") + 1])["declined"])
     except Exception:
         return None
 
@@ -280,8 +317,16 @@ def scoreboard(results: list[dict]) -> list[dict]:
     for r in results:
         row = by_name.setdefault(
             r["contestant"],
-            {"contestant": r["contestant"], PASS: 0, STALE: 0, INVENTED: 0, MISS: 0,
-             "tokens": 0, "probes": 0, "needs_judge": 0},
+            {
+                "contestant": r["contestant"],
+                PASS: 0,
+                STALE: 0,
+                INVENTED: 0,
+                MISS: 0,
+                "tokens": 0,
+                "probes": 0,
+                "needs_judge": 0,
+            },
         )
         row[r["outcome"]] += 1
         row["tokens"] += r.get("tokens", 0)
@@ -314,6 +359,7 @@ def render(rows: list[dict]) -> str:
 # through the thing that actually calls it — the gate decides whether to search
 # at all, and that decision is half of what separates these systems.
 
+
 def arena_home(backend: str, track: str, seed: list[str], model: str) -> Path:
     """A home NAMED for what it holds, so seeding once can serve many races.
 
@@ -336,8 +382,9 @@ def arena_home(backend: str, track: str, seed: list[str], model: str) -> Path:
     """
     from tini.config import load_settings
 
-    home = (load_settings().home.parent / ".tini-arena"
-            / f"{backend}-{arena_key(track, seed, model)}")
+    home = (
+        load_settings().home.parent / ".tini-arena" / f"{backend}-{arena_key(track, seed, model)}"
+    )
     home.mkdir(parents=True, exist_ok=True)
     return home
 
@@ -401,8 +448,14 @@ def _is_seeded(home: Path) -> bool:
     return (home / ".seeded").exists()
 
 
-def run_arena(backends: list[str], track: str, emit, fixture: dict | None = None,
-              model: str = "", seed_only: bool = False) -> None:
+def run_arena(
+    backends: list[str],
+    track: str,
+    emit,
+    fixture: dict | None = None,
+    model: str = "",
+    seed_only: bool = False,
+) -> None:
     """Seed the same conversation into each backend, ask the same probes, score.
 
     One agent, one model, one loop. The ONLY variable is `TINI_SEMANTIC_STORE`.
@@ -469,8 +522,9 @@ def run_arena(backends: list[str], track: str, emit, fixture: dict | None = None
         try:
             opts = {"provider": prov, "model": mod} if prov and mod else {}
             # Partition env is set once around the whole race, below.
-            app = Tini(settings=Settings(home=home, semantic_store=store,
-                                         graph_workflows=False, **opts))
+            app = Tini(
+                settings=Settings(home=home, semantic_store=store, graph_workflows=False, **opts)
+            )
             # Seeding is 53% of a race and perfectly deterministic, so a home
             # that already holds this exact seed is not re-told. Racing is now
             # the cheap half: seed once, ask many times.
@@ -504,9 +558,14 @@ def run_arena(backends: list[str], track: str, emit, fixture: dict | None = None
             #    This was invisible until the gate was fixed (#94). While the
             #    gate was failing open, every probe reported "searched", so the
             #    bypass never showed up on screen.
-            consolidation.consolidate_if_due(app.memory.conn, app.client,
-                                             app.settings.small_model, 1,
-                                             app.memory.facts, app.memory.episodes)
+            consolidation.consolidate_if_due(
+                app.memory.conn,
+                app.client,
+                app.settings.small_model,
+                1,
+                app.memory.facts,
+                app.memory.episodes,
+            )
 
             # 3. WAIT FOR THE STORE TO BECOME SEARCHABLE. sqlite and LangMem
             #    return instantly; the hosted two are eventually consistent and
@@ -518,21 +577,34 @@ def run_arena(backends: list[str], track: str, emit, fixture: dict | None = None
             #    verdict is MISS and nothing on screen says why.
             settled = app.memory.facts.settle()
             if not settled:
-                emit("warn", {"contestant": backend,
-                              "message": "store did not confirm readiness before probing; "
-                                         "results for this contestant may understate it"})
+                emit(
+                    "warn",
+                    {
+                        "contestant": backend,
+                        "message": "store did not confirm readiness before probing; "
+                        "results for this contestant may understate it",
+                    },
+                )
 
             # The marker goes here and nowhere earlier: after the seed lines,
             # after the consolidation flush, after the store confirms it is
             # searchable. A home marked ready before settle() would be reused
             # by the next race and probed while still filing.
             if settled and not already:
-                (home / ".seeded").write_text(f"{track}\n{model}\n{len(seeding)} lines\n",
-                                              encoding="utf-8")
+                (home / ".seeded").write_text(
+                    f"{track}\n{model}\n{len(seeding)} lines\n", encoding="utf-8"
+                )
 
             if seed_only:
-                emit("seed-done", {"contestant": backend, "home": str(home),
-                                   "facts": len(seeding), "reused": already})
+                emit(
+                    "seed-done",
+                    {
+                        "contestant": backend,
+                        "home": str(home),
+                        "facts": len(seeding),
+                        "reused": already,
+                    },
+                )
                 return
 
             app.session.start_new("probes")
@@ -562,30 +634,44 @@ def run_arena(backends: list[str], track: str, emit, fixture: dict | None = None
                 if not certain:
                     declined = adjudicate_refusal(probe["question"], turn.reply)
                     if declined is True and outcome == INVENTED:
-                        outcome, certain, why = PASS, True, "declined — judge overruled the phrase list"
+                        outcome, certain, why = (
+                            PASS,
+                            True,
+                            "declined — judge overruled the phrase list",
+                        )
                     elif declined is False and outcome == PASS:
-                        outcome, certain, why = (INVENTED, True,
-                                                 "asserted an answer — judge overruled the phrase list")
+                        outcome, certain, why = (
+                            INVENTED,
+                            True,
+                            "asserted an answer — judge overruled the phrase list",
+                        )
                     elif declined is not None:
                         certain, why = True, why + " (judge agreed)"
 
-                row = {"contestant": backend, "probe": probe["id"], "test": probe["test"],
-                       "question": probe["question"], "answer": turn.reply,
-                       "outcome": outcome, "certain": certain, "why": why,
-                       # Whether the gate went to memory at all. Computed since the
-                       # first version and thrown away at render time, so "did
-                       # retrieval even happen" was unanswerable from the results —
-                       # which is most of what a memory benchmark is for.
-                       "retrieved": gate.get("retrieved"),
-                       "tokens": after - spent,
-                       # How many API calls this ONE question actually took. The
-                       # token delta alone left "why does one question cost 4,783
-                       # tokens" answerable only by inference — I guessed two
-                       # calls and happened to be close, which is not the same as
-                       # knowing. The ledger writes one row per call, so counting
-                       # rows settles it for every probe, for free.
-                       "calls": calls_now - calls_at,
-                       "ms": int((time.perf_counter() - t0) * 1000)}
+                row = {
+                    "contestant": backend,
+                    "probe": probe["id"],
+                    "test": probe["test"],
+                    "question": probe["question"],
+                    "answer": turn.reply,
+                    "outcome": outcome,
+                    "certain": certain,
+                    "why": why,
+                    # Whether the gate went to memory at all. Computed since the
+                    # first version and thrown away at render time, so "did
+                    # retrieval even happen" was unanswerable from the results —
+                    # which is most of what a memory benchmark is for.
+                    "retrieved": gate.get("retrieved"),
+                    "tokens": after - spent,
+                    # How many API calls this ONE question actually took. The
+                    # token delta alone left "why does one question cost 4,783
+                    # tokens" answerable only by inference — I guessed two
+                    # calls and happened to be close, which is not the same as
+                    # knowing. The ledger writes one row per call, so counting
+                    # rows settles it for every probe, for free.
+                    "calls": calls_now - calls_at,
+                    "ms": int((time.perf_counter() - t0) * 1000),
+                }
                 spent, calls_at = after, calls_now
                 with lock:
                     results.append(row)
@@ -607,8 +693,10 @@ def run_arena(backends: list[str], track: str, emit, fixture: dict | None = None
     # thread to finish restore the old value while the others were still
     # writing — sending them at the live agent's memory.
     seed_lines = [] if not backends else (spec.get("seed") or [])
-    with (arena_partition_env(track, seed_lines, model),
-          ThreadPoolExecutor(max_workers=min(len(backends) or 1, 6)) as pool):
+    with (
+        arena_partition_env(track, seed_lines, model),
+        ThreadPoolExecutor(max_workers=min(len(backends) or 1, 6)) as pool,
+    ):
         list(pool.map(one, backends))
 
     # Name the leaks explicitly rather than leaving them to be noticed. A probe
@@ -624,13 +712,19 @@ def run_arena(backends: list[str], track: str, emit, fixture: dict | None = None
     #     flagged in every single run, forever, and mean nothing.
     def _asserts_recall(probe_id: str) -> bool:
         probe = next((q for q in spec["probes"] if q["id"] == probe_id), {})
-        return bool(probe.get("expect_any") or probe.get("expect_all")) \
-            and not probe.get("expect_refusal") \
+        return (
+            bool(probe.get("expect_any") or probe.get("expect_all"))
+            and not probe.get("expect_refusal")
             and probe.get("expect_retrieval") is not False
+        )
 
-    leaked = sorted({r["probe"] for r in results
-                     if r["contestant"] == CONTROL and r["outcome"] == PASS
-                     and _asserts_recall(r["probe"])})
+    leaked = sorted(
+        {
+            r["probe"]
+            for r in results
+            if r["contestant"] == CONTROL and r["outcome"] == PASS and _asserts_recall(r["probe"])
+        }
+    )
     emit("done", {"scoreboard": scoreboard(results), "results": results, "leaked": leaked})
 
 
@@ -665,8 +759,10 @@ def _ledger(home) -> tuple[int, int]:
 # paid service, and a dashboard that quietly bills you for sitting on a tab is
 # not one anyone should ship.
 
-def store_contents(limit: int = 8, only: str = "", track: str = "",
-                   model: str = "", fixture: dict | None = None) -> list[dict]:
+
+def store_contents(
+    limit: int = 8, only: str = "", track: str = "", model: str = "", fixture: dict | None = None
+) -> list[dict]:
     """Per-backend: how many facts it holds and a sample of them.
 
     A backend that errors reports the error rather than an empty list — "0
@@ -715,33 +811,48 @@ def store_contents(limit: int = 8, only: str = "", track: str = "",
         # changed no matter what you cleaned. Worse, the panel was showing the
         # operator's REAL hosted memory the whole time.
         arena_copy = bool(seed)
-        kind = ("control" if key == CONTROL else
-                "arena" if arena_copy else
-                "live" if key == "sqlite" else "connected")
-        row = {"store": key, "count": 0, "facts": [], "error": "", "span": "",
-               "kind": kind, "note": _store_note(key)}
+        kind = (
+            "control"
+            if key == CONTROL
+            else "arena"
+            if arena_copy
+            else "live"
+            if key == "sqlite"
+            else "connected"
+        )
+        row = {
+            "store": key,
+            "count": 0,
+            "facts": [],
+            "error": "",
+            "span": "",
+            "kind": kind,
+            "note": _store_note(key),
+        }
         if row["note"]:
-            out.append(row)   # nothing meaningful to read — say why, don't report 0
+            out.append(row)  # nothing meaningful to read — say why, don't report 0
             continue
         try:
             # The control has no store of its own; the race gives it a sqlite
             # in its own home and tells it nothing, so reading that home is
             # what proves it really is empty rather than merely claimed to be.
-            home = (arena_home(key, track, seed, model) if arena_copy
-                    else load_settings().home)
+            home = arena_home(key, track, seed, model) if arena_copy else load_settings().home
             store = "sqlite" if key == CONTROL else key
             settings = Settings(home=home, semantic_store=store)
             # The hosted stores read their partition from the environment at
             # construction, exactly as they do during a race — so the read has
             # to be wrapped the same way the write was.
-            with (arena_partition_env(track, seed, model) if arena_copy
-                  else contextlib.nullcontext()):
+            with (
+                arena_partition_env(track, seed, model) if arena_copy else contextlib.nullcontext()
+            ):
                 facts = Memory._make_fact_store(_conn_for(store, settings), settings)
                 rows = facts.list(200)
             row["count"] = len(rows)
             row["span"] = _span(rows)
-            row["facts"] = [{"subject": r.get("subject", ""), "content": r.get("content", "")}
-                            for r in rows[:limit]]
+            row["facts"] = [
+                {"subject": r.get("subject", ""), "content": r.get("content", "")}
+                for r in rows[:limit]
+            ]
         except Exception as exc:
             row["error"] = f"{type(exc).__name__}: {exc}"[:160]
         out.append(row)
@@ -858,12 +969,16 @@ def _store_note(key: str) -> str:
         # "AttributeError: 'NoneType' object has no attribute 'execute'", which
         # reads as "your control contestant is broken" when the truth is that
         # holding nothing is the entire job.
-        return ("told nothing, by design — there is no store behind this one. "
-                "It exists so a probe it still passes can be flagged as a "
-                "question that never needed memory.")
+        return (
+            "told nothing, by design — there is no store behind this one. "
+            "It exists so a probe it still passes can be flagged as a "
+            "question that never needed memory."
+        )
     if key == "langmem" and not os.getenv("TINI_LANGMEM_POSTGRES", "").strip():
-        return ("in-memory store — contents live inside the process that wrote them "
-                "and cannot be read back here. Set TINI_LANGMEM_POSTGRES to persist.")
+        return (
+            "in-memory store — contents live inside the process that wrote them "
+            "and cannot be read back here. Set TINI_LANGMEM_POSTGRES to persist."
+        )
     return ""
 
 
@@ -884,8 +999,11 @@ def _available_backends() -> list[str]:
     up", which is what the Connections tab is for."""
     from tini.integrations import IntegrationState, list_integrations
 
-    ready = {v.key for v in list_integrations()
-             if v.status.state in (IntegrationState.CONFIGURED, IntegrationState.CONNECTED)}
+    ready = {
+        v.key
+        for v in list_integrations()
+        if v.status.state in (IntegrationState.CONFIGURED, IntegrationState.CONNECTED)
+    }
     # SLOW ones last, deliberately. Zep waits for graph ingestion on every
     # write — minutes where the others take milliseconds — so putting it in the
     # middle means the fast columns sit unread behind it while it finishes.

@@ -64,9 +64,12 @@ def classify_message(client, small_model: str, message: str) -> tuple[str, str]:
         return "full", f"triage failed open ({type(exc).__name__})"
 
 
-def build_triage_graph(*, classify_fn: Callable[[str], tuple[str, str]],
-                       quick_fn: Callable[[dict], str],
-                       full_fn: Callable[[dict], object]) -> Graph:
+def build_triage_graph(
+    *,
+    classify_fn: Callable[[str], tuple[str, str]],
+    quick_fn: Callable[[dict], str],
+    full_fn: Callable[[dict], object],
+) -> Graph:
     """Callables injected so evals script them, the dashboard builds it with
     stubs just to describe(), and app.py binds the real client/loop."""
     g = Graph("triage")
@@ -82,8 +85,11 @@ def build_triage_graph(*, classify_fn: Callable[[str], tuple[str, str]],
     g.add_node(Node("quick_reply", lambda s: {"reply": quick_fn(s)}, kind="llm"))
     g.add_node(Node("full_agent", lambda s: {"result": full_fn(s)}, kind="agent"))
     g.add_edge(START, "classify")
-    g.add_router("classify", key_router("route", default="full"),
-                 {"quick": "quick_reply", "full": "full_agent"})
+    g.add_router(
+        "classify",
+        key_router("route", default="full"),
+        {"quick": "quick_reply", "full": "full_agent"},
+    )
     g.add_edge("quick_reply", END)
     g.add_edge("full_agent", END)
     return g
@@ -92,5 +98,6 @@ def build_triage_graph(*, classify_fn: Callable[[str], tuple[str, str]],
 def triage_topology() -> dict:
     """The topology as data, for the dashboard — built with stubs, never run."""
     noop = lambda *a, **k: ""  # noqa: E731
-    return build_triage_graph(classify_fn=lambda m: ("full", ""),
-                              quick_fn=noop, full_fn=noop).describe()
+    return build_triage_graph(
+        classify_fn=lambda m: ("full", ""), quick_fn=noop, full_fn=noop
+    ).describe()

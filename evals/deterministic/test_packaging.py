@@ -116,7 +116,6 @@ def test_a_scripted_turn_ignores_the_graph_flag(tmp_path, monkeypatch):
     # the assertion — a triage graph would spend a third on classification and
     # this client would raise IndexError instead of answering.
     gate = response([text_block('{"retrieve": false, "reason": "greeting"}')])
-    app = make_tini(tmp_path / "home",
-                    client=ScriptedClient([gate, response([text_block("hi")])]))
+    app = make_tini(tmp_path / "home", client=ScriptedClient([gate, response([text_block("hi")])]))
     assert app.settings.graph_workflows is False
     assert app.respond("hello").reply == "hi"

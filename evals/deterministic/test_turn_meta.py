@@ -12,9 +12,13 @@ from evals.helpers import ScriptedClient, make_tini, response, text_block, tool_
 
 
 def test_turn_meta_is_saved_with_gate_and_iterations(tmp_path):
-    gate = response([text_block('{"retrieve": true, "query": "alex", "reason": "asks about alex"}')])
-    turn = [response([tool_block("search_web", {"query": "alex"})], "tool_use"),
-            response([text_block("Found it.")])]
+    gate = response(
+        [text_block('{"retrieve": true, "query": "alex", "reason": "asks about alex"}')]
+    )
+    turn = [
+        response([tool_block("search_web", {"query": "alex"})], "tool_use"),
+        response([text_block("Found it.")]),
+    ]
     app = make_tini(tmp_path / "home", client=ScriptedClient([gate] + turn))
     app.respond("find the Alex runbook")
 
@@ -23,7 +27,7 @@ def test_turn_meta_is_saved_with_gate_and_iterations(tmp_path):
     ).fetchone()
     meta = json.loads(row["meta"])
     assert meta["gate"]["decision"] == "retrieve"
-    assert meta["iterations"] == 2                    # tool turn + final answer
+    assert meta["iterations"] == 2  # tool turn + final answer
     assert isinstance(meta["latency_ms"], int)
     assert [t["tool"] for t in meta["tools"]] == ["search_web"]
     # which brain answered — shown per card, survives a reopened thread
@@ -47,7 +51,5 @@ def test_old_rows_without_meta_are_tolerated(tmp_path):
     """A row written before meta existed (NULL) must not break anything."""
     app = make_tini(tmp_path / "home", client=ScriptedClient([]))
     app.memory.log_chat("hi", "hello", session_id="s1", source="cli", meta=None)
-    row = app.conn.execute(
-        "SELECT meta FROM chat_log WHERE role='assistant'"
-    ).fetchone()
+    row = app.conn.execute("SELECT meta FROM chat_log WHERE role='assistant'").fetchone()
     assert row["meta"] is None
