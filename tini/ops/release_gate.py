@@ -30,12 +30,17 @@ def run(suite: str) -> tuple[int, dict]:
     print(f"\n=== {suite} ===")
     proc = subprocess.run(
         [sys.executable, "-m", "pytest", "-q", str(REPO / "evals" / suite)],
-        cwd=REPO, capture_output=True, text=True, check=False,
+        cwd=REPO,
+        capture_output=True,
+        text=True,
+        check=False,
     )
     print(proc.stdout, end="")
     print(proc.stderr, end="", file=sys.stderr)
-    counts = {k: (int(m.group(1)) if (m := re.search(rf"(\d+) {k}", proc.stdout)) else 0)
-              for k in ("passed", "failed")}
+    counts = {
+        k: (int(m.group(1)) if (m := re.search(rf"(\d+) {k}", proc.stdout)) else 0)
+        for k in ("passed", "failed")
+    }
     return proc.returncode, counts
 
 

@@ -28,12 +28,17 @@ import json
 # Rough $/million tokens (in, out) for a dollar ESTIMATE — the number humans
 # actually feel. Keyed by provider; deliberately approximate and labelled "est".
 PRICING = {
-    "anthropic": (3.0, 15.0), "openai": (2.5, 15.0), "gemini": (0.3, 2.5),
+    "anthropic": (3.0, 15.0),
+    "openai": (2.5, 15.0),
+    "gemini": (0.3, 2.5),
     "custom_openai": (3.0, 15.0),  # unknown endpoint; deliberately an estimate
-    "deepseek": (0.435, 0.87), "minimax": (0.30, 1.20), "kimi": (0.6, 2.5), "glm": (0.6, 2.2),
-    "xai": (3.0, 15.0),   # Grok — rough est; keyed users get exact from the catalog
-    "opencode_zen": (0.435, 0.87),   # rough est (matching deepseek — same underlying model)
-    "opencode_go": (0.435, 0.87),    # rough est
+    "deepseek": (0.435, 0.87),
+    "minimax": (0.30, 1.20),
+    "kimi": (0.6, 2.5),
+    "glm": (0.6, 2.2),
+    "xai": (3.0, 15.0),  # Grok — rough est; keyed users get exact from the catalog
+    "opencode_zen": (0.435, 0.87),  # rough est (matching deepseek — same underlying model)
+    "opencode_go": (0.435, 0.87),  # rough est
     # openrouter fallback for paid models when the live catalog is unreachable
     # (rough mid-catalog guess). ":free" ids and catalog-priced models never
     # hit this: see price_for().
@@ -56,7 +61,7 @@ _price_cache: dict[str, tuple[float, float]] = {}
 MODEL_PRICING = {
     # Anthropic — platform.claude.com/docs/.../pricing
     "claude-opus-4-8": (5.0, 25.0),
-    "claude-fable-5": (10.0, 50.0),            # Mythos-class flagship, ~2x opus
+    "claude-fable-5": (10.0, 50.0),  # Mythos-class flagship, ~2x opus
     "claude-sonnet-5": (3.0, 15.0),
     "claude-haiku-4-5-20251001": (1.0, 5.0),
     # OpenAI — openai.com pricing (Sol = flagship; chat-latest = non-reasoning)
@@ -92,7 +97,7 @@ MODEL_CUTOFF = {
     "claude-opus-4-8": "2026-01",
     "claude-fable-5": "2026-01",
     "claude-sonnet-5": "2026-01",
-    "claude-haiku-4-5-20251001": "2025-02",   # trained on data through 2025-07
+    "claude-haiku-4-5-20251001": "2025-02",  # trained on data through 2025-07
     # OpenAI — developers.openai.com model pages
     "gpt-5.6-sol": "2026-02",
     "gpt-5.3-chat-latest": "2025-08",

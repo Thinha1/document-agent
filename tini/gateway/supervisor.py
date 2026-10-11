@@ -21,8 +21,11 @@ class GatewayHandle(Protocol):
 
 
 class GatewaySupervisor:
-    def __init__(self, starters: dict[str, Callable[[], GatewayHandle | None]],
-                 env_fields: dict[str, tuple[str, ...]]) -> None:
+    def __init__(
+        self,
+        starters: dict[str, Callable[[], GatewayHandle | None]],
+        env_fields: dict[str, tuple[str, ...]],
+    ) -> None:
         self._starters = starters
         self._env_fields = env_fields
         self._handles: dict[str, GatewayHandle] = {}

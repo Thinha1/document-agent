@@ -69,7 +69,7 @@ def run_one(provider: str, model: str, cases: list[dict], trials: int = 1) -> di
             home = Path(tempfile.mkdtemp(prefix=f"shootout-{provider}-"))
             settings = Settings(provider=provider, model=model, small_model="", home=home)
             app = Tini(settings=settings)
-            resolved_model = settings.model   # get_client filled the default
+            resolved_model = settings.model  # get_client filled the default
             if "setup_fact" in case:
                 app.memory.facts.add(case["setup_fact"]["subject"], case["setup_fact"]["content"])
             t0 = time.perf_counter()
@@ -87,39 +87,61 @@ def run_one(provider: str, model: str, cases: list[dict], trials: int = 1) -> di
             hits += ok
             if not ok:
                 why = w
-        rows.append({"case": case["id"], "hits": hits, "trials": trials,
-                     "passed": hits == trials, "why": "ok" if hits == trials else why,
-                     "avg_latency_s": round(sum(lat) / len(lat), 1),
-                     "iterations": max(iters_seen or [0]),
-                     "tokens_in": tin, "tokens_out": tout, "cost_usd": round(cost, 4)})
+        rows.append(
+            {
+                "case": case["id"],
+                "hits": hits,
+                "trials": trials,
+                "passed": hits == trials,
+                "why": "ok" if hits == trials else why,
+                "avg_latency_s": round(sum(lat) / len(lat), 1),
+                "iterations": max(iters_seen or [0]),
+                "tokens_in": tin,
+                "tokens_out": tout,
+                "cost_usd": round(cost, 4),
+            }
+        )
         r = rows[-1]
-        print(f"  [{hits}/{trials}] {case['id']:26s} {r['avg_latency_s']:5.1f}s avg  "
-              f"${cost:.4f}  {'' if r['passed'] else why}")
+        print(
+            f"  [{hits}/{trials}] {case['id']:26s} {r['avg_latency_s']:5.1f}s avg  "
+            f"${cost:.4f}  {'' if r['passed'] else why}"
+        )
     n = max(len(rows), 1)
-    return {"provider": provider, "model": resolved_model,
-            "trials": trials, "cases": rows,
-            "hit_rate": round(sum(r["hits"] for r in rows) / (n * trials), 3),
-            "passed": sum(r["hits"] for r in rows), "total": len(rows) * trials,
-            "cost_usd": round(sum(r["cost_usd"] for r in rows), 4),
-            "avg_latency_s": round(sum(r["avg_latency_s"] for r in rows) / n, 1),
-            "wall_s": round(time.perf_counter() - t_run, 1)}
+    return {
+        "provider": provider,
+        "model": resolved_model,
+        "trials": trials,
+        "cases": rows,
+        "hit_rate": round(sum(r["hits"] for r in rows) / (n * trials), 3),
+        "passed": sum(r["hits"] for r in rows),
+        "total": len(rows) * trials,
+        "cost_usd": round(sum(r["cost_usd"] for r in rows), 4),
+        "avg_latency_s": round(sum(r["avg_latency_s"] for r in rows) / n, 1),
+        "wall_s": round(time.perf_counter() - t_run, 1),
+    }
 
 
 def markdown(results: list[dict]) -> str:
-    lines = ["| brain | pass rate | est cost | avg latency | tokens in/out |",
-             "|---|---|---|---|---|"]
+    lines = [
+        "| brain | pass rate | est cost | avg latency | tokens in/out |",
+        "|---|---|---|---|---|",
+    ]
     for r in results:
         tin = sum(c["tokens_in"] for c in r["cases"])
         tout = sum(c["tokens_out"] for c in r["cases"])
-        lines.append(f"| {r['provider']}:{r['model']} | {r['passed']}/{r['total']} "
-                     f"| ${r['cost_usd']:.4f} | {r['avg_latency_s']}s | {tin}/{tout} |")
+        lines.append(
+            f"| {r['provider']}:{r['model']} | {r['passed']}/{r['total']} "
+            f"| ${r['cost_usd']:.4f} | {r['avg_latency_s']}s | {tin}/{tout} |"
+        )
     trials = results[0].get("trials", 1) if results else 1
     lines.append("")
-    lines.append(f"Every case runs {trials} trial(s) — tool-calling is nondeterministic, "
-                 "so a rate beats a coin flip. Same agent, same tasks, keys from your own "
-                 ".env — re-run with: `make shootout RUNS=\"...\"`. Costs are estimates "
-                 "(tokens x list price; cache discounts not modeled). Pass = deterministic "
-                 "tool-behavior checks from evals/dataset.jsonl.")
+    lines.append(
+        f"Every case runs {trials} trial(s) — tool-calling is nondeterministic, "
+        "so a rate beats a coin flip. Same agent, same tasks, keys from your own "
+        '.env — re-run with: `make shootout RUNS="..."`. Costs are estimates '
+        "(tokens x list price; cache discounts not modeled). Pass = deterministic "
+        "tool-behavior checks from evals/dataset.jsonl."
+    )
     return "\n".join(lines)
 
 
@@ -131,7 +153,9 @@ def coding_shootout(runs: list[str], cases: list[dict], trials: int) -> str:
     lines = ["| brain | pass rate | avg latency | detail |", "|---|---|---|---|"]
     for spec in runs:
         provider, _, model = spec.partition(":")
-        print(f"\n=== coding · {provider}:{model or '(default)'} — {len(cases)} cases x {trials} ===")
+        print(
+            f"\n=== coding · {provider}:{model or '(default)'} — {len(cases)} cases x {trials} ==="
+        )
         hits = total = 0
         lats, notes = [], []
         for case in cases:
@@ -149,27 +173,41 @@ def coding_shootout(runs: list[str], cases: list[dict], trials: int) -> str:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run the same tasks on different brains.")
-    parser.add_argument("runs", nargs="+", metavar="provider:model",
-                        help="e.g. kimi:kimi-k3 anthropic:claude-opus-4-8 "
-                             "(omit :model for the provider default)")
+    parser.add_argument(
+        "runs",
+        nargs="+",
+        metavar="provider:model",
+        help="e.g. kimi:kimi-k3 anthropic:claude-opus-4-8 (omit :model for the provider default)",
+    )
     parser.add_argument("--cases", default="", help="comma-separated case ids (default: all)")
-    parser.add_argument("--trials", type=int, default=3,
-                        help="attempts per case (default 3 — rates, not coin flips)")
-    parser.add_argument("--coding", action="store_true",
-                        help="run the CODING battery (evals/coding.jsonl) via pi per model, "
-                             "scored by each task's verify command")
+    parser.add_argument(
+        "--trials",
+        type=int,
+        default=3,
+        help="attempts per case (default 3 — rates, not coin flips)",
+    )
+    parser.add_argument(
+        "--coding",
+        action="store_true",
+        help="run the CODING battery (evals/coding.jsonl) via pi per model, "
+        "scored by each task's verify command",
+    )
     args = parser.parse_args()
 
     if args.coding:
         from tini.ops.coding_eval import load_coding_cases, pi_available
+
         if not pi_available():
-            raise SystemExit("pi isn't installed — the coding battery needs it. "
-                             "Install: npm install -g --ignore-scripts @earendil-works/pi-coding-agent")
+            raise SystemExit(
+                "pi isn't installed — the coding battery needs it. "
+                "Install: npm install -g --ignore-scripts @earendil-works/pi-coding-agent"
+            )
         wanted = [c.strip() for c in args.cases.split(",") if c.strip()]
         cases = [c for c in load_coding_cases() if not wanted or c["id"] in wanted]
         if not cases:
-            raise SystemExit(f"no coding cases match {wanted!r} — ids: "
-                             f"{[c['id'] for c in load_coding_cases()]}")
+            raise SystemExit(
+                f"no coding cases match {wanted!r} — ids: {[c['id'] for c in load_coding_cases()]}"
+            )
         table = coding_shootout(args.runs, cases, args.trials)
         print("\n" + table)
         out_dir = load_settings().home / "shootout"
@@ -187,7 +225,9 @@ def main() -> None:
     results = []
     for spec in args.runs:
         provider, _, model = spec.partition(":")
-        print(f"\n=== {provider}:{model or '(default)'} — {len(cases)} cases x {args.trials} trials ===")
+        print(
+            f"\n=== {provider}:{model or '(default)'} — {len(cases)} cases x {args.trials} trials ==="
+        )
         results.append(run_one(provider, model, cases, trials=args.trials))
 
     table = markdown(results)

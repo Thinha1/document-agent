@@ -47,7 +47,9 @@ import pytest
 from evals.helpers import HAS_KEY
 from tini.memory.retrieval_gate import should_retrieve
 
-pytestmark = pytest.mark.skipif(not HAS_KEY, reason="LLM-as-judge needs the active provider's API key")
+pytestmark = pytest.mark.skipif(
+    not HAS_KEY, reason="LLM-as-judge needs the active provider's API key"
+)
 
 # What each error direction actually costs the user, in the same unit, so the
 # headline score can weight them instead of averaging them away.
@@ -134,7 +136,6 @@ DATASET: list[GateCase] = [
         ],
         should_retrieve=False,
     ),
-
     # ── Category 2: Direct question about a stored fact — SHOULD retrieve
     GateCase(
         id="direct-fact-1",
@@ -167,7 +168,6 @@ DATASET: list[GateCase] = [
         ],
         should_retrieve=True,
     ),
-
     # ── Category 3: Follow-up whose referent is in chat history, not memory
     #
     # The user is continuing a conversation — the context is in the chat
@@ -203,7 +203,6 @@ DATASET: list[GateCase] = [
         ],
         should_retrieve=False,
     ),
-
     # ── Category 4: A question whose answer memory does not contain
     #
     # The user asks something personal that Tini has no memory of. The gate
@@ -333,21 +332,31 @@ def gate_metric():
     return GEval(
         name="GateDecisionQuality",
         evaluation_steps=[
-            ("The Input is the ONLY thing the gate saw. It had no chat history, "
-             "no previous turns, and it did not see the Retrieval Context."),
-            ("Decide, from the Input's wording alone, whether it sounds personal "
-             "or refers to the user's life, people, plans, possessions or "
-             "history. Count a short or ambiguous follow-up such as 'can you "
-             "make it earlier?' as personal-sounding, because the gate has no "
-             "way to rule that out."),
-            ("If the previous step was yes, an Actual Output of 'retrieve' is "
-             "correct and scores high, and 'do not retrieve' scores low."),
-            ("If the previous step was no — greetings, thanks, small talk, "
-             "general knowledge, arithmetic — an Actual Output of 'do not "
-             "retrieve' is correct and scores high, and 'retrieve' scores low."),
-            ("Do not consider whether the Retrieval Context contains an answer. "
-             "It is background only, the gate never saw it, and it must not "
-             "change the score."),
+            (
+                "The Input is the ONLY thing the gate saw. It had no chat history, "
+                "no previous turns, and it did not see the Retrieval Context."
+            ),
+            (
+                "Decide, from the Input's wording alone, whether it sounds personal "
+                "or refers to the user's life, people, plans, possessions or "
+                "history. Count a short or ambiguous follow-up such as 'can you "
+                "make it earlier?' as personal-sounding, because the gate has no "
+                "way to rule that out."
+            ),
+            (
+                "If the previous step was yes, an Actual Output of 'retrieve' is "
+                "correct and scores high, and 'do not retrieve' scores low."
+            ),
+            (
+                "If the previous step was no — greetings, thanks, small talk, "
+                "general knowledge, arithmetic — an Actual Output of 'do not "
+                "retrieve' is correct and scores high, and 'retrieve' scores low."
+            ),
+            (
+                "Do not consider whether the Retrieval Context contains an answer. "
+                "It is background only, the gate never saw it, and it must not "
+                "change the score."
+            ),
         ],
         evaluation_params=[
             LLMTestCaseParams.INPUT,
@@ -438,24 +447,34 @@ def query_metric():
     return GEval(
         name="GateQueryQuality",
         evaluation_steps=[
-            ("The Actual Output is a set of search keywords for a literal "
-             "keyword index (SQLite FTS5) over the user's stored facts. It is "
-             "a QUERY, not an answer."),
-            ("Do NOT require the Actual Output to answer the Input, and do not "
-             "penalise it for failing to. Answering is not its job."),
-            ("Score how well the keywords name the subject of the Input: the "
-             "concrete nouns, names and topic words should be present. Filler "
-             "and pronouns such as 'my' match nothing in a keyword index, so "
-             "their absence is correct and never a defect. For the Input "
-             "'What's my dog's name?' the keywords 'dog name' are ideal."),
-            ("Do NOT consider whether the Retrieval Context contains the "
-             "answer. Coverage is a property of the store, not of these "
-             "keywords, and several of these stores deliberately hold no "
-             "answer. A context with nothing relevant must not reduce the "
-             "score."),
-            ("Score high when the keywords name the Input's subject. Score low "
-             "only when they are empty, made of generic filler, or about a "
-             "different subject than the Input."),
+            (
+                "The Actual Output is a set of search keywords for a literal "
+                "keyword index (SQLite FTS5) over the user's stored facts. It is "
+                "a QUERY, not an answer."
+            ),
+            (
+                "Do NOT require the Actual Output to answer the Input, and do not "
+                "penalise it for failing to. Answering is not its job."
+            ),
+            (
+                "Score how well the keywords name the subject of the Input: the "
+                "concrete nouns, names and topic words should be present. Filler "
+                "and pronouns such as 'my' match nothing in a keyword index, so "
+                "their absence is correct and never a defect. For the Input "
+                "'What's my dog's name?' the keywords 'dog name' are ideal."
+            ),
+            (
+                "Do NOT consider whether the Retrieval Context contains the "
+                "answer. Coverage is a property of the store, not of these "
+                "keywords, and several of these stores deliberately hold no "
+                "answer. A context with nothing relevant must not reduce the "
+                "score."
+            ),
+            (
+                "Score high when the keywords name the Input's subject. Score low "
+                "only when they are empty, made of generic filler, or about a "
+                "different subject than the Input."
+            ),
         ],
         evaluation_params=[
             LLMTestCaseParams.INPUT,
@@ -525,8 +544,8 @@ def test_gate_accuracy_summary(gate_results):
     """
     tp = fp = tn = fn = 0
     by_category: dict[str, list[bool]] = {}
-    missed: list[GateCase] = []      # false NO — the expensive direction
-    needless: list[GateCase] = []    # false YES — the cheap direction
+    missed: list[GateCase] = []  # false NO — the expensive direction
+    needless: list[GateCase] = []  # false YES — the cheap direction
 
     for case in DATASET:
         gate_said = gate_results[case.id].retrieve
@@ -545,16 +564,12 @@ def test_gate_accuracy_summary(gate_results):
             missed.append(case)
 
     total = len(DATASET)
-    positives = tp + fn   # cases that SHOULD have retrieved
-    negatives = tn + fp   # cases that should NOT have
+    positives = tp + fn  # cases that SHOULD have retrieved
+    negatives = tn + fp  # cases that should NOT have
     accuracy = (tp + tn) / total
     precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
     recall = tp / positives if positives > 0 else 0.0
-    f1 = (
-        2 * precision * recall / (precision + recall)
-        if (precision + recall) > 0
-        else 0.0
-    )
+    f1 = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0.0
 
     # 1.0 = flawless, 0.0 = every case wrong in the most expensive way
     # available. Normalising by the worst case keeps the number readable as a
@@ -567,9 +582,7 @@ def test_gate_accuracy_summary(gate_results):
 
     # How many retrieve-cases handed the query eval something to score. Read
     # straight off the gate results — no judge call, no extra spend.
-    scorable = sum(
-        1 for c in DATASET if c.should_retrieve and gate_results[c.id].retrieve
-    )
+    scorable = sum(1 for c in DATASET if c.should_retrieve and gate_results[c.id].retrieve)
 
     ratio = FALSE_NEGATIVE_COST / FALSE_POSITIVE_COST
     lines = [
@@ -577,23 +590,30 @@ def test_gate_accuracy_summary(gate_results):
         "=" * 72,
         "RETRIEVAL GATE ACCURACY REPORT (issue #77)",
         "=" * 72,
-        (f"  Total cases:           {total}   ({positives} should retrieve, "
-         f"{negatives} should not)"),
+        (
+            f"  Total cases:           {total}   ({positives} should retrieve, "
+            f"{negatives} should not)"
+        ),
         "",
-        (f"  COST-WEIGHTED SCORE:   {weighted:.1%}   <- headline: a false NO "
-         f"counts {ratio:.0f}x a false YES"),
-        (f"  Accuracy (unweighted): {accuracy:.1%}   (shown second on purpose: "
-         f"it treats both errors as equal, which they are not)"),
+        (
+            f"  COST-WEIGHTED SCORE:   {weighted:.1%}   <- headline: a false NO "
+            f"counts {ratio:.0f}x a false YES"
+        ),
+        (
+            f"  Accuracy (unweighted): {accuracy:.1%}   (shown second on purpose: "
+            f"it treats both errors as equal, which they are not)"
+        ),
         "",
         "  ERROR DIRECTIONS - THESE ARE NOT SYMMETRIC",
         "  " + "-" * 70,
-        (f"    Missed retrievals (false NO):    {fn} of {positives}   "
-         f"miss rate {miss_rate:.1%}"),
+        (f"    Missed retrievals (false NO):    {fn} of {positives}   miss rate {miss_rate:.1%}"),
         "      The expensive direction. The gate refused to look, so a fact the",
         "      user told Tini is absent from the reply and nothing says why.",
         "",
-        (f"    Needless retrievals (false YES): {fp} of {negatives}   "
-         f"false-alarm rate {false_alarm_rate:.1%}"),
+        (
+            f"    Needless retrievals (false YES): {fp} of {negatives}   "
+            f"false-alarm rate {false_alarm_rate:.1%}"
+        ),
         "      The cheap direction. Costs one local FTS5 search and some prompt",
         "      space; only bites when an irrelevant fact skews the answer.",
         "",
@@ -601,8 +621,10 @@ def test_gate_accuracy_summary(gate_results):
         f"  Recall:        {recall:.1%}  (of should-retrieve cases, how many we caught)",
         f"  F1:            {f1:.1%}",
         f"  Confusion:     TP={tp}  FP={fp}  TN={tn}  FN={fn}",
-        (f"  Query coverage: {scorable} of {positives} should-retrieve cases "
-         f"produced a query to score"),
+        (
+            f"  Query coverage: {scorable} of {positives} should-retrieve cases "
+            f"produced a query to score"
+        ),
         "",
         "  Per-category accuracy:",
     ]
@@ -616,16 +638,18 @@ def test_gate_accuracy_summary(gate_results):
     if missed:
         lines += [
             "",
-            (f"  *** WARNING: {len(missed)} missed retrieval(s) - the expensive "
-             f"failure direction ***"),
+            (
+                f"  *** WARNING: {len(missed)} missed retrieval(s) - the expensive "
+                f"failure direction ***"
+            ),
         ]
         for case in missed:
-            lines.append(f"    - {case.id}: \"{case.message}\"")
-            lines.append(f"        gate's reason: \"{gate_results[case.id].reason}\"")
+            lines.append(f'    - {case.id}: "{case.message}"')
+            lines.append(f'        gate\'s reason: "{gate_results[case.id].reason}"')
     if needless:
         lines += ["", f"  Note: {len(needless)} needless retrieval(s) (the cheap direction)"]
         for case in needless:
-            lines.append(f"    - {case.id}: \"{case.message}\"")
+            lines.append(f'    - {case.id}: "{case.message}"')
 
     lines.append("=" * 72)
     lines.append("")

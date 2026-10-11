@@ -700,6 +700,46 @@ Markdown/text tables and OCR'd tables are. Thirty questions is one fact per
 technique, so this shows the mechanism works, not how much it is worth; a document
 already in the index keeps its old chunks until it is re-indexed.
 
+## Generation eval: what the agent does with what it retrieves
+
+Retrieval evals stop at "were the right chunks returned". `scripts/generation_eval.py`
+(logic in `tini/ops/generation_eval.py`) runs the same turn `Tini.respond` runs (the
+real system prompt, the real `search_documents` tool, the real loop) minus memory,
+the retrieval gate and the chat log, so it never touches `.tini/`, and scores:
+
+| measure | how |
+|---|---|
+| answered | every expected keyword is in the reply (deterministic) |
+| retrieval-limited vs generation-missed | the keywords were / were not in the chunks the agent actually saw, so a miss is attributed to retrieval or to the model |
+| cited | the reply names the expected document (deterministic) |
+| page | for an answer that came from a PDF chunk: the reply names a page (`p.7`, `pp.7-8`, `page 7`, `trang 7`, `7ページ`) that the chunk holding the answer covers. Shown as *right page / answered PDF questions*; a range counts every page in it, and a source without pages is not checked (deterministic) |
+| language | `detect_language(reply)` equals that of the question (deterministic) |
+| faithful | a **judge model** reads the question, the evidence the agent saw and the reply: is every claim supported? (an opinion, kept per row for audit) |
+| declined / invented | on 12 questions whose answer is not in the documents (a torque row past the end of the table, an injector and a supplier that do not exist, a year the reports never reach), did it say so, or give a value? (judge) |
+
+54 questions: 12 + 6 real, 12 synthetic prose, 12 synthetic tables, 12 unanswerable
+(`evals/generation/unanswerable.jsonl`), spread over en/ja/vi. `--no-language-note`
+drops the reply-language line so the A/B for that line is one flag. Counts, not
+percentages, because 54 is small.
+
+**Status: built and unit-tested, no trustworthy numbers yet.** The one run that
+got started used DeepSeek, whose balance ran out mid-run (HTTP 402 on most
+questions), and the repo's default judge (`gpt-5.6-sol`) has an invalid key here.
+Running on the configured model (`SDS-AI/softdream`, ~22 s for a one-word reply)
+timed out on 13 of 24 questions, leaving 11, too few to read. What the few
+completed DeepSeek rows did show, as observations and not measurements: replies are
+long (median ~1,800 characters, often with tables), the agent searches about 2.4
+times per question, and the first judge pass was too strict because it saw only
+14,000 characters of evidence (now 60,000), so its faithfulness counts were
+discarded. To get real numbers, run it with a generator and a judge that are both
+reachable and different from each other:
+
+```bash
+python scripts/generation_eval.py run --label flash --provider deepseek --model deepseek-v4-flash     --judge-provider deepseek --judge-model deepseek-v4-pro          # ~2.7M input tokens for two arms
+python scripts/generation_eval.py run --label flash-nonote ... --no-language-note
+python scripts/generation_eval.py compare evals/baselines/generation-flash-*.json evals/baselines/generation-flash-nonote-*.json
+```
+
 ## What re-ingesting costs after a manual edit
 
 Ingestion embeds a document's chunks *before* the index decides whether the
@@ -814,6 +854,19 @@ A table is the one exception to "headings, paragraphs, sentences": with
 from the surrounding prose and is chunked by row instead, header repeated on
 every piece. Without that flag — everything today — a table is just Markdown
 inside the prose flow above, with the token-offset cut this exists to avoid.
+
+### Page numbers (PDF only)
+
+A chunk from a PDF records the pages it came from as `page_start` and `page_end` in
+its chunk metadata, and `search_documents` shows them in the citation label
+(`[title#chunk-85, pp.104-106]`), so the agent can cite a page. The number is the
+PDF's own 1-based page index, which can differ from a number printed in the page
+footer. The loader marks each page with a private-use marker that is removed again
+before chunking, so the text that is chunked and embedded is unchanged
+(`tini/documents/pages.py`). Chunks are ~512 tokens, so on pages shorter than that
+a chunk can span two or three pages and the label is a range. Markdown, text and
+DOCX sources have no pages and show none. Documents indexed before this existed have
+no page data until they are re-ingested (delete the chunks, then ingest again).
 
 ## Embedding configuration
 

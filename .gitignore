@@ -30,3 +30,6 @@ credentials.json
 client_secret*.json
 *token*.json
 .gcp/
+
+# Agent handoff notes (local working memory, not for the repo)
+HANDOFF.md

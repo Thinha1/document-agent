@@ -55,13 +55,11 @@ class NotionEpisodeStore:
         self.client = Client(auth=self.token)
         # notion-client >= 2.5 (Notion API 2025-09-03): rows live under a
         # database's data source, so resolve database_id -> data_source_id once.
-        sources = self.client.databases.retrieve(database_id=self.database_id).get(
-            "data_sources"
-        ) or []
+        sources = (
+            self.client.databases.retrieve(database_id=self.database_id).get("data_sources") or []
+        )
         if not sources:
-            raise ValueError(
-                f"Notion database {self.database_id} has no data sources to query"
-            )
+            raise ValueError(f"Notion database {self.database_id} has no data sources to query")
         self.data_source_id = sources[0]["id"]
 
     def add(self, summary: str, happened_at: str) -> None:
@@ -96,10 +94,7 @@ class NotionEpisodeStore:
             summary_lower = self._extract_rich_text(
                 page.get("properties", {}).get("Summary", {})
             ).lower()
-            if any(
-                re.search(rf"\b{re.escape(keyword)}\b", summary_lower)
-                for keyword in keywords
-            ):
+            if any(re.search(rf"\b{re.escape(keyword)}\b", summary_lower) for keyword in keywords):
                 matches.append(page)
 
         matches.sort(
@@ -118,12 +113,8 @@ class NotionEpisodeStore:
         return [
             {
                 "id": page.get("id", ""),
-                "happened_at": self._extract_title(
-                    page.get("properties", {}).get("Name", {})
-                ),
-                "summary": self._extract_rich_text(
-                    page.get("properties", {}).get("Summary", {})
-                ),
+                "happened_at": self._extract_title(page.get("properties", {}).get("Name", {})),
+                "summary": self._extract_rich_text(page.get("properties", {}).get("Summary", {})),
                 "created_at": page.get("created_time", ""),
             }
             for page in pages[:limit]

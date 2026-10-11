@@ -59,9 +59,7 @@ def _fts_query(text: str) -> str:
     words = re.findall(r"[^\W_]{2,}", text.lower())
     if not words:
         return ""
-    return " OR ".join(
-        f"{w}*" if _UNSEGMENTED.search(w) else w for w in dict.fromkeys(words)
-    )
+    return " OR ".join(f"{w}*" if _UNSEGMENTED.search(w) else w for w in dict.fromkeys(words))
 
 
 class SqliteFactStore:

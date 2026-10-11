@@ -11,6 +11,8 @@ from io import BytesIO
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from tini.documents.pages import PageStarts, mark_page, split_marks
+
 if TYPE_CHECKING:
     from tini.documents.ocr import OcrProvider
 
@@ -41,6 +43,7 @@ class LoadedDocument:
     size_bytes: int
     content_hash: str
     metadata: dict[str, Any] = field(default_factory=dict)
+    pages: PageStarts = ()  # where each PDF page begins in `text`; empty for other types
 
 
 class _TextOnlyHTMLParser(HTMLParser):
@@ -146,6 +149,9 @@ def load_document(
         metadata.update(docx_meta)
 
     text = _normalise_text(text)
+    pages: PageStarts = ()
+    if suffix == ".pdf":
+        text, pages = split_marks(text)
     if not text:
         raise DocumentLoadError(f"document contains no extractable text: {path.name}")
     if len(text) > max_text_chars:
@@ -162,6 +168,7 @@ def load_document(
         size_bytes=size,
         content_hash=content_hash,
         metadata=metadata,
+        pages=pages,
     )
 
 
@@ -212,9 +219,11 @@ def _load_pdf(
         raise DocumentLoadError(f"could not parse PDF {path.name}: {exc}") from exc
 
     page_count = len(pages)
-    text = "\n\n".join(pages)
+    plain = "\n\n".join(pages)
+    # page markers ride in the text so chunks can be traced to a page (tini/documents/pages.py)
+    text = "\n\n".join(mark_page(number, page) for number, page in enumerate(pages, start=1))
     metadata: dict[str, Any] = {"page_count": page_count}
-    scanned = page_count > 0 and len(text) / page_count < _MIN_CHARS_PER_PAGE
+    scanned = page_count > 0 and len(plain) / page_count < _MIN_CHARS_PER_PAGE
     if scanned:
         if ocr is None:
             # Honest, not silent: an operator inspecting this document's
@@ -374,7 +383,7 @@ def _ocr_pdf_pages(raw: bytes, ocr: OcrProvider) -> tuple[str, int, int, int]:
     failed_pages = sum(1 for text, _, _ in results if text is None)
     tables_found = sum(found for _, found, _ in results)
     failed_tables = sum(failed for _, _, failed in results)
-    parts = [text for text, _, _ in results if text]
+    parts = [mark_page(number, text) for number, (text, _, _) in enumerate(results, start=1) if text]
     return "\n\n".join(parts), failed_pages, tables_found, failed_tables
 
 

@@ -175,10 +175,13 @@ def test_constructor_accepts_a_copied_database_link(monkeypatch):
 
 
 def test_normalize_database_id_uses_path_not_view_id():
-    assert normalize_database_id(
-        "https://app.notion.com/p/3a14b87b9c3280afac7ae76e389e4ba7"
-        "?v=3a14b87b9c32802abf0f000caaf78263"
-    ) == "3a14b87b9c3280afac7ae76e389e4ba7"
+    assert (
+        normalize_database_id(
+            "https://app.notion.com/p/3a14b87b9c3280afac7ae76e389e4ba7"
+            "?v=3a14b87b9c32802abf0f000caaf78263"
+        )
+        == "3a14b87b9c3280afac7ae76e389e4ba7"
+    )
 
 
 def test_module_imports_without_notion_client_installed():
@@ -189,5 +192,7 @@ from tini.memory.episodic.notion_store import NotionEpisodeStore
 assert "notion_client" not in sys.modules
 print("ok")
 """
-    result = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, check=False)
+    result = subprocess.run(
+        [sys.executable, "-c", code], capture_output=True, text=True, check=False
+    )
     assert result.returncode == 0, result.stderr

@@ -26,15 +26,20 @@ def test_discovery_requires_workflow_and_binder():
 
 
 def test_a_leading_slash_is_a_command():
-    assert commands.parse("/triage summarize the runbook") == (
-        "triage", "summarize the runbook"
-    )
+    assert commands.parse("/triage summarize the runbook") == ("triage", "summarize the runbook")
     assert commands.parse("  /graphs  ") == ("graphs", "")
 
 
 def test_ordinary_messages_are_not_commands():
-    for text in ("hello", "look in /tmp/x", "what is 3/4", "", "   ",
-                 "/ triage", "the file is at /etc/hosts"):
+    for text in (
+        "hello",
+        "look in /tmp/x",
+        "what is 3/4",
+        "",
+        "   ",
+        "/ triage",
+        "the file is at /etc/hosts",
+    ):
         assert commands.parse(text) is None, text
 
 

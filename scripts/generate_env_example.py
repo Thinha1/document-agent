@@ -35,8 +35,16 @@ def main(argv: list[str] | None = None) -> int:
         if current == expected:
             return 0
         print("Generated Connections block is out of date:")
-        print("".join(difflib.unified_diff(current.splitlines(True), expected.splitlines(True),
-                                            fromfile=str(path), tofile="generated")))
+        print(
+            "".join(
+                difflib.unified_diff(
+                    current.splitlines(True),
+                    expected.splitlines(True),
+                    fromfile=str(path),
+                    tofile="generated",
+                )
+            )
+        )
         return 1
     path.write_text(expected, encoding="utf-8")
     return 0

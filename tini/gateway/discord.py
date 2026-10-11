@@ -81,9 +81,16 @@ class TurnBudget:
         return True
 
 
-def should_answer(*, is_dm: bool, author_id: str, channel_id: str, mentioned: bool,
-                  allowed_users: set[str], allowed_channels: set[str],
-                  require_mention: bool) -> bool:
+def should_answer(
+    *,
+    is_dm: bool,
+    author_id: str,
+    channel_id: str,
+    mentioned: bool,
+    allowed_users: set[str],
+    allowed_channels: set[str],
+    require_mention: bool,
+) -> bool:
     """The whole access policy, as one pure function so it can be tested without
     a Discord connection. Deny is the default at every branch.
 
@@ -161,7 +168,7 @@ def _build_client(runner: GatewayAgentRunner | None = None):
             allowed_channels=allowed_channels,
             require_mention=require_mention,
         ):
-            return                      # silence, not a refusal reply
+            return  # silence, not a refusal reply
         if not budget.allow():
             print(f"(discord) hourly turn budget spent — ignoring {message.author}")
             return
@@ -181,14 +188,19 @@ def describe_posture() -> str:
     users = _ids("DISCORD_ALLOWED_USER")
     channels = _ids("DISCORD_ALLOWED_CHANNEL")
     who = f"{len(users)} allowlisted user(s)" if users else "anyone who can DM it"
-    where = (f"{len(channels)} allowlisted channel(s), @mention required"
-             if channels else "DMs only — no server channel will be answered")
+    where = (
+        f"{len(channels)} allowlisted channel(s), @mention required"
+        if channels
+        else "DMs only — no server channel will be answered"
+    )
     home = os.getenv("DISCORD_HOME", "").strip() or ".tini — YOUR personal memory"
     cap = os.getenv("DISCORD_MAX_TURNS_PER_HOUR", "30")
-    return (f"  reachable by: {who}\n"
-            f"  answers in:   {where}\n"
-            f"  memory:       {home}\n"
-            f"  spend cap:    {cap} turns/hour")
+    return (
+        f"  reachable by: {who}\n"
+        f"  answers in:   {where}\n"
+        f"  memory:       {home}\n"
+        f"  spend cap:    {cap} turns/hour"
+    )
 
 
 def main() -> None:
@@ -199,7 +211,9 @@ def main() -> None:
 
     token = os.getenv("DISCORD_BOT_TOKEN", "")
     if not token:
-        raise SystemExit("Set DISCORD_BOT_TOKEN in .env (create a bot in the Discord Developer Portal).")
+        raise SystemExit(
+            "Set DISCORD_BOT_TOKEN in .env (create a bot in the Discord Developer Portal)."
+        )
     runner = _new_runner()
     try:
         client = _build_client(runner)
@@ -246,8 +260,10 @@ def start_in_background() -> DiscordHandle | None:
     try:
         import discord  # noqa: F401
     except ImportError:
-        print("(discord) DISCORD_BOT_TOKEN is set but the extra isn't installed — "
-              "pip install 'tini-agent[discord]'")
+        print(
+            "(discord) DISCORD_BOT_TOKEN is set but the extra isn't installed — "
+            "pip install 'tini-agent[discord]'"
+        )
         return None
 
     print("(discord) starting:")

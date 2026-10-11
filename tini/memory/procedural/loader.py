@@ -78,12 +78,14 @@ class SkillLoader:
         """Transparent trigger: keyword overlap between the message and each
         skill's name+description. No embeddings, no magic — you can compute
         the score in your head."""
-        if self._scan_sig() != self._sig:   # a skill was added/edited — reload
+        if self._scan_sig() != self._sig:  # a skill was added/edited — reload
             self.refresh()
         msg_words = set(re.findall(r"[a-z0-9]{3,}", message.lower()))
         scored = []
         for skill in self.skills:
-            skill_words = set(re.findall(r"[a-z0-9]{3,}", (skill.name + " " + skill.description).lower()))
+            skill_words = set(
+                re.findall(r"[a-z0-9]{3,}", (skill.name + " " + skill.description).lower())
+            )
             overlap = len(msg_words & skill_words)
             if overlap >= 2:
                 scored.append((overlap, skill))

@@ -78,9 +78,7 @@ def test_dashboard_reports_legacy_non_utf8_trace_without_modifying_it(tmp_path, 
     data = collect()
     live = events_since(0)
 
-    assert data["trace_errors"] == [
-        {"file": trace.name, "error": live["error"]}
-    ]
+    assert data["trace_errors"] == [{"file": trace.name, "error": live["error"]}]
     assert "not valid UTF-8" in live["error"]
     assert "was not modified" in live["error"]
     assert live["events"] == []
@@ -96,8 +94,10 @@ def test_tracer_refuses_to_append_to_legacy_non_utf8_trace(tmp_path):
     ).encode("gbk")
     trace.write_bytes(original)
 
-    with pytest.raises(TraceEncodingError, match="not valid UTF-8"), \
-            Tracer(settings).turn("next turn"):
+    with (
+        pytest.raises(TraceEncodingError, match="not valid UTF-8"),
+        Tracer(settings).turn("next turn"),
+    ):
         pass
 
     assert trace.read_bytes() == original

@@ -17,6 +17,7 @@ def test_settings_exposes_the_flag_so_the_ui_can_render_a_toggle(monkeypatch):
 def test_turning_it_off_is_not_swallowed():
     """settings_save must use `is not None` — "" means OFF, absent means
     don't touch. `if graph_workflows:` would make the toggle one-way."""
+
     def rule(payload: dict):
         graph_workflows = payload.get("graph_workflows")
         if graph_workflows is None:

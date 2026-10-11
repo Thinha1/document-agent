@@ -12,7 +12,7 @@ import shutil
 
 from tini.ops import coding_eval as ce
 
-_TRUE = shutil.which("true") or "/usr/bin/true"   # a real no-op binary, exits 0
+_TRUE = shutil.which("true") or "/usr/bin/true"  # a real no-op binary, exits 0
 
 
 def _stub_pi(monkeypatch):
@@ -22,10 +22,15 @@ def _stub_pi(monkeypatch):
 def test_verify_pass_is_the_verdict(tmp_path, monkeypatch):
     _stub_pi(monkeypatch)
     monkeypatch.setenv("ANTHROPIC_API_KEY", "x")
-    case = {"id": "ok", "input": "n/a",
-            "files": {"fizzbuzz.py": "def fizzbuzz(n):\n"
-                      "    return 'FizzBuzz' if n%15==0 else 'Fizz' if n%3==0 else 'Buzz' if n%5==0 else str(n)\n"},
-            "verify": "python3 -c \"from fizzbuzz import fizzbuzz; assert fizzbuzz(15)=='FizzBuzz'; print('ok')\""}
+    case = {
+        "id": "ok",
+        "input": "n/a",
+        "files": {
+            "fizzbuzz.py": "def fizzbuzz(n):\n"
+            "    return 'FizzBuzz' if n%15==0 else 'Fizz' if n%3==0 else 'Buzz' if n%5==0 else str(n)\n"
+        },
+        "verify": "python3 -c \"from fizzbuzz import fizzbuzz; assert fizzbuzz(15)=='FizzBuzz'; print('ok')\"",
+    }
     passed, why, _secs = ce.run_coding_case("anthropic", "claude-opus-4-8", case)
     assert passed and why == "tests pass"
 
@@ -33,11 +38,14 @@ def test_verify_pass_is_the_verdict(tmp_path, monkeypatch):
 def test_verify_fail_when_code_is_wrong(tmp_path, monkeypatch):
     _stub_pi(monkeypatch)
     monkeypatch.setenv("ANTHROPIC_API_KEY", "x")
-    case = {"id": "bad", "input": "n/a",
-            "files": {"fizzbuzz.py": "def fizzbuzz(n):\n    return 'wrong'\n"},
-            "verify": "python3 -c \"from fizzbuzz import fizzbuzz; assert fizzbuzz(3)=='Fizz'\""}
+    case = {
+        "id": "bad",
+        "input": "n/a",
+        "files": {"fizzbuzz.py": "def fizzbuzz(n):\n    return 'wrong'\n"},
+        "verify": "python3 -c \"from fizzbuzz import fizzbuzz; assert fizzbuzz(3)=='Fizz'\"",
+    }
     passed, _why, _ = ce.run_coding_case("anthropic", "claude-opus-4-8", case)
-    assert not passed                       # pi 'ran' but the code fails verify
+    assert not passed  # pi 'ran' but the code fails verify
 
 
 def test_missing_key_is_reported(tmp_path, monkeypatch):
@@ -73,23 +81,30 @@ def test_coding_case_for_message_matches_trimmed():
 
 
 def test_stream_runner_scores_by_verify_and_emits_lines(tmp_path, monkeypatch):
-    _stub_pi(monkeypatch)                       # pi = no-op; seeded file provides the code
+    _stub_pi(monkeypatch)  # pi = no-op; seeded file provides the code
     monkeypatch.setenv("ANTHROPIC_API_KEY", "x")
     lines = []
     passed, why, _secs = ce.run_coding_stream(
-        "anthropic", "claude-opus-4-8",
+        "anthropic",
+        "claude-opus-4-8",
         task="n/a",
         files={"fizzbuzz.py": "def fizzbuzz(n):\n    return 'FizzBuzz' if n%15==0 else str(n)\n"},
         verify="python3 -c \"from fizzbuzz import fizzbuzz; assert fizzbuzz(15)=='FizzBuzz'\"",
-        on_line=lines.append)
+        on_line=lines.append,
+    )
     assert passed is True and why == "tests pass"
-    assert any(ln.startswith("$ pi") for ln in lines)   # the launch line streamed
+    assert any(ln.startswith("$ pi") for ln in lines)  # the launch line streamed
 
 
 def test_stream_runner_free_form_has_no_verdict(tmp_path, monkeypatch):
     _stub_pi(monkeypatch)
     monkeypatch.setenv("ANTHROPIC_API_KEY", "x")
-    passed, _why, _ = ce.run_coding_stream("anthropic", "claude-opus-4-8",
-                                          task="build snake", files=None, verify=None,
-                                          on_line=lambda _ln: None)
-    assert passed is None            # nothing to score -> no pass/fail, it just ran
+    passed, _why, _ = ce.run_coding_stream(
+        "anthropic",
+        "claude-opus-4-8",
+        task="build snake",
+        files=None,
+        verify=None,
+        on_line=lambda _ln: None,
+    )
+    assert passed is None  # nothing to score -> no pass/fail, it just ran

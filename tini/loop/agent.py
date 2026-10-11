@@ -71,8 +71,11 @@ def run_loop(
         if can_stream:
             try:
                 with client.messages.stream(
-                    model=model, system=system, messages=messages,
-                    tools=tools.schemas(), max_tokens=max_tokens,
+                    model=model,
+                    system=system,
+                    messages=messages,
+                    tools=tools.schemas(),
+                    max_tokens=max_tokens,
                 ) as s:
                     for delta in s.text_stream:
                         notify("text", {"delta": delta})
@@ -87,10 +90,18 @@ def run_loop(
                 tools=tools.schemas(),
                 max_tokens=max_tokens,
             )
-        notify("llm", {"iteration": iteration, "stop_reason": response.stop_reason,
-                       "usage": {"in": response.usage.input_tokens,
-                                 "out": response.usage.output_tokens,
-                                 "cache": getattr(response.usage, "cache_hit_tokens", 0)}})
+        notify(
+            "llm",
+            {
+                "iteration": iteration,
+                "stop_reason": response.stop_reason,
+                "usage": {
+                    "in": response.usage.input_tokens,
+                    "out": response.usage.output_tokens,
+                    "cache": getattr(response.usage, "cache_hit_tokens", 0),
+                },
+            },
+        )
         result.usage["in"] += response.usage.input_tokens
         result.usage["out"] += response.usage.output_tokens
         result.usage["cache"] += getattr(response.usage, "cache_hit_tokens", 0)
@@ -113,11 +124,11 @@ def run_loop(
             event = {"tool": call.name, "args": call.input, "output": output}
             result.tool_calls.append(event)
             notify("tool", event)
-            tool_results.append(
-                {"type": "tool_result", "tool_use_id": call.id, "content": output}
-            )
+            tool_results.append({"type": "tool_result", "tool_use_id": call.id, "content": output})
         messages.append({"role": "user", "content": tool_results})
 
     # ---- guardrail 2: ran out of iterations
-    result.reply = "(I hit my iteration limit before finishing — try breaking the request into smaller steps.)"
+    result.reply = (
+        "(I hit my iteration limit before finishing — try breaking the request into smaller steps.)"
+    )
     return result

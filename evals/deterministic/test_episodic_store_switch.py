@@ -20,9 +20,9 @@ class _FakeNotionClient:
     same rows as one created in the test body."""
 
     _pages: ClassVar[list[dict]] = []
-    _init_count = 0     # Client constructions — the dashboard must build ONE
-    _query_count = 0    # data-source queries — the result cache throttles these
-    _query_fails = False   # simulate a Notion outage after a successful fetch
+    _init_count = 0  # Client constructions — the dashboard must build ONE
+    _query_count = 0  # data-source queries — the result cache throttles these
+    _query_fails = False  # simulate a Notion outage after a successful fetch
 
     def __init__(self, auth: str | None = None) -> None:
         type(self)._init_count += 1
@@ -59,8 +59,10 @@ class _FakeNotionClient:
         type(self)._query_count += 1
         assert data_source_id == "test-ds-id"
         # the real API excludes archived pages from query results
-        return {"results": [p for p in type(self)._pages if not p.get("archived")],
-                "has_more": False}
+        return {
+            "results": [p for p in type(self)._pages if not p.get("archived")],
+            "has_more": False,
+        }
 
 
 @pytest.fixture
@@ -194,14 +196,14 @@ def test_collect_builds_notion_client_once_across_refreshes(monkeypatch, fake_no
 
     from tini.ops import dashboard
 
-    fake_notion._init_count = 0   # ignore the setup construction above
+    fake_notion._init_count = 0  # ignore the setup construction above
     fake_notion._query_count = 0
 
     payloads = [dashboard.collect() for _ in range(3)]
 
     assert all(p["episodes_source"] == "notion" and p["episodes_error"] == "" for p in payloads)
     assert [p["episodes"] for p in payloads] == [payloads[0]["episodes"]] * 3
-    assert fake_notion._init_count == 1   # client built once, then cached
+    assert fake_notion._init_count == 1  # client built once, then cached
     assert fake_notion._query_count == 1  # result cached for the TTL, no re-query
 
 
@@ -215,15 +217,15 @@ def test_collect_refetches_after_ttl_but_reuses_client(monkeypatch, fake_notion,
 
     from tini.ops import dashboard
 
-    monkeypatch.setattr(dashboard, "_NOTION_EPISODES_TTL", 0)   # every poll is stale
+    monkeypatch.setattr(dashboard, "_NOTION_EPISODES_TTL", 0)  # every poll is stale
     fake_notion._init_count = 0
     fake_notion._query_count = 0
 
     dashboard.collect()
     dashboard.collect()
 
-    assert fake_notion._query_count == 2   # TTL expired → refetch each time
-    assert fake_notion._init_count == 1    # …but the client is still built once
+    assert fake_notion._query_count == 2  # TTL expired → refetch each time
+    assert fake_notion._init_count == 1  # …but the client is still built once
 
 
 def test_collect_serves_stale_episodes_during_notion_outage(monkeypatch, fake_notion, tmp_path):
@@ -246,7 +248,7 @@ def test_collect_serves_stale_episodes_during_notion_outage(monkeypatch, fake_no
     assert data["episodes_source"] == "notion"
     assert "notion is down" in data["episodes_error"]
     assert [e["summary"] for e in data["episodes"]] == ["cached episode"]
-    assert "facts" in data   # the rest of the payload still rendered
+    assert "facts" in data  # the rest of the payload still rendered
 
 
 def test_delete_episode_busts_the_episodes_cache(monkeypatch, fake_notion, tmp_path):
@@ -261,10 +263,10 @@ def test_delete_episode_busts_the_episodes_cache(monkeypatch, fake_notion, tmp_p
 
     from tini.ops import dashboard
 
-    assert len(dashboard.collect()["episodes"]) == 2   # populates the cache
+    assert len(dashboard.collect()["episodes"]) == 2  # populates the cache
 
     page_id = _FakeNotionClient._pages[0]["id"]
     assert dashboard.memory_action({"action": "delete_episode", "id": page_id}) == {"ok": True}
 
-    after = dashboard.collect()   # cache busted → refetch, not the stale pair
+    after = dashboard.collect()  # cache busted → refetch, not the stale pair
     assert [e["summary"] for e in after["episodes"]] == ["second"]

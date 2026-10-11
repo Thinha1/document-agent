@@ -185,9 +185,7 @@ def _build_handler(
             # Verify Meta's X-Hub-Signature-256 — without this, anyone who
             # finds the webhook URL can forge payloads and drive the agent.
             sig = self.headers.get("X-Hub-Signature-256", "")
-            expected = "sha256=" + hmac.new(
-                app_secret.encode(), body, hashlib.sha256
-            ).hexdigest()
+            expected = "sha256=" + hmac.new(app_secret.encode(), body, hashlib.sha256).hexdigest()
             if not hmac.compare_digest(sig, expected):
                 print("(whatsapp) rejected: bad signature")
                 self._set_json(403)
@@ -222,14 +220,10 @@ def _build_handler(
 
                         print(f"you › [{sender}] {text}")
                         with tini_lock:
-                            result = tini.respond(
-                                text, observer=_observer, source="whatsapp"
-                            )
+                            result = tini.respond(text, observer=_observer, source="whatsapp")
                         print(f"tini › {result.reply}")
 
-                        _send_message(
-                            token, phone_number_id, sender, result.reply or "(no reply)"
-                        )
+                        _send_message(token, phone_number_id, sender, result.reply or "(no reply)")
 
     return Handler
 
@@ -322,8 +316,10 @@ def start_in_background() -> WhatsAppHandle | None:
     try:
         import httpx  # noqa: F401
     except ImportError:
-        print("(whatsapp) WHATSAPP_TOKEN is set but the extra isn't installed — "
-              "pip install 'tini-agent[whatsapp]'")
+        print(
+            "(whatsapp) WHATSAPP_TOKEN is set but the extra isn't installed — "
+            "pip install 'tini-agent[whatsapp]'"
+        )
         return None
 
     allowed = os.getenv("WHATSAPP_ALLOWED_PHONE", "")

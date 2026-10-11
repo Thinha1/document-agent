@@ -55,15 +55,13 @@ def test_skill_loader_reads_utf8_when_platform_default_cannot(tmp_path, monkeypa
     assert "em dash \u2014 safely" in loader.skills[0].body
 
 
-def test_installed_skill_is_written_as_utf8(
-    tmp_path, monkeypatch, require_explicit_text_encoding
-):
+def test_installed_skill_is_written_as_utf8(tmp_path, monkeypatch, require_explicit_text_encoding):
     home = tmp_path / "home"
-    source = (
-        f"---\nname: installed-report\ndescription: {DESCRIPTION}\n---\n\n{BODY}\n"
-    ).encode()
+    source = (f"---\nname: installed-report\ndescription: {DESCRIPTION}\n---\n\n{BODY}\n").encode()
     monkeypatch.setenv("TINI_HOME", str(home))
-    monkeypatch.setattr(installer.urllib.request, "urlopen", lambda *args, **kwargs: BytesIO(source))
+    monkeypatch.setattr(
+        installer.urllib.request, "urlopen", lambda *args, **kwargs: BytesIO(source)
+    )
 
     installer.install("https://example.com/SKILL.md")
 

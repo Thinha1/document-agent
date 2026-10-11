@@ -21,6 +21,7 @@ from tini.documents.models import (
     IngestReport,
     SearchHit,
 )
+from tini.documents.pages import pages_from_metadata
 from tini.memory.semantic.store import _fts_query
 
 
@@ -214,7 +215,7 @@ class SqliteDocumentIndex:
             return []
         rows = self.conn.execute(
             """SELECT c.id AS chunk_id, c.document_id, c.title, d.source_uri,
-                      c.text, c.ordinal, bm25(document_chunks_fts) AS rank
+                      c.text, c.ordinal, c.metadata, bm25(document_chunks_fts) AS rank
                FROM document_chunks_fts
                JOIN document_chunks c ON c.rowid = document_chunks_fts.rowid
                JOIN documents d ON d.id = c.document_id
@@ -232,6 +233,8 @@ class SqliteDocumentIndex:
                 text=row["text"],
                 ordinal=row["ordinal"],
                 score=-float(row["rank"]),
+                page_start=pages_from_metadata(row["metadata"])[0],
+                page_end=pages_from_metadata(row["metadata"])[1],
             )
             for row in rows
         ]
@@ -246,7 +249,7 @@ class SqliteDocumentIndex:
             return []
         rows = self.conn.execute(
             """SELECT c.id AS chunk_id, c.document_id, c.title, d.source_uri,
-                      c.text, c.ordinal, e.vector
+                      c.text, c.ordinal, c.metadata, e.vector
                FROM document_chunk_embeddings e
                JOIN document_chunks c ON c.id=e.chunk_id
                JOIN documents d ON d.id=c.document_id
@@ -270,6 +273,8 @@ class SqliteDocumentIndex:
                     text=row["text"],
                     ordinal=row["ordinal"],
                     score=0.0,
+                    page_start=pages_from_metadata(row["metadata"])[0],
+                    page_end=pages_from_metadata(row["metadata"])[1],
                 ),
             )
             for row in rows

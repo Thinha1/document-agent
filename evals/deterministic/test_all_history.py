@@ -50,14 +50,24 @@ def test_thread_history_includes_meta(tmp_path, monkeypatch):
     must carry the per-turn meta (gate/stats/tools/model) so cards render full."""
     monkeypatch.setenv("TINI_HOME", str(tmp_path / "home"))
     app = make_tini(tmp_path / "home", client=ScriptedClient([]))
-    meta = {"gate": {"decision": "skip"}, "iterations": 1, "latency_ms": 2400,
-            "tools": [], "model": "gemini-3.5-flash"}
-    app.conn.execute("INSERT INTO chat_log (role, content, session_id, source) VALUES ('user','hi','t','dashboard')")
-    app.conn.execute("INSERT INTO chat_log (role, content, session_id, source, meta) "
-                     "VALUES ('assistant','hey','t','dashboard',?)", (json.dumps(meta),))
+    meta = {
+        "gate": {"decision": "skip"},
+        "iterations": 1,
+        "latency_ms": 2400,
+        "tools": [],
+        "model": "gemini-3.5-flash",
+    }
+    app.conn.execute(
+        "INSERT INTO chat_log (role, content, session_id, source) VALUES ('user','hi','t','dashboard')"
+    )
+    app.conn.execute(
+        "INSERT INTO chat_log (role, content, session_id, source, meta) "
+        "VALUES ('assistant','hey','t','dashboard',?)",
+        (json.dumps(meta),),
+    )
     app.conn.commit()
 
     hist = _thread_history(app.conn, "t")
-    assert hist[0]["meta"] is None                     # user row
+    assert hist[0]["meta"] is None  # user row
     assert hist[1]["meta"]["model"] == "gemini-3.5-flash"
     assert hist[1]["meta"]["gate"]["decision"] == "skip"

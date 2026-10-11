@@ -323,7 +323,7 @@ def _default_answer_fn(settings: Settings) -> AnswerFn:
 
     def answer(question: str, hits: list) -> str:
         excerpts = "\n\n".join(
-            f"[{n}] {hit.title}#chunk-{hit.ordinal}\n{hit.text[:1500]}"
+            f"[{n}] {hit.title}#chunk-{hit.ordinal}{', ' + hit.page_label if hit.page_label else ''}\n{hit.text[:1500]}"
             for n, hit in enumerate(hits, 1)
         )
         response = client.messages.create(

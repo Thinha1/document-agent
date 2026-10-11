@@ -43,12 +43,15 @@ class MCPBridge:
         tools: list[Tool] = []
         for srv, metas in listed.items():
             for meta in metas:
-                tools.append(Tool(
-                    name=f"{srv}_{meta['name']}",
-                    description=f"[MCP:{srv}] {meta.get('description','') or ''}",
-                    input_schema=meta.get("inputSchema") or {"type": "object", "properties": {}},
-                    fn=(lambda srv=srv, tname=meta["name"], **kw: self.call(srv, tname, kw)),
-                ))
+                tools.append(
+                    Tool(
+                        name=f"{srv}_{meta['name']}",
+                        description=f"[MCP:{srv}] {meta.get('description', '') or ''}",
+                        input_schema=meta.get("inputSchema")
+                        or {"type": "object", "properties": {}},
+                        fn=(lambda srv=srv, tname=meta["name"], **kw: self.call(srv, tname, kw)),
+                    )
+                )
         return tools
 
     async def _connect_all(self, servers) -> dict:
@@ -68,7 +71,10 @@ class MCPBridge:
                 await session.initialize()
                 self._sessions[name] = session
                 tools = (await session.list_tools()).tools
-                listed[name] = [{"name": t.name, "description": t.description, "inputSchema": t.inputSchema} for t in tools]
+                listed[name] = [
+                    {"name": t.name, "description": t.description, "inputSchema": t.inputSchema}
+                    for t in tools
+                ]
             except Exception as exc:  # one bad server shouldn't stop the rest
                 print(f"MCP server '{name}' failed to connect: {exc}")
         return listed

@@ -76,7 +76,7 @@ def documents_main(argv: list[str]) -> int:
     try:
         if args.search:
             for hit in index.search(args.search, args.limit, args.workspace):
-                print(f"[{hit.title}#chunk-{hit.ordinal}] {hit.text}\n{hit.source_uri}\n")
+                print(f"[{hit.title}#chunk-{hit.ordinal}{', ' + hit.page_label if hit.page_label else ''}] {hit.text}\n{hit.source_uri}\n")
         else:
             for document in index.list_documents(args.workspace, args.limit):
                 print(

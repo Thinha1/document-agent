@@ -39,14 +39,14 @@ def posture() -> str:
     ids = _allowed_ids()
     if ids:
         return f"  reachable by: {len(ids)} allowlisted user(s)"
-    return ("  reachable by: ANYONE who finds this bot — it will answer from your\n"
-            "                personal memory. Set TELEGRAM_ALLOWED_USER to lock it.")
+    return (
+        "  reachable by: ANYONE who finds this bot — it will answer from your\n"
+        "                personal memory. Set TELEGRAM_ALLOWED_USER to lock it."
+    )
 
 
 def _new_runner() -> GatewayAgentRunner:
-    return GatewayAgentRunner(
-        Tini, session_id="telegram", source="telegram", observer=_observer
-    )
+    return GatewayAgentRunner(Tini, session_id="telegram", source="telegram", observer=_observer)
 
 
 def _build_app(token: str, allowed: str = "", runner: GatewayAgentRunner | None = None):
@@ -106,6 +106,7 @@ class TelegramHandle:
             if self.app.running:
                 await self.app.stop()
             await self.app.shutdown()
+
         try:
             if self.thread.is_alive() and self.loop.is_running():
                 try:
@@ -120,7 +121,9 @@ class TelegramHandle:
 
     def status(self) -> IntegrationStatus:
         if self._conflict["conflict"]:
-            return IntegrationStatus(IntegrationState.ERROR, "another instance is polling this token")
+            return IntegrationStatus(
+                IntegrationState.ERROR, "another instance is polling this token"
+            )
         if not self.thread.is_alive():
             return IntegrationStatus(IntegrationState.ERROR, "gateway stopped unexpectedly")
         if error := self.runner.error_status:
@@ -141,8 +144,10 @@ def start_in_background() -> TelegramHandle | None:
     try:
         import telegram  # noqa: F401
     except ImportError:
-        print("(telegram) TELEGRAM_BOT_TOKEN is set but the extra isn't installed — "
-              "pip install 'tini-agent[telegram]'")
+        print(
+            "(telegram) TELEGRAM_BOT_TOKEN is set but the extra isn't installed — "
+            "pip install 'tini-agent[telegram]'"
+        )
         return None
 
     print("(telegram) starting:")
@@ -160,8 +165,10 @@ def start_in_background() -> TelegramHandle | None:
 
         if isinstance(exc, Conflict) and not warned["conflict"]:
             warned["conflict"] = True
-            print("(telegram) another instance is already running this bot — the dashboard's "
-                  "Telegram stays idle. Stop the other `tini telegram` and restart to use it here.")
+            print(
+                "(telegram) another instance is already running this bot — the dashboard's "
+                "Telegram stays idle. Stop the other `tini telegram` and restart to use it here."
+            )
 
     loop = asyncio.new_event_loop()
     runner = _new_runner()

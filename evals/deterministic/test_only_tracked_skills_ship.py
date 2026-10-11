@@ -37,8 +37,9 @@ SKILLS = REPO / "skills"
 
 
 def _tracked_skill_dirs() -> set[str]:
-    out = subprocess.run(["git", "ls-files", "skills/"], cwd=REPO,
-                         capture_output=True, text=True, check=False).stdout
+    out = subprocess.run(
+        ["git", "ls-files", "skills/"], cwd=REPO, capture_output=True, text=True, check=False
+    ).stdout
     return {line.split("/")[1] for line in out.split() if line.count("/") >= 1}
 
 
@@ -64,8 +65,13 @@ def test_every_skill_on_disk_is_tracked():
 def test_no_untracked_files_inside_a_tracked_skill():
     """Same trap one level down: a committed skill folder holding an
     uncommitted draft or a notes file still ships every byte."""
-    out = subprocess.run(["git", "ls-files", "--others", "--exclude-standard", "skills/"],
-                         cwd=REPO, capture_output=True, text=True, check=False).stdout.split()
+    out = subprocess.run(
+        ["git", "ls-files", "--others", "--exclude-standard", "skills/"],
+        cwd=REPO,
+        capture_output=True,
+        text=True,
+        check=False,
+    ).stdout.split()
     assert out == [], (
         f"untracked files under skills/ would be published: {out}\n"
         "Commit them or move them out — force-include does not consult git."

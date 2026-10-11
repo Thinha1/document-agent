@@ -108,7 +108,7 @@ class ZepFactStore:
         while time.monotonic() < deadline:
             try:
                 found = self.client.graph.episode.get_by_user_id(user_id=self.user_id, lastn=20)
-                for ep in (getattr(found, "episodes", None) or []):
+                for ep in getattr(found, "episodes", None) or []:
                     if getattr(ep, "uuid_", None) == uuid:
                         if getattr(ep, "processed", False):
                             return True
@@ -135,13 +135,12 @@ class ZepFactStore:
         started, last, stable = time.monotonic(), -1, 0
         while time.monotonic() - started < timeout:
             try:
-                found = self.client.graph.episode.get_by_user_id(
-                    user_id=self.user_id, lastn=50)
+                found = self.client.graph.episode.get_by_user_id(user_id=self.user_id, lastn=50)
                 episodes = getattr(found, "episodes", None) or []
-                done = bool(episodes) and all(
-                    getattr(ep, "processed", False) for ep in episodes)
-                nodes = len(self.client.graph.node.get_by_user_id(
-                    user_id=self.user_id, limit=200) or [])
+                done = bool(episodes) and all(getattr(ep, "processed", False) for ep in episodes)
+                nodes = len(
+                    self.client.graph.node.get_by_user_id(user_id=self.user_id, limit=200) or []
+                )
             except Exception:  # noqa: S110 — transient; the deadline is the real bound
                 nodes, done = -1, False
             stable = stable + 1 if done and nodes == last and nodes > 0 else 0
@@ -214,17 +213,25 @@ class ZepFactStore:
         # A search returns edges and/or nodes depending on scope; both carry a
         # uuid and some rendered text, under different attribute names.
         for group in ("edges", "nodes"):
-            for item in (getattr(found, group, None) or []):
+            for item in getattr(found, group, None) or []:
                 rows.append(self._row(item))
         return rows[:top_k]
 
     @staticmethod
     def _row(item) -> dict:
-        text = (getattr(item, "fact", None) or getattr(item, "summary", None)
-                or getattr(item, "name", None) or "")
+        text = (
+            getattr(item, "fact", None)
+            or getattr(item, "summary", None)
+            or getattr(item, "name", None)
+            or ""
+        )
         subject, _, content = text.partition(": ")
         if not content:
             subject, content = "", text
-        return {"id": getattr(item, "uuid_", None) or getattr(item, "uuid", "") or "",
-                "subject": subject, "content": content, "source": "zep",
-                "created_at": getattr(item, "created_at", None)}
+        return {
+            "id": getattr(item, "uuid_", None) or getattr(item, "uuid", "") or "",
+            "subject": subject,
+            "content": content,
+            "source": "zep",
+            "created_at": getattr(item, "created_at", None),
+        }

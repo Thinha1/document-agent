@@ -50,8 +50,10 @@ class LangMemFactStore:
         """Postgres when it is configured, in-process otherwise. The index block
         is what makes search() semantic rather than exact — without it the store
         is a plain key-value dict and every probe that rephrases a fact fails."""
-        index = {"dims": 1536,
-                 "embed": env_or("OPENAI_EMBED_MODEL", "openai:text-embedding-3-small")}
+        index = {
+            "dims": 1536,
+            "embed": env_or("OPENAI_EMBED_MODEL", "openai:text-embedding-3-small"),
+        }
         dsn = os.getenv("TINI_LANGMEM_POSTGRES", "").strip()
         if dsn:
             from langgraph.store.postgres import PostgresStore
@@ -64,12 +66,17 @@ class LangMemFactStore:
         return InMemoryStore(index=index)
 
     def add(self, subject: str, content: str, source: str = "user") -> None:
-        self.store.put(_NAMESPACE, f"fact-{uuid.uuid4().hex[:12]}",
-                       {"subject": subject.lower().strip(), "content": content, "source": source})
+        self.store.put(
+            _NAMESPACE,
+            f"fact-{uuid.uuid4().hex[:12]}",
+            {"subject": subject.lower().strip(), "content": content, "source": source},
+        )
 
     def search(self, query: str, top_k: int = 4) -> list[str]:
-        return [f"[{r['subject']}] {r['content']}" if r["subject"] else r["content"]
-                for r in self.search_with_ids(query, top_k)]
+        return [
+            f"[{r['subject']}] {r['content']}" if r["subject"] else r["content"]
+            for r in self.search_with_ids(query, top_k)
+        ]
 
     def list(self, limit: int = 200) -> list[dict]:
         # An empty query with a limit is BaseStore's documented way to page a
@@ -107,6 +114,10 @@ class LangMemFactStore:
     @staticmethod
     def _row(item) -> dict:
         value = getattr(item, "value", None) or {}
-        return {"id": getattr(item, "key", ""), "subject": value.get("subject", ""),
-                "content": value.get("content", ""), "source": value.get("source", ""),
-                "created_at": getattr(item, "created_at", None)}
+        return {
+            "id": getattr(item, "key", ""),
+            "subject": value.get("subject", ""),
+            "content": value.get("content", ""),
+            "source": value.get("source", ""),
+            "created_at": getattr(item, "created_at", None),
+        }

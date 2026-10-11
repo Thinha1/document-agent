@@ -66,14 +66,23 @@ def judge_client(provider: str | None = None, model: str | None = None):
     Returns (client, model_id). get_client fills in the provider's default when
     the id is blank, so read the id back off settings rather than the argument.
     """
-    settings = Settings(provider=provider or JUDGE_PROVIDER, model=model or JUDGE_MODEL,
-                        small_model="", home=load_settings().home)
+    settings = Settings(
+        provider=provider or JUDGE_PROVIDER,
+        model=model or JUDGE_MODEL,
+        small_model="",
+        home=load_settings().home,
+    )
     client = get_client(settings)
     return client, settings.model
 
 
-def judge_reply(task: str, reply: str, provider: str | None = None,
-                model: str | None = None, tools: list | None = None) -> dict | None:
+def judge_reply(
+    task: str,
+    reply: str,
+    provider: str | None = None,
+    model: str | None = None,
+    tools: list | None = None,
+) -> dict | None:
     """Grade one reply. `tools` is the list of tool names that ACTUALLY fired this
     turn — passed to the judge as ground truth so a retrieval claim backed by
     search_web isn't mistaken for a hallucination. Returns
@@ -83,12 +92,13 @@ def judge_reply(task: str, reply: str, provider: str | None = None,
         return None
     provider = provider or JUDGE_PROVIDER
     model = model or JUDGE_MODEL
-    actions = (f"\nTools the assistant actually ran this turn (ground truth): "
-               f"{', '.join(tools)}.\n" if tools else
-               "\nThe assistant ran no tools this turn.\n")
+    actions = (
+        f"\nTools the assistant actually ran this turn (ground truth): {', '.join(tools)}.\n"
+        if tools
+        else "\nThe assistant ran no tools this turn.\n"
+    )
     prompt = _RUBRIC.format(task=task[:2000], reply=reply[:4000], actions=actions)
-    settings = Settings(provider=provider, model=model, small_model="",
-                        home=load_settings().home)
+    settings = Settings(provider=provider, model=model, small_model="", home=load_settings().home)
     # A race judges every column at once, so the endpoint sees a burst and may
     # 429. Retry ONLY the API call (with growing backoff); the semaphore caps how
     # many run concurrently. A response that arrives but won't parse isn't
@@ -96,21 +106,23 @@ def judge_reply(task: str, reply: str, provider: str | None = None,
     resp = None
     for attempt in range(4):
         try:
-            client = get_client(settings)   # fills the provider default id
+            client = get_client(settings)  # fills the provider default id
             with _JUDGE_SEM:
                 resp = client.messages.create(
-                    model=settings.model, max_tokens=300,
-                    messages=[{"role": "user", "content": prompt}])
+                    model=settings.model,
+                    max_tokens=300,
+                    messages=[{"role": "user", "content": prompt}],
+                )
             break
         except Exception:
             if attempt < 3:
-                time.sleep(1.2 * (attempt + 1))   # 1.2s, 2.4s, 3.6s — let a 429 clear
+                time.sleep(1.2 * (attempt + 1))  # 1.2s, 2.4s, 3.6s — let a 429 clear
     if resp is None:
         return None
     try:
         text = "".join(b.text for b in resp.content if getattr(b, "type", "") == "text")
-        obj = json.loads(text[text.index("{"): text.rindex("}") + 1])
+        obj = json.loads(text[text.index("{") : text.rindex("}") + 1])
         score = max(0, min(10, int(obj["score"])))
         return {"score": score, "reason": str(obj.get("reason", ""))[:200], "judge": settings.model}
     except Exception:
-        return None   # got a response, just not valid JSON — retrying won't help
+        return None  # got a response, just not valid JSON — retrying won't help

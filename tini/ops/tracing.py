@@ -83,8 +83,10 @@ class Tracer:
             self._otel_provider = provider
             return trace.get_tracer("tini")
         except ImportError:
-            print("(tracing) OTEL endpoint set but opentelemetry not installed — "
-                  "pip install 'tini-agent[tracing]'. JSONL tracing still on.")
+            print(
+                "(tracing) OTEL endpoint set but opentelemetry not installed — "
+                "pip install 'tini-agent[tracing]'. JSONL tracing still on."
+            )
             return None
 
     def _write(self, record: dict) -> None:
@@ -107,10 +109,15 @@ class Tracer:
         the dashboard. Tokens are the ground truth; dollar cost is derived from
         them (pricing can change), so we store tokens + provider/model."""
         usage = event.get("usage", {})
-        record = {"ts": _now(), "provider": self.settings.provider,
-                  "model": self.settings.model or "", "kind": "loop",
-                  "in": usage.get("in", 0), "out": usage.get("out", 0),
-                  "cache": usage.get("cache", 0)}
+        record = {
+            "ts": _now(),
+            "provider": self.settings.provider,
+            "model": self.settings.model or "",
+            "kind": "loop",
+            "in": usage.get("in", 0),
+            "out": usage.get("out", 0),
+            "cache": usage.get("cache", 0),
+        }
         with (self.settings.home / "usage.jsonl").open("a", encoding="utf-8") as f:
             f.write(json.dumps(record) + "\n")
 
@@ -122,8 +129,11 @@ class Tracer:
             self._record_usage(event)
             # stamp WHICH brain answered — in a multi-model world (shootouts,
             # live model switching) a trace without the model is half a trace
-            event = {"provider": self.settings.provider,
-                     "model": self.settings.model or "", **event}
+            event = {
+                "provider": self.settings.provider,
+                "model": self.settings.model or "",
+                **event,
+            }
         self._write({"type": kind, **event})
         if self._otel_tracer and self._span_ctx is not None:
             with self._otel_tracer.start_as_current_span(
@@ -162,7 +172,9 @@ class Tracer:
 def compose(*observers) -> callable:
     """Fan one loop event out to several observers (gateway display + tracer)."""
     active = [o for o in observers if o]
+
     def fanout(kind: str, event: dict) -> None:
         for obs in active:
             obs(kind, event)
+
     return fanout

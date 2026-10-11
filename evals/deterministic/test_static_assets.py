@@ -143,3 +143,17 @@ def test_dashboard_has_persistent_light_and_dark_themes():
     css = (STATIC / "style.css").read_text()
     assert ':root[data-theme="light"]' in css
     assert ':root[data-theme="dark"]' in css
+
+
+def test_dashboard_navigation_prioritizes_document_rag_work():
+    primary = INDEX[: INDEX.index('<details class="nav-advanced"')]
+
+    assert primary.index(">Knowledge <") < primary.index(">Conversations <")
+    assert ">Runs <" in primary
+    assert ">Evaluations <" in primary
+    assert 'href="#settings/providers"' in primary
+    assert ">Overview<" not in INDEX
+    assert ">Memory race<" not in INDEX
+    assert 'location.hash||"#documents"' in JS_SRC
+    assert 'settings(d, sub)' in JS_SRC
+    assert 'evaluations(d)' in JS_SRC

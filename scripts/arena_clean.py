@@ -59,7 +59,8 @@ def mem0_users() -> tuple[object, list[str]]:
     rows = payload.get("results", payload) if isinstance(payload, dict) else payload
     users = sorted(
         (r.get("name"), bool(r.get("is_playground")))
-        for r in rows or [] if isinstance(r, dict) and r.get("name")
+        for r in rows or []
+        if isinstance(r, dict) and r.get("name")
     )
     return client, users
 
@@ -69,8 +70,11 @@ def zep_users() -> tuple[object, list[str]]:
 
     client = Zep(api_key=os.environ["ZEP_API_KEY"])
     found = client.user.list_ordered()
-    users = [(u.user_id, False) for u in (getattr(found, "users", found) or [])
-             if getattr(u, "user_id", None)]
+    users = [
+        (u.user_id, False)
+        for u in (getattr(found, "users", found) or [])
+        if getattr(u, "user_id", None)
+    ]
     return client, sorted(users)
 
 
@@ -82,19 +86,30 @@ def hosted_stores() -> set[str]:
     mem0 or Zep cannot contain anything but leftovers from past races, and
     protecting it just means the contamination never actually goes away.
     """
-    return {os.getenv("TINI_SEMANTIC_STORE", "sqlite").strip().strip("'\"").lower(),
-            os.getenv("TINI_EPISODIC_STORE", "sqlite").strip().strip("'\"").lower()}
+    return {
+        os.getenv("TINI_SEMANTIC_STORE", "sqlite").strip().strip("'\"").lower(),
+        os.getenv("TINI_EPISODIC_STORE", "sqlite").strip().strip("'\"").lower(),
+    }
 
 
-def classify(user: str, playground: bool, include_tini: bool,
-             service_is_live: bool = True) -> tuple[bool, str]:
+def classify(
+    user: str, playground: bool, include_tini: bool, service_is_live: bool = True
+) -> tuple[bool, str]:
     """(delete?, why) -- said out loud so a dry run is readable."""
     if user == REAL:
         if not service_is_live:
-            return (True, ("arena leftovers -- your assistant is configured for "
-                           "sqlite, so nothing here is its memory"))
-        return (include_tini, "your real assistant's partition"
-                + ("" if include_tini else " -- kept, pass --include-tini to remove"))
+            return (
+                True,
+                (
+                    "arena leftovers -- your assistant is configured for "
+                    "sqlite, so nothing here is its memory"
+                ),
+            )
+        return (
+            include_tini,
+            "your real assistant's partition"
+            + ("" if include_tini else " -- kept, pass --include-tini to remove"),
+        )
     if user.startswith(ARENA_PREFIXES):
         return (True, "written by this repo (arena or quickstart)")
     if playground:
@@ -151,9 +166,16 @@ def main(apply: bool, include_tini: bool) -> None:
 
 if __name__ == "__main__":
     p = argparse.ArgumentParser(description="Wipe hosted memory partitions (mem0, Zep).")
-    p.add_argument("--yes", "-y", action="store_true",
-                   help="actually delete. Without it this only lists what it would do.")
-    p.add_argument("--include-tini", action="store_true",
-                   help="also delete the `tini` partition -- your real assistant's memories.")
+    p.add_argument(
+        "--yes",
+        "-y",
+        action="store_true",
+        help="actually delete. Without it this only lists what it would do.",
+    )
+    p.add_argument(
+        "--include-tini",
+        action="store_true",
+        help="also delete the `tini` partition -- your real assistant's memories.",
+    )
     args = p.parse_args()
     main(apply=args.yes, include_tini=args.include_tini)

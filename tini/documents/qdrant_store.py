@@ -46,6 +46,7 @@ from tini.documents.models import (
     IngestReport,
     SearchHit,
 )
+from tini.documents.pages import pages_from_metadata
 
 if TYPE_CHECKING:
     from qdrant_client import QdrantClient
@@ -270,18 +271,23 @@ class QdrantDocumentIndex:
                 limit=limit,
                 with_payload=True,
             ).points
-        return [
-            SearchHit(
-                document_id=point.payload["document_id"],
-                chunk_id=str(point.id),
-                title=point.payload["title"],
-                source_uri=point.payload["source_uri"],
-                text=point.payload["text"],
-                ordinal=point.payload["ordinal"],
-                score=float(point.score),
+        hits = []
+        for point in results:
+            first, last = pages_from_metadata(point.payload.get("chunk_metadata"))
+            hits.append(
+                SearchHit(
+                    document_id=point.payload["document_id"],
+                    chunk_id=str(point.id),
+                    title=point.payload["title"],
+                    source_uri=point.payload["source_uri"],
+                    text=point.payload["text"],
+                    ordinal=point.payload["ordinal"],
+                    score=float(point.score),
+                    page_start=first,
+                    page_end=last,
+                )
             )
-            for point in results
-        ]
+        return hits
 
     def list_documents(
         self, workspace_id: str = DEFAULT_WORKSPACE, limit: int = 200

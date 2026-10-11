@@ -28,8 +28,9 @@ def test_tool_node_maps_in_keys_to_out_key():
 
 def test_llm_node_formats_prompt_from_state_and_writes_reply():
     client = ScriptedClient([response([text_block("quick")])])
-    node = llm_node("classify", "Message: {message}", out_key="route",
-                    client=client, model="small-model")
+    node = llm_node(
+        "classify", "Message: {message}", out_key="route", client=client, model="small-model"
+    )
     state = run_graph(one_node_graph(node), {"message": "thanks!"})
     assert state["route"] == "quick"
 
@@ -37,25 +38,38 @@ def test_llm_node_formats_prompt_from_state_and_writes_reply():
 def test_agent_node_runs_a_real_loop_turn_with_tagged_events():
     registry = ToolRegistry()
     calls: list[dict] = []
-    registry.register(Tool(
-        name="retrieve_docs", description="retrieve documents",
-        input_schema={"type": "object", "properties": {"text": {"type": "string"}}},
-        fn=lambda text: (calls.append({"text": text}), "saved")[1],
-    ))
-    client = ScriptedClient([
-        response([tool_block("retrieve_docs", {"text": "runbook"})], "tool_use"),
-        response([text_block("Noted!")]),
-    ])
-    node = agent_node("full_agent", out_key="result", client=client,
-                      model="main-model", system="You are a test agent.",
-                      tools=registry)
+    registry.register(
+        Tool(
+            name="retrieve_docs",
+            description="retrieve documents",
+            input_schema={"type": "object", "properties": {"text": {"type": "string"}}},
+            fn=lambda text: (calls.append({"text": text}), "saved")[1],
+        )
+    )
+    client = ScriptedClient(
+        [
+            response([tool_block("retrieve_docs", {"text": "runbook"})], "tool_use"),
+            response([text_block("Noted!")]),
+        ]
+    )
+    node = agent_node(
+        "full_agent",
+        out_key="result",
+        client=client,
+        model="main-model",
+        system="You are a test agent.",
+        tools=registry,
+    )
 
     events: list[tuple[str, dict]] = []
-    state = run_graph(one_node_graph(node), {"message": "note milk"},
-                      observer=lambda kind, ev: events.append((kind, ev)))
+    state = run_graph(
+        one_node_graph(node),
+        {"message": "note milk"},
+        observer=lambda kind, ev: events.append((kind, ev)),
+    )
 
-    assert calls == [{"text": "runbook"}]                 # the tool really ran
-    assert state["result"].reply == "Noted!"              # a real LoopResult
+    assert calls == [{"text": "runbook"}]  # the tool really ran
+    assert state["result"].reply == "Noted!"  # a real LoopResult
     assert state["result"].iterations == 2
     inner = [(k, ev) for k, ev in events if k in ("llm", "tool")]
     assert inner, "inner loop events must pass through to the outer observer"

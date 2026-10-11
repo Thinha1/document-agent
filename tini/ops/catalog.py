@@ -38,8 +38,11 @@ def _known_default_ids(prov, out: dict, is_active: bool) -> list[dict]:
     flagship + fast + loop/gate defaults — so the showcase model (e.g. opus-4.8)
     is offered too, not just the two loop defaults — plus the active model when
     this is the active provider."""
-    ids = [*(prov.default_pair() if prov else []),
-           prov.model if prov else "", prov.small_model if prov else ""]
+    ids = [
+        *(prov.default_pair() if prov else []),
+        prov.model if prov else "",
+        prov.small_model if prov else "",
+    ]
     if is_active:
         ids = [out.get("model"), out.get("small_model"), *ids]
     return [{"id": m} for m in dict.fromkeys(m for m in ids if m)]
@@ -65,8 +68,7 @@ def list_models(provider: str | None = None, *, use_cache: bool = True) -> dict:
     # TINI_BASE_URL only applies to the provider it was set for).
     name = provider or s.provider
     prov = PROVIDERS.get(name)
-    base = (prov.configured_base_url(s.base_url if name == s.provider else None)
-            if prov else None)
+    base = prov.configured_base_url(s.base_url if name == s.provider else None) if prov else None
     out = {
         "provider": name,
         "model": s.model or (prov.model if prov else ""),
@@ -85,12 +87,11 @@ def list_models(provider: str | None = None, *, use_cache: bool = True) -> dict:
     else:
         # No catalog endpoint: fall back to the provider's own known defaults
         # (flagship + fast + loop/gate), not just the active model.
-        return {**out, "listed": False,
-                "models": _known_default_ids(prov, out, name == s.provider)}
+        return {**out, "listed": False, "models": _known_default_ids(prov, out, name == s.provider)}
 
     cached = _models_cache.get(url) if use_cache else None
     if cached and time.time() - cached[0] < 300:
-        _ts, cmodels, cerr = cached          # cerr None on a real listing
+        _ts, cmodels, cerr = cached  # cerr None on a real listing
         r = {**out, "listed": cerr is None, "models": cmodels}
         if cerr:
             r["error"] = cerr
@@ -104,19 +105,29 @@ def list_models(provider: str | None = None, *, use_cache: bool = True) -> dict:
     try:
         key.encode("latin-1")
     except UnicodeEncodeError:
-        msg = (f"{prov.key_env} contains a non-ASCII character — re-paste the key "
-               f"(no spaces, line breaks, or arrows).")
-        return {**out, "listed": False,
-                "models": _known_default_ids(prov, out, name == s.provider), "error": msg}
+        msg = (
+            f"{prov.key_env} contains a non-ASCII character — re-paste the key "
+            f"(no spaces, line breaks, or arrows)."
+        )
+        return {
+            **out,
+            "listed": False,
+            "models": _known_default_ids(prov, out, name == s.provider),
+            "error": msg,
+        }
     # send both auth styles — Bearer for OpenAI-compatible catalogs, x-api-key +
     # version for Anthropic's; each server reads the header it knows.
     # Set a browser-like User-Agent: some OpenAI-compatible proxies (e.g.
     # opencode.ai) block Python-urllib/3.x with a 403 / error code 1010.
-    req = urllib.request.Request(url, headers={
-        "Authorization": f"Bearer {key}",
-        "x-api-key": key, "anthropic-version": "2023-06-01",
-        "User-Agent": "Mozilla/5.0 (compatible; Tini)",
-    })
+    req = urllib.request.Request(
+        url,
+        headers={
+            "Authorization": f"Bearer {key}",
+            "x-api-key": key,
+            "anthropic-version": "2023-06-01",
+            "User-Agent": "Mozilla/5.0 (compatible; Tini)",
+        },
+    )
     try:
         with urllib.request.urlopen(req, timeout=10) as resp:
             data = json.loads(resp.read())
@@ -161,7 +172,7 @@ def list_models(provider: str | None = None, *, use_cache: bool = True) -> dict:
             pass
         models.append(entry)
     models.sort(key=lambda x: (not x["free"], x["tools"] is False, x["id"]))
-    _models_cache[url] = (time.time(), models, None)   # None error = a real listing
+    _models_cache[url] = (time.time(), models, None)  # None error = a real listing
     return {**out, "listed": True, "models": models}
 
 

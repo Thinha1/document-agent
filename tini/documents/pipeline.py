@@ -14,6 +14,7 @@ from tini.documents.embeddings import EmbeddingProvider
 from tini.documents.loaders import discover_documents, load_document
 from tini.documents.models import DEFAULT_WORKSPACE, DocumentSource, IngestReport
 from tini.documents.ocr import OcrProvider
+from tini.documents.pages import assign_pages
 
 IngestObserver = Callable[[str, dict[str, Any]], None]
 
@@ -98,6 +99,7 @@ class IngestionPipeline:
                 )
                 if not chunks:
                     raise ValueError("document produced no chunks")
+                chunks = assign_pages(chunks, loaded.pages)
                 notify(
                     "embedding",
                     {

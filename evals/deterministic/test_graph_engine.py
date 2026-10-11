@@ -49,6 +49,7 @@ def test_fanout_runs_in_parallel_and_fanin_waits_for_all():
         def fn(state):
             time.sleep(0.15)
             return {key: key}
+
         return fn
 
     for key in ("x", "y", "z"):
@@ -62,8 +63,8 @@ def test_fanout_runs_in_parallel_and_fanin_waits_for_all():
     t0 = time.perf_counter()
     state = run_graph(g, {})
     elapsed = time.perf_counter() - t0
-    assert state["joined"] == "xyz"          # fan-in saw all three keys
-    assert elapsed < 0.35                    # 3 x 0.15s ran together, not in series
+    assert state["joined"] == "xyz"  # fan-in saw all three keys
+    assert elapsed < 0.35  # 3 x 0.15s ran together, not in series
 
 
 def routed_graph() -> Graph:
@@ -72,8 +73,7 @@ def routed_graph() -> Graph:
     g.add_node(Node("quick", lambda s: {"took": "quick"}))
     g.add_node(Node("full", lambda s: {"took": "full"}))
     g.add_edge(START, "decide")
-    g.add_router("decide", key_router("route", default="full"),
-                 {"quick": "quick", "full": "full"})
+    g.add_router("decide", key_router("route", default="full"), {"quick": "quick", "full": "full"})
     g.add_edge("quick", END)
     g.add_edge("full", END)
     return g
@@ -122,11 +122,11 @@ def test_sequential_overwrite_is_allowed():
 
 def cycle_graph(max_visits: int) -> Graph:
     g = Graph("cycle")
-    g.add_node(Node("work", lambda s: {"count": s.get("count", 0) + 1},
-                    max_visits=max_visits))
+    g.add_node(Node("work", lambda s: {"count": s.get("count", 0) + 1}, max_visits=max_visits))
     g.add_edge(START, "work")
-    g.add_router("work", lambda s: "again" if s["count"] < 99 else "done",
-                 {"again": "work", "done": END})
+    g.add_router(
+        "work", lambda s: "again" if s["count"] < 99 else "done", {"again": "work", "done": END}
+    )
     return g
 
 
@@ -163,7 +163,7 @@ def test_node_exception_without_on_error_drains_to_end():
     g.add_edge("explode", "after")
     events, observer = collect_events()
     state = run_graph(g, {}, observer=observer)
-    assert "ran" not in state                     # downstream starved, run ended
+    assert "ran" not in state  # downstream starved, run ended
     assert dict(events)["graph_end"]["error"] is not None
 
 
@@ -173,13 +173,22 @@ def test_observer_event_sequence_and_payload_schemas():
     run_graph(routed_graph(), {"want": "quick"}, observer=observer)
     kinds = [k for k, _ in events]
     assert kinds[0] == "graph_start" and kinds[-1] == "graph_end"
-    assert kinds == ["graph_start", "node_start", "node_end", "route",
-                     "node_start", "node_end", "graph_end"]
-    schemas = {"graph_start": {"workflow", "nodes"},
-               "node_start": {"workflow", "node", "visit"},
-               "node_end": {"workflow", "node", "ms", "keys", "error"},
-               "route": {"workflow", "router", "target", "reason"},
-               "graph_end": {"workflow", "ms", "steps", "path", "error"}}
+    assert kinds == [
+        "graph_start",
+        "node_start",
+        "node_end",
+        "route",
+        "node_start",
+        "node_end",
+        "graph_end",
+    ]
+    schemas = {
+        "graph_start": {"workflow", "nodes"},
+        "node_start": {"workflow", "node", "visit"},
+        "node_end": {"workflow", "node", "ms", "keys", "error"},
+        "route": {"workflow", "router", "target", "reason"},
+        "graph_end": {"workflow", "ms", "steps", "path", "error"},
+    }
     for kind, ev in events:
         assert schemas[kind] <= set(ev), f"{kind} missing {schemas[kind] - set(ev)}"
 
@@ -202,4 +211,4 @@ def test_reserved_underscore_keys_never_merge_or_leak():
     state = run_graph(g, {}, observer=observer)
     assert "_secret" not in state and state["open"] == 2
     assert dict(events)["node_end"]["keys"] == ["open"]
-    assert "_notify" not in state                 # engine plumbing stays internal
+    assert "_notify" not in state  # engine plumbing stays internal

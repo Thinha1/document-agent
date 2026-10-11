@@ -66,7 +66,7 @@ class Mem0FactStore:
             [{"role": "user", "content": self._pack(subject, content)}],
             user_id=self.user_id,
             metadata={"source": source},
-            infer=False,   # see the module docstring — the contract needs this
+            infer=False,  # see the module docstring — the contract needs this
         )
 
     def search(self, query: str, top_k: int = 4) -> list[str]:
@@ -94,7 +94,7 @@ class Mem0FactStore:
         try:
             self.client.update(memory_id=str(fact_id), text=self._pack(subject, content))
         except Exception:
-            return False   # unknown id — False, never an exception (base.py)
+            return False  # unknown id — False, never an exception (base.py)
         return True
 
     def settle(self, timeout: float = 120.0) -> bool:
@@ -115,8 +115,9 @@ class Mem0FactStore:
         started, last, stable = time.monotonic(), -1, 0
         while time.monotonic() - started < timeout:
             try:
-                found = len(self._rows(self.client.get_all(
-                    filters={"user_id": self.user_id}, version="v2")))
+                found = len(
+                    self._rows(self.client.get_all(filters={"user_id": self.user_id}, version="v2"))
+                )
             except Exception:
                 return False
             stable = stable + 1 if found == last and found > 0 else 0
@@ -145,6 +146,10 @@ class Mem0FactStore:
 
     def _row(self, row: dict) -> dict:
         subject, content = self._unpack(row.get("memory") or row.get("text") or "")
-        return {"id": row.get("id", ""), "subject": subject, "content": content,
-                "source": (row.get("metadata") or {}).get("source", ""),
-                "created_at": row.get("created_at")}
+        return {
+            "id": row.get("id", ""),
+            "subject": subject,
+            "content": content,
+            "source": (row.get("metadata") or {}).get("source", ""),
+            "created_at": row.get("created_at"),
+        }
